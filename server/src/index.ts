@@ -9,6 +9,8 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import { authRouter } from './routes/auth.js';
 import { userRouter } from './routes/user.js';
+import { shopRouter } from './routes/shop.js';
+import { cardsRouter } from './routes/cards.js';
 
 const app = express();
 
@@ -43,6 +45,8 @@ const authLimiter = rateLimit({
 // Routes
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/user', userRouter);
+app.use('/api/shop', shopRouter);
+app.use('/api/cards', cardsRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

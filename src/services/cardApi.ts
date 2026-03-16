@@ -1,96 +1,73 @@
 /**
- * Card API service — fetches card data from YGOPRODeck API.
- * All API calls go through this file (single responsibility).
+ * Card API service — fetches card data from our own backend.
+ * Cards are stored in our PostgreSQL database, images served locally.
  */
 
 import { env } from '../config/env';
-import type { Card, CardApiResponse } from '../types/card';
-import { CARD_SETS } from '../config/sets';
+import type { Card } from '../types/card';
+
+interface DbCard {
+  id: number;
+  name_de: string;
+  name_en: string;
+  desc_de: string;
+  desc_en: string;
+  type_de: string;
+  type_en: string;
+  frame_type: string;
+  atk: number | null;
+  def: number | null;
+  level: number | null;
+  race_de: string;
+  race_en: string;
+  attribute: string | null;
+  archetype: string | null;
+  image_path: string;
+}
+
+function dbCardToCard(db: DbCard): Card {
+  return {
+    id: db.id,
+    name: db.name_de ?? db.name_en,
+    name_en: db.name_en,
+    type: db.type_de as Card['type'],
+    type_en: db.type_en as Card['type'],
+    frameType: db.frame_type,
+    desc: db.desc_de ?? db.desc_en,
+    desc_en: db.desc_en,
+    atk: db.atk ?? undefined,
+    def: db.def ?? undefined,
+    level: db.level ?? undefined,
+    race: db.race_de ?? db.race_en,
+    race_en: db.race_en,
+    attribute: db.attribute as Card['attribute'],
+    archetype: db.archetype ?? undefined,
+    card_images: [{
+      id: db.id,
+      image_url: `/images/cards/${db.id}.jpg`,
+      image_url_small: `/images/cards/${db.id}.jpg`,
+      image_url_cropped: `/images/cards/${db.id}.jpg`,
+    }],
+  };
+}
 
 /**
- * Allowed card types for DM/GX era (no Synchro, XYZ, Pendulum, Link).
- */
-const ALLOWED_FRAME_TYPES = new Set([
-  'normal',
-  'effect',
-  'ritual',
-  'fusion',
-  'spell',
-  'trap',
-]);
-
-/**
- * All set names we care about (DM through early GX).
- */
-const ALL_SET_NAMES = new Set(CARD_SETS.map((s) => s.name));
-
-/**
- * Fetches all cards from the YGOPRODeck API in both languages.
- * German is the primary language, English names are kept as fallback.
+ * Fetches all cards from our own backend API.
  */
 export async function fetchAllCards(): Promise<Card[]> {
-  const [deResponse, enResponse] = await Promise.all([
-    fetch(`${env.ygoproApi.baseUrl}/cardinfo.php?language=de`),
-    fetch(`${env.ygoproApi.baseUrl}/cardinfo.php`),
-  ]);
+  const response = await fetch(`${env.api.baseUrl}/cards`);
 
-  if (!deResponse.ok || !enResponse.ok) {
+  if (!response.ok) {
     throw new Error('Kartendaten konnten nicht geladen werden.');
   }
 
-  const deJson: CardApiResponse = await deResponse.json();
-  const enJson: CardApiResponse = await enResponse.json();
-
-  const enMap = new Map(enJson.data.map((c) => [c.id, c]));
-
-  const merged = deJson.data.map((deCard) => {
-    const enCard = enMap.get(deCard.id);
-    return {
-      ...deCard,
-      name_en: enCard?.name ?? deCard.name,
-      desc_en: enCard?.desc ?? deCard.desc,
-      type_en: enCard?.type ?? deCard.type,
-      race_en: enCard?.race ?? deCard.race,
-      card_sets: enCard?.card_sets ?? deCard.card_sets,
-    };
-  });
-
-  return filterDmGxCards(merged);
+  const dbCards: DbCard[] = await response.json();
+  return dbCards.map(dbCardToCard);
 }
 
 /**
- * Filters cards to only include DM/GX-era cards.
- * A card is included if:
- * 1. Its frameType is one we support (no synchro/xyz/pendulum/link)
- * 2. It appeared in at least one of our defined sets
+ * Returns the local image URL for a card.
  */
-function filterDmGxCards(cards: Card[]): Card[] {
-  return cards.filter((card) => {
-    if (!ALLOWED_FRAME_TYPES.has(card.frameType)) {
-      return false;
-    }
-
-    if (!card.card_sets || card.card_sets.length === 0) {
-      return false;
-    }
-
-    return card.card_sets.some((set) => ALL_SET_NAMES.has(set.set_name));
-  });
-}
-
-/**
- * Returns the image URL for a card.
- * Uses the small version for list views, full for detail views.
- */
-export function getCardImageUrl(cardId: number, size: 'full' | 'small' | 'cropped' = 'small'): string {
-  const base = env.ygoproApi.imageUrl;
-
-  switch (size) {
-    case 'small':
-      return `${base}_small/${cardId}.jpg`;
-    case 'cropped':
-      return `${base}_cropped/${cardId}.jpg`;
-    default:
-      return `${base}/${cardId}.jpg`;
-  }
+export function getCardImageUrl(cardId: number, _size: 'full' | 'small' | 'cropped' = 'small'): string {
+  return `/images/cards/${cardId}.jpg`;
 }

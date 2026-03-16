@@ -9,6 +9,7 @@ import { TitleScreen } from '../pages/TitleScreen';
 import { HomePage } from '../pages/HomePage';
 import { CardBrowserPage } from '../pages/CardBrowserPage';
 import { NewsDetailPage } from '../pages/NewsDetailPage';
+import { ShopPage } from '../pages/ShopPage';
 import { RoadmapDetailPage } from '../pages/RoadmapDetailPage';
 
 export const router = createBrowserRouter([
@@ -26,7 +27,7 @@ export const router = createBrowserRouter([
       { path: 'news/:id', element: <NewsDetailPage /> },
       { path: 'roadmap/:id', element: <RoadmapDetailPage /> },
       // { path: 'deckbuilder', element: <DeckbuilderPage /> },
-      // { path: 'shop', element: <ShopPage /> },
+      { path: 'shop', element: <ShopPage /> },
       // { path: 'duel', element: <DuelPage /> },
       // { path: 'story', element: <StoryPage /> },
       // { path: 'quests', element: <QuestsPage /> },

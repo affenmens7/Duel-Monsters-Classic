@@ -232,6 +232,23 @@
   margin-top: 16px;
 }
 
+.langBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #1a2820;
+  letter-spacing: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.langBtn:hover {
+  color: var(--orichalcos-light);
+}
+
 .version,
 .credit {
   font-family: var(--font-heading);

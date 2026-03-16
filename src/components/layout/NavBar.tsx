@@ -6,7 +6,7 @@ const NAV_ITEMS = [
   { to: '/app/home', labelKey: 'nav.home' },
   { to: '/app/cards', labelKey: 'nav.cards' },
   // { to: '/app/deckbuilder', labelKey: 'nav.deckbuilder' },
-  // { to: '/app/shop', labelKey: 'nav.shop' },
+  { to: '/app/shop', labelKey: 'nav.shop' },
   // { to: '/app/duel', labelKey: 'nav.duel' },
   // { to: '/app/story', labelKey: 'nav.story' },
   // { to: '/app/quests', labelKey: 'nav.quests' },

@@ -11,7 +11,7 @@ import styles from './TitleScreen.module.css';
 type FormMode = 'start' | 'login' | 'register';
 
 export function TitleScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { login, user } = useAuth();
   const { cards } = useCards();
@@ -180,6 +180,17 @@ export function TitleScreen() {
         </div>
 
         <div className={styles.footer}>
+          <button
+            className={styles.langBtn}
+            onClick={() => {
+              const next = i18n.language === 'de' ? 'en' : 'de';
+              i18n.changeLanguage(next);
+              localStorage.setItem('dmc-language', next);
+            }}
+          >
+            {i18n.language === 'de' ? 'EN' : 'DE'}
+          </button>
+          <span className={styles.separator}>.</span>
           <span className={styles.version}>v{APP_VERSION}</span>
           <span className={styles.separator}>.</span>
           <span className={styles.credit}>{t('title.credit')}</span>

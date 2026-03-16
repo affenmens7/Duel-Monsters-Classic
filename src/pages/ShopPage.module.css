@@ -1,0 +1,214 @@
+.page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+/* === Tabs === */
+
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--orichalcos-faint);
+  margin-bottom: 24px;
+}
+
+.tab {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 10px 20px;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab:hover {
+  color: var(--text-secondary);
+}
+
+.tabActive {
+  color: var(--orichalcos-light);
+  border-bottom-color: var(--orichalcos-dim);
+}
+
+/* === Error === */
+
+.error {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: #ef4444;
+  text-align: center;
+  padding: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.04);
+  margin-bottom: 16px;
+}
+
+/* === Product Grid === */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--orichalcos-faint);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: var(--orichalcos-subtle);
+}
+
+.cardLocked {
+  opacity: 0.4;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cardType {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.cardCount {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.cardName {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 0.5px;
+}
+
+.cardDesc {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.price {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.buyBtn {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border: 1px solid var(--orichalcos-subtle);
+  background: rgba(0, 200, 160, 0.05);
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.buyBtn:hover {
+  border-color: var(--orichalcos-dim);
+}
+
+.buyBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.unavailable {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  font-style: italic;
+}
+
+/* === Pack Opening Result === */
+
+.packResult {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.packResultText {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.packCards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.packCard {
+  aspect-ratio: 59 / 86;
+  overflow: hidden;
+}
+
+.packCard img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* === Responsive === */
+
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .packCards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

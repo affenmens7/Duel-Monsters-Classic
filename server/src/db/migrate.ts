@@ -21,6 +21,46 @@ const schema = `
     UNIQUE(username, tag)
   );
 
+  -- Card sets (booster packs, starter decks, etc.)
+  CREATE TABLE IF NOT EXISTS card_sets (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(128) UNIQUE NOT NULL,
+    code        VARCHAR(32),
+    type        VARCHAR(32) DEFAULT 'booster',
+    release_date VARCHAR(32),
+    image_path  VARCHAR(255)
+  );
+
+  -- Cards master table
+  CREATE TABLE IF NOT EXISTS cards (
+    id            INTEGER PRIMARY KEY,
+    name_de       VARCHAR(255),
+    name_en       VARCHAR(255) NOT NULL,
+    desc_de       TEXT,
+    desc_en       TEXT,
+    type_de       VARCHAR(64),
+    type_en       VARCHAR(64),
+    frame_type    VARCHAR(32),
+    atk           INTEGER,
+    def           INTEGER,
+    level         INTEGER,
+    race_de       VARCHAR(64),
+    race_en       VARCHAR(64),
+    attribute     VARCHAR(16),
+    archetype     VARCHAR(128),
+    image_path    VARCHAR(255)
+  );
+
+  -- Card-to-set mapping (which cards are in which set)
+  CREATE TABLE IF NOT EXISTS card_set_entries (
+    id          SERIAL PRIMARY KEY,
+    card_id     INTEGER REFERENCES cards(id) ON DELETE CASCADE,
+    set_name    VARCHAR(128) REFERENCES card_sets(name) ON DELETE CASCADE,
+    set_code    VARCHAR(32),
+    rarity      VARCHAR(64),
+    rarity_code VARCHAR(16)
+  );
+
   -- User card collection
   CREATE TABLE IF NOT EXISTS user_cards (
     id        SERIAL PRIMARY KEY,
