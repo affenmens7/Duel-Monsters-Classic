@@ -12,6 +12,7 @@ const schema = `
     username      VARCHAR(32) NOT NULL,
     tag           VARCHAR(4) NOT NULL,
     email         VARCHAR(255) UNIQUE NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
     password_hash VARCHAR(255) NOT NULL,
     role          VARCHAR(16) DEFAULT 'user',
     dp            INTEGER DEFAULT 1250,
@@ -44,6 +45,17 @@ const schema = `
     deck_id   INTEGER REFERENCES decks(id) ON DELETE CASCADE,
     card_id   INTEGER NOT NULL,
     quantity  INTEGER DEFAULT 1
+  );
+
+  -- Verification and reset codes
+  CREATE TABLE IF NOT EXISTS email_codes (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    code        VARCHAR(6) NOT NULL,
+    type        VARCHAR(16) NOT NULL,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    used        BOOLEAN DEFAULT FALSE,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
   );
 
   -- User stats
