@@ -110,27 +110,20 @@ shopRouter.get('/collection', async (req, res) => {
 });
 
 /**
- * Opens a booster pack — returns random card IDs from the given set.
- * Uses the YGOPRODeck API to get cards from the set, then picks randomly.
+ * Opens a booster pack — returns random card IDs from our own database.
  */
 async function openBoosterPack(setName: string, count: number): Promise<number[]> {
-  // Fetch cards from this set via API
-  const response = await fetch(
-    `https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=${encodeURIComponent(setName)}`
+  const result = await pool.query(
+    'SELECT card_id FROM card_set_entries WHERE set_name = $1',
+    [setName]
   );
 
-  if (!response.ok) {
-    throw new Error('Kartendaten konnten nicht geladen werden');
-  }
-
-  const data = await response.json();
-  const allCards: number[] = data.data.map((c: { id: number }) => c.id);
+  const allCards = result.rows.map((r) => r.card_id as number);
 
   if (allCards.length === 0) {
     throw new Error('Keine Karten in diesem Set gefunden');
   }
 
-  // Pick random cards
   const picked: number[] = [];
   for (let i = 0; i < count; i++) {
     const idx = Math.floor(Math.random() * allCards.length);
@@ -141,19 +134,15 @@ async function openBoosterPack(setName: string, count: number): Promise<number[]
 }
 
 /**
- * Returns all card IDs from a starter deck set.
+ * Returns all card IDs from a starter deck set (from our own database).
  */
 async function getStarterDeckCards(setName: string): Promise<number[]> {
-  const response = await fetch(
-    `https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=${encodeURIComponent(setName)}`
+  const result = await pool.query(
+    'SELECT card_id FROM card_set_entries WHERE set_name = $1',
+    [setName]
   );
 
-  if (!response.ok) {
-    throw new Error('Kartendaten konnten nicht geladen werden');
-  }
-
-  const data = await response.json();
-  return data.data.map((c: { id: number }) => c.id);
+  return result.rows.map((r) => r.card_id as number);
 }
 
 /**
