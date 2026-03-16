@@ -1,0 +1,31 @@
+.subnav {
+  display: flex;
+  gap: 0;
+  padding: 0 var(--spacing-lg);
+  background: rgba(4, 6, 8, 0.9);
+  border-bottom: 1px solid var(--orichalcos-faint);
+  overflow-x: auto;
+}
+
+.item {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 12px 22px;
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.item:hover {
+  color: #60c0a0;
+}
+
+.active {
+  color: var(--orichalcos-light);
+  border-bottom-color: var(--orichalcos-dim);
+}

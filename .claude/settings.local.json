@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Read(//home/michael/Projekte/Sonstiges/neos-ts-analysis/**)",
+      "Read(//home/michael/Projekte/Sonstiges/neos-ts-analysis/src/**)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:neos.moecube.com)",
+      "WebFetch(domain:www.neos.moe)",
+      "WebFetch(domain:hearthstone.fandom.com)",
+      "WebFetch(domain:www.schemecolor.com)",
+      "WebFetch(domain:hearthstone.wiki.gg)",
+      "WebFetch(domain:codepen.io)",
+      "WebFetch(domain:www.gamersexperience.com)",
+      "WebFetch(domain:warcraft.wiki.gg)",
+      "WebFetch(domain:toucharcade.com)",
+      "WebFetch(domain:blizzardwatch.com)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

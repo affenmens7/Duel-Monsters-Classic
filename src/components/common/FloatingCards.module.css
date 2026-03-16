@@ -1,0 +1,36 @@
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.card {
+  position: absolute;
+  left: -80px;
+  animation: floatRight linear infinite;
+}
+
+.card img {
+  width: 100%;
+  aspect-ratio: 59 / 86;
+  object-fit: cover;
+  filter: grayscale(0.8) brightness(0.6);
+}
+
+.owned img {
+  filter: grayscale(0.2) brightness(0.9) sepia(0.15);
+}
+
+@keyframes floatRight {
+  0% {
+    transform: translateX(0) rotate(-1deg);
+  }
+  100% {
+    transform: translateX(110vw) rotate(1deg);
+  }
+}

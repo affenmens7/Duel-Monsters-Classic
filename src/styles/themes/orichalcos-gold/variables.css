@@ -1,0 +1,54 @@
+/* Theme: Orichalcos Gold
+   Orichalcos teal + Millennium gold on dark background */
+
+[data-theme='orichalcos-gold'] {
+  /* Accent — Orichalcos teal */
+  --orichalcos: rgba(0, 200, 160, 1);
+  --orichalcos-light: #00dca8;
+  --orichalcos-mid: #00c898;
+  --orichalcos-dim: rgba(0, 200, 160, 0.4);
+  --orichalcos-subtle: rgba(0, 200, 160, 0.15);
+  --orichalcos-faint: rgba(0, 200, 160, 0.06);
+  --orichalcos-glow: rgba(0, 200, 160, 0.04);
+
+  /* Accent — Millennium gold */
+  --gold: #c8a830;
+  --gold-light: #d4b030;
+  --gold-dim: rgba(180, 160, 60, 0.3);
+  --gold-subtle: rgba(180, 160, 60, 0.1);
+  --gold-faint: rgba(180, 160, 60, 0.03);
+
+  /* Backgrounds */
+  --bg-primary: #06080a;
+  --bg-elevated: rgba(6, 8, 10, 0.97);
+  --bg-card: rgba(8, 12, 14, 0.6);
+  --bg-input: rgba(6, 8, 10, 0.9);
+  --bg-deep: rgba(4, 6, 8, 0.9);
+
+  /* Text */
+  --text-primary: #b8c8b8;
+  --text-secondary: #80a090;
+  --text-muted: #2a4038;
+  --text-heading: var(--orichalcos-light);
+  --text-accent: var(--gold);
+
+  /* Card type colors */
+  --color-monster-normal: #c8a86e;
+  --color-monster-effect: #c06030;
+  --color-monster-ritual: #4a6ab8;
+  --color-monster-fusion: #7a4ab8;
+  --color-spell: #3a9a5a;
+  --color-trap: #b03060;
+
+  /* Functional */
+  --color-atk: #ef6b4a;
+  --color-def: #5ba8d9;
+  --color-error: #ef4444;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 35px rgba(0, 0, 0, 0.5);
+  --glow-orichalcos: 0 0 20px var(--orichalcos-glow);
+  --glow-gold: 0 0 8px rgba(180, 160, 60, 0.02);
+}

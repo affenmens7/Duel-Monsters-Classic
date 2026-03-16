@@ -1,0 +1,209 @@
+.roadmap {
+  position: relative;
+  padding: 20px 0;
+}
+
+/* Center line — starts at first dot, not from top */
+.roadmap::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 44px;
+  bottom: 16px;
+  width: 1px;
+  background: var(--orichalcos-faint);
+  transform: translateX(-50%);
+}
+
+/* === Phase node === */
+
+.phase {
+  position: relative;
+  display: flex;
+  width: 100%;
+  padding: 16px 0;
+}
+
+.phaseLeft {
+  justify-content: flex-start;
+  padding-right: calc(50% + 24px);
+}
+
+.phaseRight {
+  justify-content: flex-end;
+  padding-left: calc(50% + 24px);
+}
+
+/* === Dot on center line === */
+
+.dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--orichalcos-faint);
+  background: var(--bg-primary);
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.done .dot {
+  background: var(--orichalcos-dim);
+  border-color: var(--orichalcos-dim);
+}
+
+.active .dot {
+  border-color: var(--orichalcos-light);
+}
+
+/* === Card === */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--orichalcos-faint);
+  padding: 16px 20px;
+  max-width: 380px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: var(--orichalcos-subtle);
+}
+
+.active .card {
+  border-color: var(--orichalcos-subtle);
+}
+
+.topRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.phaseLabel {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.active .phaseLabel {
+  color: var(--orichalcos-light);
+}
+
+.badge {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-muted);
+}
+
+.done .badge {
+  color: var(--orichalcos-dim);
+}
+
+.active .badge {
+  color: var(--orichalcos-light);
+  border-color: var(--orichalcos-subtle);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.done .title {
+  color: var(--text-muted);
+}
+
+.active .title {
+  color: var(--orichalcos-light);
+}
+
+.desc {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.features li {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding-left: 12px;
+  position: relative;
+}
+
+.features li::before {
+  content: '-';
+  position: absolute;
+  left: 0;
+  color: var(--orichalcos-faint);
+}
+
+.done .features li::before {
+  content: '+';
+  color: var(--orichalcos-dim);
+}
+
+.active .features li::before {
+  color: var(--orichalcos-light);
+}
+
+.moreLink {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 1px;
+  margin-top: 6px;
+  align-self: flex-end;
+  transition: color 0.2s;
+}
+
+.moreLink:hover {
+  color: var(--orichalcos-light);
+}
+
+/* === Responsive === */
+
+@media (max-width: 700px) {
+  .roadmap::before {
+    left: 20px;
+  }
+
+  .phaseLeft,
+  .phaseRight {
+    justify-content: flex-start;
+    padding-left: 50px;
+    padding-right: 0;
+  }
+
+  .dot {
+    left: 20px;
+  }
+}

@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: dmc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dmc}
+      POSTGRES_USER: ${POSTGRES_USER:-dmc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dmc_dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - dmc_pgdata:/var/lib/postgresql/data
+
+volumes:
+  dmc_pgdata:

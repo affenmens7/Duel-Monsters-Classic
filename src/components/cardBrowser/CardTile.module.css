@@ -1,0 +1,74 @@
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid rgba(0, 200, 160, 0.04);
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+
+.tile:hover {
+  transform: translateY(-5px);
+  border-color: var(--orichalcos-subtle);
+  box-shadow:
+    var(--shadow-lg),
+    var(--glow-orichalcos),
+    var(--glow-gold);
+}
+
+/* Card type glow on hover */
+.frameNormal:hover { border-color: rgba(200, 168, 110, 0.2); box-shadow: var(--shadow-lg), 0 0 16px rgba(200, 168, 110, 0.05); }
+.frameEffect:hover { border-color: rgba(192, 96, 48, 0.2); box-shadow: var(--shadow-lg), 0 0 16px rgba(192, 96, 48, 0.05); }
+.frameRitual:hover { border-color: rgba(74, 106, 184, 0.2); box-shadow: var(--shadow-lg), 0 0 16px rgba(74, 106, 184, 0.05); }
+.frameFusion:hover { border-color: rgba(122, 74, 184, 0.2); box-shadow: var(--shadow-lg), 0 0 16px rgba(122, 74, 184, 0.05); }
+.frameSpell:hover { border-color: rgba(58, 154, 90, 0.2); box-shadow: var(--shadow-lg), 0 0 16px rgba(58, 154, 90, 0.05); }
+.frameTrap:hover { border-color: rgba(176, 48, 96, 0.2); box-shadow: var(--shadow-lg), 0 0 16px rgba(176, 48, 96, 0.05); }
+
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 59 / 86;
+  overflow: hidden;
+  background: var(--bg-deep);
+  border: 1px solid rgba(0, 200, 160, 0.02);
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity var(--transition-normal);
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(6, 8, 10, 0.8) 25%,
+    rgba(8, 12, 14, 0.6) 50%,
+    rgba(6, 8, 10, 0.8) 75%
+  );
+  background-size: 200% 200%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 200%; }
+  100% { background-position: -200% -200%; }
+}
+
+.name {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #2a5848;
+  text-align: center;
+  line-height: 1.2;
+  max-height: 2.4em;
+  overflow: hidden;
+  width: 100%;
+}

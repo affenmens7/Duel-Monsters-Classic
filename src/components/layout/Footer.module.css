@@ -1,0 +1,11 @@
+.footer {
+  padding: 10px var(--spacing-lg);
+  border-top: 1px solid var(--orichalcos-faint);
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
