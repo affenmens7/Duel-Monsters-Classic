@@ -32,11 +32,11 @@ Beide Decks werden im Shop fuer DP erhaeltlich sein. Verdiene DP durch Duelle un
   {
     id: 'launch',
     date: '16.03.2026',
-    title: 'Willkommen bei Duell Monsters Classic',
+    title: 'Willkommen bei Duel Monsters Classic',
     summary: 'Das Projekt ist gestartet. Die ersten Karten aus der DM-Aera sind verfuegbar. Erkunde den Kartenbrowser und stelle dein erstes Deck zusammen.',
-    content: `Duell Monsters Classic ist offiziell gestartet!
+    content: `Duel Monsters Classic ist offiziell gestartet!
 
-Was ist Duell Monsters Classic?
+Was ist Duel Monsters Classic?
 Ein Fan-Projekt das die goldene Aera von Yu-Gi-Oh! wiederaufleben laesst. Von den ersten Starter Decks bis hin zu den Elementarhelden — erlebe die Entwicklung des Kartenspiels wie im Anime.
 
 Was ist bereits verfuegbar?

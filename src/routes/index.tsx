@@ -10,12 +10,18 @@ import { HomePage } from '../pages/HomePage';
 import { CardBrowserPage } from '../pages/CardBrowserPage';
 import { NewsDetailPage } from '../pages/NewsDetailPage';
 import { ShopPage } from '../pages/ShopPage';
+import { DeckbuilderPage } from '../pages/DeckbuilderPage';
 import { RoadmapDetailPage } from '../pages/RoadmapDetailPage';
+import { StarterChoicePage } from '../pages/StarterChoicePage';
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <TitleScreen />,
+  },
+  {
+    path: '/choose-starter',
+    element: <StarterChoicePage onComplete={() => { window.location.href = '/app'; }} />,
   },
   {
     path: '/app',
@@ -26,7 +32,7 @@ export const router = createBrowserRouter([
       { path: 'cards', element: <CardBrowserPage /> },
       { path: 'news/:id', element: <NewsDetailPage /> },
       { path: 'roadmap/:id', element: <RoadmapDetailPage /> },
-      // { path: 'deckbuilder', element: <DeckbuilderPage /> },
+      { path: 'deckbuilder', element: <DeckbuilderPage /> },
       { path: 'shop', element: <ShopPage /> },
       // { path: 'duel', element: <DuelPage /> },
       // { path: 'story', element: <StoryPage /> },

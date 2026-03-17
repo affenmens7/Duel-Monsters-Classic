@@ -29,5 +29,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# Downloaded card images (large, fetched separately)
+# Downloaded images (large, fetched separately)
 public/images/cards/
+public/images/sets/

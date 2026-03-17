@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../store/AuthContext';
-import { useCards } from '../hooks/useCards';
+import { useCards } from '../store/CardContext';
 import { FloatingCards } from '../components/common/FloatingCards';
 import { loginUser, registerUser } from '../services/authApi';
 import { APP_VERSION } from '../config/version';
@@ -24,9 +24,10 @@ export function TitleScreen() {
   const [loading, setLoading] = useState(false);
   const [fading, setFading] = useState(false);
 
-  function transitionToApp() {
+  function transitionToApp(userData?: { starterChosen: string | null }) {
     setFading(true);
-    setTimeout(() => navigate('/app'), 600);
+    const target = userData?.starterChosen ? '/app' : '/choose-starter';
+    setTimeout(() => navigate(target), 600);
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -37,7 +38,7 @@ export function TitleScreen() {
     try {
       const result = await loginUser(username, password);
       login(result.token, result.user);
-      transitionToApp();
+      transitionToApp(result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login fehlgeschlagen');
     } finally {
@@ -53,7 +54,7 @@ export function TitleScreen() {
     try {
       const result = await registerUser(username, email, password);
       login(result.token, result.user);
-      transitionToApp();
+      transitionToApp(result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registrierung fehlgeschlagen');
     } finally {

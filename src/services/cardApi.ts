@@ -1,10 +1,13 @@
 /**
  * Card API service — fetches card data from our own backend.
- * Cards are stored in our PostgreSQL database, images served locally.
+ * Cards are cached in localStorage to avoid reloading on every page visit.
  */
 
 import { env } from '../config/env';
 import type { Card } from '../types/card';
+
+const CACHE_KEY = 'dmc-cards-v2';
+const CACHE_MAX_AGE = 1000 * 60 * 60; // 1 hour
 
 interface DbCard {
   id: number;
@@ -23,6 +26,12 @@ interface DbCard {
   attribute: string | null;
   archetype: string | null;
   image_path: string;
+  available?: boolean;
+}
+
+interface CacheEntry {
+  timestamp: number;
+  cards: Card[];
 }
 
 function dbCardToCard(db: DbCard): Card {
@@ -42,6 +51,7 @@ function dbCardToCard(db: DbCard): Card {
     race_en: db.race_en,
     attribute: db.attribute as Card['attribute'],
     archetype: db.archetype ?? undefined,
+    available: db.available ?? true,
     card_images: [{
       id: db.id,
       image_url: `/images/cards/${db.id}.jpg`,
@@ -51,18 +61,57 @@ function dbCardToCard(db: DbCard): Card {
   };
 }
 
+function getCache(): Card[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+
+    const entry: CacheEntry = JSON.parse(raw);
+    const age = Date.now() - entry.timestamp;
+
+    if (age > CACHE_MAX_AGE) return null;
+
+    return entry.cards;
+  } catch {
+    return null;
+  }
+}
+
+function setCache(cards: Card[]) {
+  try {
+    const entry: CacheEntry = { timestamp: Date.now(), cards };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+  } catch {
+    // localStorage full or unavailable — ignore
+  }
+}
+
 /**
- * Fetches all cards from our own backend API.
+ * Fetches all cards — from cache if fresh, otherwise from backend.
  */
 export async function fetchAllCards(): Promise<Card[]> {
-  const response = await fetch(`${env.api.baseUrl}/cards`);
+  const cached = getCache();
+  if (cached) return cached;
+
+  const response = await fetch(`${env.api.baseUrl}/cards/browse`);
 
   if (!response.ok) {
     throw new Error('Kartendaten konnten nicht geladen werden.');
   }
 
   const dbCards: DbCard[] = await response.json();
-  return dbCards.map(dbCardToCard);
+  const cards = dbCards.map(dbCardToCard);
+
+  setCache(cards);
+  return cards;
+}
+
+/**
+ * Forces a fresh reload from the backend (ignores cache).
+ */
+export async function refreshCards(): Promise<Card[]> {
+  localStorage.removeItem(CACHE_KEY);
+  return fetchAllCards();
 }
 
 /**

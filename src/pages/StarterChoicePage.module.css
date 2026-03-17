@@ -1,0 +1,126 @@
+.page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 40px 20px;
+}
+
+.content {
+  text-align: center;
+  max-width: 900px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 48px;
+}
+
+.decks {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-content: center;
+}
+
+.vs {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  letter-spacing: 4px;
+  color: var(--gold-dim);
+  flex-shrink: 0;
+}
+
+.deckOption {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  padding: 32px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 360px;
+  text-align: center;
+}
+
+.deckOption:hover {
+  border-color: var(--orichalcos-dim);
+  transform: translateY(-4px);
+}
+
+.deckOption:disabled {
+  cursor: wait;
+}
+
+.deckSelected {
+  border-color: var(--orichalcos-light);
+  box-shadow: 0 0 30px rgba(0, 200, 160, 0.15);
+}
+
+.deckImageWrap {
+  width: 140px;
+  height: 200px;
+  margin: 0 auto 20px;
+  overflow: hidden;
+}
+
+.deckImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.deckName {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.deckDesc {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.deckHighlights {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.deckHighlights span {
+  font-size: 0.65rem;
+  padding: 3px 10px;
+  border: 1px solid var(--border-subtle);
+  color: var(--orichalcos-light);
+  letter-spacing: 0.5px;
+}
+
+.choosing {
+  margin-top: 32px;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orichalcos-light);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

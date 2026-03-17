@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../store/AuthContext';
 import { Modal } from '../common/Modal';
@@ -13,11 +14,10 @@ export function Header() {
   return (
     <>
       <header className={styles.header}>
-        <div className={styles.left}>
-          <span className={styles.logoIcon}>DMC</span>
-          <span className={styles.logoText}>Duell Monsters</span>
+        <Link to="/app/home" className={styles.left}>
+          <span className={styles.logoText}>Duel Monsters</span>
           <span className={styles.logoSub}>Classic</span>
-        </div>
+        </Link>
         <div className={styles.right}>
           <div className={styles.dpBadge}>{user?.dp ?? 0} DP</div>
           <button className={styles.userBtn} onClick={() => setSettingsOpen(true)}>

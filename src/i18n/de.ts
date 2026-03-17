@@ -5,7 +5,7 @@
 export const de = {
   // Title Screen
   title: {
-    gameName: 'Duell Monsters',
+    gameName: 'Duel Monsters',
     subtitle: 'Classic',
     tagline: 'DM — GX Era',
     flavor: 'Die Schatten erwachen. Das Schicksal der Duellanten liegt in deinen Händen.',
@@ -23,8 +23,8 @@ export const de = {
   nav: {
     home: 'Home',
     cards: 'Karten',
-    deckbuilder: 'Deckbuilder',
-    shop: 'Shop',
+    deckbuilder: 'Deck erstellen',
+    shop: 'Kartenladen',
     duel: 'Duell',
     story: 'Story',
     quests: 'Quests',

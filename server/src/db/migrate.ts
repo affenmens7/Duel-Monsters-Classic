@@ -27,6 +27,8 @@ const schema = `
     name        VARCHAR(128) UNIQUE NOT NULL,
     code        VARCHAR(32),
     type        VARCHAR(32) DEFAULT 'booster',
+    wave        INTEGER DEFAULT 0,
+    active      BOOLEAN DEFAULT FALSE,
     release_date VARCHAR(32),
     image_path  VARCHAR(255)
   );
@@ -103,7 +105,8 @@ const schema = `
     user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     duels_played  INTEGER DEFAULT 0,
     duels_won     INTEGER DEFAULT 0,
-    story_chapter VARCHAR(32) DEFAULT 'chapter-1'
+    story_chapter VARCHAR(32) DEFAULT 'chapter-1',
+    starter_chosen VARCHAR(32) DEFAULT NULL
   );
 `;
 

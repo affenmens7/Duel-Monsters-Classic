@@ -13,6 +13,7 @@ export interface User {
   displayName: string;
   role: string;
   dp: number;
+  starterChosen: string | null;
 }
 
 interface AuthContextValue {
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           displayName: `${data.username}#${data.tag}`,
           role: data.role,
           dp: data.dp,
+          starterChosen: data.starter_chosen ?? null,
         });
       })
       .catch(() => {

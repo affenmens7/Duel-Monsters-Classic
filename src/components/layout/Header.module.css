@@ -10,12 +10,8 @@
 .left {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.logoIcon {
-  font-size: 1.2rem;
-  color: rgba(200, 180, 60, 0.5);
+  gap: 8px;
+  text-decoration: none;
 }
 
 .logoText {

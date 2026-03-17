@@ -26,7 +26,7 @@ function emailTemplate(content: string, lang: Lang): string {
   const footerText = lang === 'de'
     ? 'Diese E-Mail wurde automatisch versendet.'
     : 'This email was sent automatically.';
-  const projectText = 'Duell Monsters Classic &mdash; Ein Fan-Projekt';
+  const projectText = 'Duel Monsters Classic &mdash; Ein Fan-Projekt';
   const greeting = lang === 'de' ? 'Viele Gr&uuml;&szlig;e,' : 'Best regards,';
 
   return `
@@ -46,7 +46,7 @@ function emailTemplate(content: string, lang: Lang): string {
               <tr>
                 <td align="center">
                   <span style="font-family:Georgia,serif; font-size:12px; color:#c8a830; letter-spacing:4px;">DMC</span><br>
-                  <span style="font-family:Georgia,serif; font-size:22px; font-weight:bold; color:#00dca8; letter-spacing:2px;">Duell Monsters Classic</span><br>
+                  <span style="font-family:Georgia,serif; font-size:22px; font-weight:bold; color:#00dca8; letter-spacing:2px;">Duel Monsters Classic</span><br>
                   <span style="font-family:Georgia,serif; font-size:10px; color:#1a3028; letter-spacing:3px;">DM &mdash; GX ERA</span>
                 </td>
               </tr>
@@ -97,7 +97,7 @@ function emailTemplate(content: string, lang: Lang): string {
 
 export async function sendMail({ to, subject, html }: SendMailOptions) {
   await transporter.sendMail({
-    from: `"Duell Monsters Classic" <${env.smtp.user}>`,
+    from: `"Duel Monsters Classic" <${env.smtp.user}>`,
     to,
     subject,
     html,
@@ -154,8 +154,8 @@ export async function sendVerificationEmail(to: string, username: string, code: 
   `;
 
   const subject = lang === 'de'
-    ? 'Dein Verifizierungslink - Duell Monsters Classic'
-    : 'Your verification link - Duell Monsters Classic';
+    ? 'Dein Verifizierungslink - Duel Monsters Classic'
+    : 'Your verification link - Duel Monsters Classic';
 
   await sendMail({ to, subject, html: emailTemplate(content, lang) });
 }
@@ -202,15 +202,15 @@ export async function sendPasswordResetEmail(to: string, username: string, code:
   `;
 
   const subject = lang === 'de'
-    ? 'Duell Monsters Classic \u2014 Passwort zur\u00fccksetzen'
-    : 'Duell Monsters Classic \u2014 Reset Password';
+    ? 'Duel Monsters Classic \u2014 Passwort zur\u00fccksetzen'
+    : 'Duel Monsters Classic \u2014 Reset Password';
 
   await sendMail({ to, subject, html: emailTemplate(content, lang) });
 }
 
 export async function sendWelcomeEmail(to: string, username: string, displayName: string, lang: Lang = 'de') {
   const content = lang === 'de' ? `
-    <span style="font-size:18px; color:#00dca8; font-weight:bold;">Willkommen bei Duell Monsters Classic!</span>
+    <span style="font-size:18px; color:#00dca8; font-weight:bold;">Willkommen bei Duel Monsters Classic!</span>
     <br><br>
     Hallo ${username}, dein Account wurde erfolgreich erstellt.
     <br><br>
@@ -233,7 +233,7 @@ export async function sendWelcomeEmail(to: string, username: string, displayName
       bei f&uuml;r Updates und Mitspieler.
     </span>
   ` : `
-    <span style="font-size:18px; color:#00dca8; font-weight:bold;">Welcome to Duell Monsters Classic!</span>
+    <span style="font-size:18px; color:#00dca8; font-weight:bold;">Welcome to Duel Monsters Classic!</span>
     <br><br>
     Hello ${username}, your account has been created successfully.
     <br><br>
@@ -258,8 +258,8 @@ export async function sendWelcomeEmail(to: string, username: string, displayName
   `;
 
   const subject = lang === 'de'
-    ? 'Willkommen bei Duell Monsters Classic!'
-    : 'Welcome to Duell Monsters Classic!';
+    ? 'Willkommen bei Duel Monsters Classic!'
+    : 'Welcome to Duel Monsters Classic!';
 
   await sendMail({ to, subject, html: emailTemplate(content, lang) });
 }

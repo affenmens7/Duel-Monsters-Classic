@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Card } from '../types/card';
-import { useCards, useCardSearch } from '../hooks/useCards';
+import { useCards } from '../store/CardContext';
+import { useCardSearch } from '../hooks/useCards';
 import { SearchBar } from '../components/cardBrowser/SearchBar';
 import { CardGrid } from '../components/cardBrowser/CardGrid';
 import { CardDetail } from '../components/cardBrowser/CardDetail';
@@ -10,9 +11,10 @@ export function CardBrowserPage() {
   const { cards, loading, error } = useCards();
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
-  const { filteredCards } = useCardSearch(cards, query, typeFilter);
+  const { filteredCards } = useCardSearch(cards, { query, typeFilter, availabilityFilter });
 
   if (error) {
     return (
@@ -33,6 +35,8 @@ export function CardBrowserPage() {
         onQueryChange={setQuery}
         typeFilter={typeFilter}
         onTypeFilterChange={setTypeFilter}
+        availabilityFilter={availabilityFilter}
+        onAvailabilityFilterChange={setAvailabilityFilter}
         resultCount={filteredCards.length}
       />
 

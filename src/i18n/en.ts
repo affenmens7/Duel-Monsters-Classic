@@ -23,7 +23,7 @@ export const en = {
   nav: {
     home: 'Home',
     cards: 'Cards',
-    deckbuilder: 'Deck Builder',
+    deckbuilder: 'Build Deck',
     shop: 'Shop',
     duel: 'Duel',
     story: 'Story',

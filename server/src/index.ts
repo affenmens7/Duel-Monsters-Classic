@@ -11,6 +11,7 @@ import { authRouter } from './routes/auth.js';
 import { userRouter } from './routes/user.js';
 import { shopRouter } from './routes/shop.js';
 import { cardsRouter } from './routes/cards.js';
+import { decksRouter } from './routes/decks.js';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/shop', shopRouter);
 app.use('/api/cards', cardsRouter);
+app.use('/api/decks', decksRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

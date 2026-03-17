@@ -91,6 +91,7 @@ export interface Card {
   archetype?: string;
   card_sets?: CardSet[];
   card_images: CardImage[];
+  available?: boolean;
 }
 
 export interface CardApiResponse {

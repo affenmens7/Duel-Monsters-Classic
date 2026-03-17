@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className={styles.footer}>
       <span>v{APP_VERSION}</span>
-      <span>Duell Monsters Classic</span>
+      <span>Duel Monsters Classic</span>
       <span>Ein Fan-Projekt</span>
     </footer>
   );

@@ -29,7 +29,7 @@ export function CardTile({ card, onClick }: CardTileProps) {
 
   return (
     <button
-      className={`${styles.tile} ${getFrameClass(card.frameType)}`}
+      className={`${styles.tile} ${getFrameClass(card.frameType)} ${card.available === false ? styles.locked : ''}`}
       onClick={onClick}
       title={loc.name}
     >

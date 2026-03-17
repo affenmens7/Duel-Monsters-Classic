@@ -10,6 +10,15 @@
   transition: all 0.35s ease;
 }
 
+.locked {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+
+.locked:hover {
+  opacity: 0.5;
+}
+
 .tile:hover {
   transform: translateY(-5px);
   border-color: var(--orichalcos-subtle);
@@ -63,12 +72,13 @@
 
 .name {
   font-family: var(--font-heading);
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 600;
-  color: #2a5848;
+  color: var(--text-secondary);
   text-align: center;
-  line-height: 1.2;
-  max-height: 2.4em;
+  line-height: 1.3;
+  max-height: 2.6em;
   overflow: hidden;
   width: 100%;
+  word-break: break-word;
 }

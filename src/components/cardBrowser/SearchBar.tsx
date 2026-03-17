@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import styles from './SearchBar.module.css';
 
 interface SearchBarProps {
@@ -5,32 +6,28 @@ interface SearchBarProps {
   onQueryChange: (value: string) => void;
   typeFilter: string;
   onTypeFilterChange: (value: string) => void;
+  availabilityFilter: string;
+  onAvailabilityFilterChange: (value: string) => void;
   resultCount: number;
 }
-
-const TYPE_OPTIONS = [
-  { value: 'all', label: 'Alle Typen' },
-  { value: 'normal', label: 'Normal Monster' },
-  { value: 'effect', label: 'Effekt Monster' },
-  { value: 'ritual', label: 'Ritual Monster' },
-  { value: 'fusion', label: 'Fusion Monster' },
-  { value: 'spell', label: 'Zauberkarten' },
-  { value: 'trap', label: 'Fallenkarten' },
-];
 
 export function SearchBar({
   query,
   onQueryChange,
   typeFilter,
   onTypeFilterChange,
+  availabilityFilter,
+  onAvailabilityFilterChange,
   resultCount,
 }: SearchBarProps) {
+  const { t } = useTranslation();
+
   return (
     <div className={styles.searchBar}>
       <input
         type="text"
         className={styles.searchInput}
-        placeholder="Karte suchen... (z.B. Blue-Eyes, Dark Magician)"
+        placeholder={t('cards.searchPlaceholder')}
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
       />
@@ -40,15 +37,27 @@ export function SearchBar({
         value={typeFilter}
         onChange={(e) => onTypeFilterChange(e.target.value)}
       >
-        {TYPE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        <option value="all">{t('cards.allTypes')}</option>
+        <option value="normal">{t('cards.normalMonster')}</option>
+        <option value="effect">{t('cards.effectMonster')}</option>
+        <option value="ritual">{t('cards.ritualMonster')}</option>
+        <option value="fusion">{t('cards.fusionMonster')}</option>
+        <option value="spell">{t('cards.spellCards')}</option>
+        <option value="trap">{t('cards.trapCards')}</option>
+      </select>
+
+      <select
+        className={styles.typeSelect}
+        value={availabilityFilter}
+        onChange={(e) => onAvailabilityFilterChange(e.target.value)}
+      >
+        <option value="all">Alle Karten</option>
+        <option value="available">Verfuegbar</option>
+        <option value="locked">Noch gesperrt</option>
       </select>
 
       <span className={styles.resultCount}>
-        {resultCount} Karten
+        {resultCount} {t('cards.cardCount', { count: resultCount }).split(' ').slice(1).join(' ')}
       </span>
     </div>
   );

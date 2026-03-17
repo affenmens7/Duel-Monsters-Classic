@@ -1,5 +1,6 @@
 /**
  * Card routes — serves card data from our own database.
+ * By default only returns cards from active sets.
  */
 
 import { Router } from 'express';
@@ -7,21 +8,41 @@ import { pool } from '../config/db.js';
 
 export const cardsRouter = Router();
 
+/**
+ * GET /api/cards
+ * Returns cards from active sets only (unless ?all=true for admin).
+ * Optional: ?set=SetName&type=normal
+ */
 cardsRouter.get('/', async (req, res) => {
   try {
-    const { set, type } = req.query;
+    const { set, type, all } = req.query;
 
-    let query = 'SELECT * FROM cards';
+    // Subquery to check if a card belongs to any active set
+    let query = `SELECT DISTINCT c.*,
+      EXISTS(
+        SELECT 1 FROM card_set_entries cse2
+        JOIN card_sets cs2 ON cs2.name = cse2.set_name
+        WHERE cse2.card_id = c.id AND cs2.active = TRUE
+      ) as available
+      FROM cards c
+      JOIN card_set_entries cse ON cse.card_id = c.id
+      JOIN card_sets cs ON cs.name = cse.set_name`;
+
     const params: string[] = [];
     const conditions: string[] = [];
 
+    // Only active sets unless ?all=true
+    if (all !== 'true') {
+      conditions.push('cs.active = TRUE');
+    }
+
     if (type && typeof type === 'string') {
-      conditions.push(`frame_type = $${params.length + 1}`);
+      conditions.push(`c.frame_type = $${params.length + 1}`);
       params.push(type);
     }
 
     if (set && typeof set === 'string') {
-      conditions.push(`id IN (SELECT card_id FROM card_set_entries WHERE set_name = $${params.length + 1})`);
+      conditions.push(`cse.set_name = $${params.length + 1}`);
       params.push(set);
     }
 
@@ -29,7 +50,7 @@ cardsRouter.get('/', async (req, res) => {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    query += ' ORDER BY name_en';
+    query += ' ORDER BY c.name_en';
 
     const result = await pool.query(query, params);
     res.json(result.rows);
@@ -38,15 +59,42 @@ cardsRouter.get('/', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/cards/browse
+ * Returns ALL cards with availability flag — for the card browser.
+ * Available cards first, then unavailable. Includes set info.
+ */
+cardsRouter.get('/browse', async (_req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT c.*,
+        EXISTS(
+          SELECT 1 FROM card_set_entries cse2
+          JOIN card_sets cs2 ON cs2.name = cse2.set_name
+          WHERE cse2.card_id = c.id AND cs2.active = TRUE
+        ) as available
+      FROM cards c
+      ORDER BY available DESC, c.name_en
+    `);
+    res.json(result.rows);
+  } catch {
+    res.status(500).json({ error: 'Kartendaten konnten nicht geladen werden' });
+  }
+});
+
+/**
+ * GET /api/cards/sets/all
+ * Returns all sets with card count, wave, active status and image.
+ */
 cardsRouter.get('/sets/all', async (_req, res) => {
   try {
     const result = await pool.query(`
-      SELECT cs.name, cs.type, cs.image_path,
+      SELECT cs.name, cs.code, cs.type, cs.wave, cs.active, cs.image_path,
              COUNT(cse.card_id) as card_count
       FROM card_sets cs
       LEFT JOIN card_set_entries cse ON cse.set_name = cs.name
       GROUP BY cs.id
-      ORDER BY cs.id
+      ORDER BY cs.wave, cs.type DESC, cs.name
     `);
     res.json(result.rows);
   } catch {
@@ -54,6 +102,10 @@ cardsRouter.get('/sets/all', async (_req, res) => {
   }
 });
 
+/**
+ * GET /api/cards/sets/:name
+ * Returns all cards in a specific set.
+ */
 cardsRouter.get('/sets/:name', async (req, res) => {
   try {
     const setName = req.params.name;
@@ -70,6 +122,10 @@ cardsRouter.get('/sets/:name', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/cards/:id
+ * Returns a single card with its set info.
+ */
 cardsRouter.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
