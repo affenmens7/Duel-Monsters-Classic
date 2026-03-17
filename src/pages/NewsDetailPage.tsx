@@ -1,8 +1,10 @@
 import { useParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getNewsById } from '../config/news';
 import styles from './NewsDetailPage.module.css';
 
 export function NewsDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const entry = id ? getNewsById(id) : undefined;
 
@@ -10,8 +12,8 @@ export function NewsDetailPage() {
     return (
       <div className={styles.page}>
         <div className={styles.notFound}>
-          <h2 className={styles.notFoundTitle}>Nicht gefunden</h2>
-          <Link to="/app/home" className={styles.backLink}>Zurueck zur Startseite</Link>
+          <h2 className={styles.notFoundTitle}>{t('common.notFound')}</h2>
+          <Link to="/app/home" className={styles.backLink}>{t('common.backToHome')}</Link>
         </div>
       </div>
     );
@@ -20,7 +22,7 @@ export function NewsDetailPage() {
   return (
     <div className={styles.page}>
       <div className={styles.article}>
-        <Link to="/app/home" className={styles.backLink}>Zurueck</Link>
+        <Link to="/app/home" className={styles.backLink}>{t('common.back')}</Link>
 
         <div className={styles.meta}>
           <span className={styles.date}>{entry.date}</span>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Card } from '../types/card';
 import { useCards } from '../store/CardContext';
 import { useCardSearch } from '../hooks/useCards';
@@ -8,6 +9,7 @@ import { CardDetail } from '../components/cardBrowser/CardDetail';
 import styles from './CardBrowserPage.module.css';
 
 export function CardBrowserPage() {
+  const { t } = useTranslation();
   const { cards, loading, error } = useCards();
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -19,10 +21,10 @@ export function CardBrowserPage() {
   if (error) {
     return (
       <div className={styles.errorState}>
-        <h2>Fehler beim Laden</h2>
+        <h2>{t('cards.errorTitle')}</h2>
         <p>{error}</p>
         <button onClick={() => window.location.reload()}>
-          Erneut versuchen
+          {t('cards.retry')}
         </button>
       </div>
     );
@@ -43,7 +45,7 @@ export function CardBrowserPage() {
       {loading ? (
         <div className={styles.loadingState}>
           <div className={styles.spinner} />
-          <p>Lade Kartendaten...</p>
+          <p>{t('cards.loading')}</p>
         </div>
       ) : (
         <CardGrid

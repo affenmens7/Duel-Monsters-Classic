@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/michael/.claude/everything-claude-code/**)",
+      "Bash(chmod +x install.sh)",
+      "Bash(./install.sh typescript:*)",
+      "Bash(xdg-open \"http://localhost:8888/shop-demo-1.html\")",
+      "Bash(xdg-open \"http://localhost:8888/shop-demo-2.html\")",
+      "Bash(xdg-open \"http://localhost:8888/shop-demo-3.html\")",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_click"
+    ]
+  }
+}

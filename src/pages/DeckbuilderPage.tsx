@@ -1,31 +1,28 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../store/AuthContext';
 import { useCards } from '../store/CardContext';
+import { useInventory } from '../store/InventoryContext';
 import { useCardLocale } from '../hooks/useCardLocale';
 import { getCardImageUrl } from '../services/cardApi';
 import { fetchDecks, fetchDeck, createDeck, deleteDeck, saveDeckCards, type DeckSummary } from '../services/deckApi';
-import type { Card } from '../types/card';
+import type { Card, OwnedCard } from '../types/card';
+import { CardDetailPopup } from '../components/common/CardDetailPopup';
 import styles from './DeckbuilderPage.module.css';
 
 type PopupMode = 'add' | 'remove-main' | 'remove-extra';
 
 export function DeckbuilderPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { cards } = useCards();
+  const { collection, loading: inventoryLoading, refresh: refreshInventory } = useInventory();
   const { localize } = useCardLocale();
 
-  // Restore state from localStorage on mount
-  const savedState = useMemo(() => {
-    try {
-      const s = localStorage.getItem('dmc-deckbuilder');
-      return s ? JSON.parse(s) : null;
-    } catch { return null; }
-  }, []);
-
   const [decks, setDecks] = useState<DeckSummary[]>([]);
-  const [activeDeckId, setActiveDeckId] = useState<number | null>(savedState?.activeDeckId ?? null);
-  const [mainDeck, setMainDeck] = useState<number[]>(savedState?.mainDeck ?? []);
-  const [extraDeck, setExtraDeck] = useState<number[]>(savedState?.extraDeck ?? []);
+  const [activeDeckId, setActiveDeckId] = useState<number | null>(null);
+  const [mainDeck, setMainDeck] = useState<number[]>([]);
+  const [extraDeck, setExtraDeck] = useState<number[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [error, setError] = useState('');
@@ -33,16 +30,7 @@ export function DeckbuilderPage() {
   // Track whether cards were changed by user (not by loadDeckCards)
   const [userEdited, setUserEdited] = useState(false);
 
-  // Persist to localStorage
-  useEffect(() => {
-    localStorage.setItem('dmc-deckbuilder', JSON.stringify({
-      activeDeckId,
-      mainDeck,
-      extraDeck
-    }));
-  }, [activeDeckId, mainDeck, extraDeck]);
-
-  // Auto-save to backend only when user edits
+  // Auto-save to backend on every edit
   useEffect(() => {
     if (activeDeckId && userEdited) {
       saveDeckCards(activeDeckId, mainDeck, extraDeck).catch(() => {});
@@ -59,11 +47,16 @@ export function DeckbuilderPage() {
   const [dragCardId, setDragCardId] = useState<number | null>(null);
   const [dragFromDeck, setDragFromDeck] = useState<{ type: 'main' | 'extra'; index: number } | null>(null);
   const [dragIsFusion, setDragIsFusion] = useState(false);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
 
-  const availableCards = useMemo(() => cards.filter((c) => c.available), [cards]);
+  // Refresh inventory when deck changes (excludes current deck from usage calc)
+  useEffect(() => {
+    if (!user) return;
+    refreshInventory(activeDeckId ?? undefined);
+  }, [user, activeDeckId, refreshInventory]);
 
   const filteredPool = useMemo(() => {
-    let result = availableCards;
+    let result: OwnedCard[] = collection;
     if (search.trim().length >= 2) {
       const q = search.toLowerCase();
       result = result.filter((c) =>
@@ -75,7 +68,7 @@ export function DeckbuilderPage() {
       result = result.filter((c) => c.frameType === typeFilter);
     }
     return result;
-  }, [availableCards, search, typeFilter]);
+  }, [collection, search, typeFilter]);
 
 
   const cardCounts = useMemo(() => {
@@ -85,6 +78,25 @@ export function DeckbuilderPage() {
     }
     return counts;
   }, [mainDeck, extraDeck]);
+
+  // Count card types — monsters only from main deck, spells/traps from main deck
+  const deckTypeCounts = useMemo(() => {
+    let normal = 0;
+    let effect = 0;
+    let ritual = 0;
+    let spells = 0;
+    let traps = 0;
+    for (const id of mainDeck) {
+      const card = collection.find((c) => c.id === id) ?? cards.find((c) => c.id === id);
+      if (!card) continue;
+      if (card.frameType === 'spell') spells++;
+      else if (card.frameType === 'trap') traps++;
+      else if (card.frameType === 'ritual') ritual++;
+      else if (card.frameType === 'effect') effect++;
+      else normal++;
+    }
+    return { normal, effect, ritual, spells, traps, monsters: normal + effect + ritual };
+  }, [mainDeck, collection, cards]);
 
   useEffect(() => {
     if (!user) return;
@@ -113,18 +125,25 @@ export function DeckbuilderPage() {
     }
   }
 
+  // Calculate how many copies can still be added to THIS deck
+  const getAvailable = useCallback((cardId: number) => {
+    const ownedCard = collection.find((c) => c.id === cardId);
+    if (!ownedCard) return 0;
+    const inThisDeck = cardCounts.get(cardId) ?? 0;
+    return Math.max(0, Math.min(3, ownedCard.owned) - inThisDeck);
+  }, [collection, cardCounts]);
+
   const addCard = useCallback((card: Card) => {
-    const count = cardCounts.get(card.id) ?? 0;
-    if (count >= 3) return;
+    if (getAvailable(card.id) <= 0) return;
     if (card.frameType === 'fusion') {
       if (extraDeck.length >= 15) return;
       setExtraDeck((prev) => [...prev, card.id]);
     } else {
-      if (mainDeck.length >= 40) return;
+      if (mainDeck.length >= 60) return;
       setMainDeck((prev) => [...prev, card.id]);
     }
     setUserEdited(true);
-  }, [cardCounts, mainDeck.length, extraDeck.length]);
+  }, [getAvailable, mainDeck.length, extraDeck.length]);
 
   function removeFromMain(index: number) {
     setMainDeck(mainDeck.filter((_, i) => i !== index));
@@ -165,80 +184,67 @@ export function DeckbuilderPage() {
     setPopupCard(null);
   }
 
-  // Drag & Drop handlers
-  function handleDragStartFromPool(cardId: number) {
-    const card = cards.find((c) => c.id === cardId);
-    setDragCardId(cardId);
-    setDragFromDeck(null);
-    setDragIsFusion(card?.frameType === 'fusion');
-  }
-
-  function handleDragStartFromDeck(cardId: number, type: 'main' | 'extra', index: number) {
-    setDragCardId(cardId);
-    setDragFromDeck({ type, index });
-    setDragIsFusion(false);
-  }
-
-  function handleDropOnDeck(e: React.DragEvent) {
+  // Custom drag & drop — card follows cursor, with click threshold
+  function startDrag(cardId: number, e: React.MouseEvent, from?: { type: 'main' | 'extra'; index: number }) {
     e.preventDefault();
-    if (dragCardId === null) return;
-    if (!dragFromDeck) {
-      const card = cards.find((c) => c.id === dragCardId);
-      if (card) addCard(card);
-    }
-    setDragCardId(null);
-    setDragFromDeck(null);
-  }
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let isDragging = false;
 
-  function handleDropOnPool(e: React.DragEvent) {
-    e.preventDefault();
-    if (dragFromDeck) {
-      if (dragFromDeck.type === 'main') {
-        removeFromMain(dragFromDeck.index);
-      } else {
-        removeFromExtra(dragFromDeck.index);
+    const card = collection.find((c) => c.id === cardId) ?? cards.find((c) => c.id === cardId);
+
+    function onMove(ev: MouseEvent) {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (!isDragging && Math.abs(dx) + Math.abs(dy) > 6) {
+        isDragging = true;
+        setDragCardId(cardId);
+        setDragFromDeck(from ?? null);
+        setDragIsFusion(card?.frameType === 'fusion');
+      }
+      if (isDragging) {
+        setDragPos({ x: ev.clientX, y: ev.clientY });
       }
     }
-    setDragCardId(null);
-    setDragFromDeck(null);
-  }
 
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-  }
+    function onUp(ev: MouseEvent) {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
 
-  async function loadPreset(setName: string) {
-    if (!activeDeckId) {
-      setError('Bitte zuerst ein Deck erstellen oder auswaehlen');
-      return;
-    }
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/cards/sets/${encodeURIComponent(setName)}`);
-      if (!res.ok) throw new Error('Set nicht gefunden');
-      const setCards: { id: number; frame_type: string }[] = await res.json();
+      if (!isDragging) {
+        // It was a click, not a drag — let onClick handle it
+        setDragCardId(null);
+        setDragFromDeck(null);
+        setDragPos(null);
+        return;
+      }
 
-      const main: number[] = [];
-      const extra: number[] = [];
+      const target = document.elementFromPoint(ev.clientX, ev.clientY);
+      const deckPanel = target?.closest('[data-drop="deck"]');
+      const poolPanel = target?.closest('[data-drop="pool"]');
 
-      for (const c of setCards) {
-        if (c.frame_type === 'fusion') {
-          if (extra.length < 15) extra.push(c.id);
+      if (deckPanel && !from) {
+        if (card) addCard(card);
+      } else if (poolPanel && from) {
+        if (from.type === 'main') {
+          removeFromMain(from.index);
         } else {
-          if (main.length < 40) main.push(c.id);
+          removeFromExtra(from.index);
         }
       }
 
-      setMainDeck(main);
-      setExtraDeck(extra);
-      setUserEdited(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Vorlage konnte nicht geladen werden');
+      setDragCardId(null);
+      setDragFromDeck(null);
+      setDragPos(null);
     }
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
   }
 
   async function handleNewDeck() {
     if (!user) return;
-    const name = prompt('Deck-Name:');
+    const name = prompt(t('deckbuilder.deckNamePrompt'));
     if (!name) return;
     try {
       const deck = await createDeck(name);
@@ -247,7 +253,7 @@ export function DeckbuilderPage() {
       setMainDeck([]);
       setExtraDeck([]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   }
 
@@ -261,7 +267,7 @@ export function DeckbuilderPage() {
         setExtraDeck([]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   }
 
@@ -270,7 +276,7 @@ export function DeckbuilderPage() {
   }
 
   if (!user) {
-    return <div className={styles.page}><p className={styles.loginHint}>Bitte anmelden um Decks zu erstellen.</p></div>;
+    return <div className={styles.page}><p className={styles.loginHint}>{t('deckbuilder.loginRequired')}</p></div>;
   }
 
   return (
@@ -279,27 +285,11 @@ export function DeckbuilderPage() {
         {/* Left: Deck */}
         <div
           className={styles.deckPanel}
-          onDrop={handleDropOnDeck}
-          onDragOver={handleDragOver}
         >
           <div className={styles.deckHeader}>
-            <h2 className={styles.deckTitle}>Deck erstellen</h2>
+            <h2 className={styles.deckTitle}>{t('nav.deckbuilder')}</h2>
             <div className={styles.deckActions}>
-              <button className={styles.newBtn} onClick={handleNewDeck}>Neues Deck</button>
-              {activeDeckId && (
-                <select
-                  className={styles.presetSelect}
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) loadPreset(e.target.value);
-                    e.target.value = '';
-                  }}
-                >
-                  <option value="">Vorlage laden...</option>
-                  <option value="Starter Deck: Yugi">Starter Deck: Yugi</option>
-                  <option value="Starter Deck: Kaiba">Starter Deck: Kaiba</option>
-                </select>
-              )}
+              <button className={styles.newBtn} onClick={handleNewDeck}>{t('deckbuilder.newDeck')}</button>
             </div>
           </div>
 
@@ -322,10 +312,17 @@ export function DeckbuilderPage() {
             <>
               <div className={styles.deckSection}>
                 <div className={styles.deckSectionHeader}>
-                  <span>Hauptdeck ({mainDeck.length}/40)</span>
-                  <button className={styles.clearBtn} onClick={clearDeck}>Leeren</button>
+                  <span>{t('deckbuilder.mainDeck')} ({mainDeck.length}/40-60)</span>
+                  <button className={styles.clearBtn} onClick={clearDeck}>{t('deckbuilder.clear')}</button>
                 </div>
-                <div className={`${styles.deckGrid} ${dragCardId && !dragFromDeck && !dragIsFusion ? styles.deckGridDropTarget : ''}`}>
+                {mainDeck.length > 0 && (
+                  <div className={styles.deckTypeStats}>
+                    <span className={styles.statMonster}>{t('deckbuilder.monsters')}: {deckTypeCounts.monsters}</span>
+                    <span className={styles.statSpell}>{t('deckbuilder.spells')}: {deckTypeCounts.spells}</span>
+                    <span className={styles.statTrap}>{t('deckbuilder.traps')}: {deckTypeCounts.traps}</span>
+                  </div>
+                )}
+                <div className={`${styles.deckGrid} ${dragCardId && !dragFromDeck && !dragIsFusion ? styles.deckGridDropTarget : ''}`} data-drop="deck">
                   {mainDeck.map((cardId, i) => {
                     const card = getCardById(cardId);
                     return (
@@ -333,8 +330,7 @@ export function DeckbuilderPage() {
                         key={`m-${i}`}
                         className={styles.deckCard}
                         onClick={() => card && openDeckPopup(card, 'remove-main', i)}
-                        draggable
-                        onDragStart={() => handleDragStartFromDeck(cardId, 'main', i)}
+                        onMouseDown={(e) => { e.stopPropagation(); startDrag(cardId, e, { type: 'main', index: i }); }}
                         title={card ? localize(card).name : ''}
                       >
                         <img src={getCardImageUrl(cardId)} alt="" draggable={false} />
@@ -345,8 +341,8 @@ export function DeckbuilderPage() {
               </div>
 
               <div className={styles.deckSection}>
-                <span>Extra Deck ({extraDeck.length}/15)</span>
-                <div className={`${styles.deckGrid} ${dragCardId && !dragFromDeck && dragIsFusion ? styles.deckGridDropTarget : ''}`}>
+                <span>{t('deckbuilder.extraDeck')} ({extraDeck.length}/15)</span>
+                <div className={`${styles.deckGrid} ${dragCardId && !dragFromDeck && dragIsFusion ? styles.deckGridDropTarget : ''}`} data-drop="deck">
                   {extraDeck.map((cardId, i) => {
                     const card = getCardById(cardId);
                     return (
@@ -354,8 +350,7 @@ export function DeckbuilderPage() {
                         key={`e-${i}`}
                         className={styles.deckCard}
                         onClick={() => card && openDeckPopup(card, 'remove-extra', i)}
-                        draggable
-                        onDragStart={() => handleDragStartFromDeck(cardId, 'extra', i)}
+                        onMouseDown={(e) => { e.stopPropagation(); startDrag(cardId, e, { type: 'extra', index: i }); }}
                         title={card ? localize(card).name : ''}
                       >
                         <img src={getCardImageUrl(cardId)} alt="" draggable={false} />
@@ -365,51 +360,57 @@ export function DeckbuilderPage() {
                 </div>
               </div>
 
-              <div className={`${styles.deckStatus} ${mainDeck.length === 40 ? styles.deckStatusReady : ''}`}>
-                {mainDeck.length === 40
-                  ? 'Spielbereit'
-                  : `${mainDeck.length}/40 Karten`}
+              <div className={`${styles.deckStatus} ${mainDeck.length >= 40 ? styles.deckStatusReady : ''}`}>
+                {mainDeck.length >= 40
+                  ? t('deckbuilder.ready', { count: mainDeck.length })
+                  : t('deckbuilder.cardProgress', { count: mainDeck.length })}
               </div>
+
             </>
           )}
         </div>
 
         {/* Right: Card pool */}
-        <div className={styles.poolPanel} onDrop={handleDropOnPool} onDragOver={handleDragOver}>
+        <div className={`${styles.poolPanel} ${dragFromDeck ? styles.poolPanelDropTarget : ''}`} data-drop="pool">
           <div className={styles.poolHeader}>
             <input
               className={styles.poolSearch}
-              placeholder="Karte suchen..."
+              placeholder={t('cards.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <select className={styles.poolFilter} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-              <option value="all">Alle</option>
-              <option value="normal">Normal</option>
-              <option value="effect">Effekt</option>
-              <option value="ritual">Ritual</option>
-              <option value="fusion">Fusion</option>
-              <option value="spell">Zauber</option>
-              <option value="trap">Fallen</option>
+              <option value="all">{t('deckbuilder.filterAll')}</option>
+              <option value="normal">{t('deckbuilder.filterNormal')}</option>
+              <option value="effect">{t('deckbuilder.filterEffect')}</option>
+              <option value="ritual">{t('deckbuilder.filterRitual')}</option>
+              <option value="fusion">{t('deckbuilder.filterFusion')}</option>
+              <option value="spell">{t('deckbuilder.filterSpell')}</option>
+              <option value="trap">{t('deckbuilder.filterTrap')}</option>
             </select>
             <span className={styles.poolCount}>{filteredPool.length}</span>
           </div>
           <div className={styles.poolGrid}>
+            {inventoryLoading && <div className={styles.poolLoading}>{t('common.loading')}</div>}
+            {!inventoryLoading && collection.length === 0 && (
+              <div className={styles.poolEmpty}>
+                <p>{t('inventory.noCardsOwned')}</p>
+                <a href="/app/shop" className={styles.poolEmptyLink}>{t('inventory.goToShop')}</a>
+              </div>
+            )}
             {filteredPool.map((card) => {
-              const count = cardCounts.get(card.id) ?? 0;
-              const maxed = count >= 3;
+              const avail = getAvailable(card.id);
+              const maxed = avail <= 0;
               const loc = localize(card);
               return (
                 <div
                   key={card.id}
                   className={`${styles.poolCard} ${maxed ? styles.poolCardMaxed : ''}`}
                   onClick={() => openPoolPopup(card)}
-                  draggable={!maxed}
-                  onDragStart={() => handleDragStartFromPool(card.id)}
+                  onMouseDown={(e) => { if (!maxed) startDrag(card.id, e); }}
                   title={loc.name}
                 >
                   <img src={getCardImageUrl(card.id)} alt={loc.name} loading="lazy" draggable={false} />
-                  {count > 0 && <span className={styles.poolCardCount}>{count}/3</span>}
                 </div>
               );
             })}
@@ -419,48 +420,73 @@ export function DeckbuilderPage() {
 
       {/* Card popup */}
       {popupCard && (
-        <div className={styles.popupOverlay} onClick={() => setPopupCard(null)}>
-          <div className={styles.popupModal} onClick={(e) => e.stopPropagation()}>
-            <button className={styles.popupClose} onClick={() => setPopupCard(null)}>x</button>
-            <div className={styles.popupContent}>
-              <div className={styles.popupImage}>
-                <img src={getCardImageUrl(popupCard.id, 'full')} alt={localize(popupCard).name} />
+        <CardDetailPopup
+          card={{
+            id: popupCard.id,
+            nameDe: popupCard.name ?? '',
+            nameEn: popupCard.name_en ?? '',
+            descDe: popupCard.desc ?? '',
+            descEn: popupCard.desc_en ?? '',
+            type: localize(popupCard).type,
+            frameType: popupCard.frameType,
+            atk: popupCard.atk,
+            def: popupCard.def,
+            level: popupCard.level,
+            attribute: popupCard.attribute,
+          }}
+          onClose={() => setPopupCard(null)}
+        >
+          {/* Inventory info */}
+          {(() => {
+            const ownedCard = collection.find((c) => c.id === popupCard.id);
+            const inDeck = cardCounts.get(popupCard.id) ?? 0;
+            return ownedCard ? (
+              <div style={{ display: 'flex', gap: '16px', fontFamily: 'var(--font-heading)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#c8a830', padding: '8px 0', borderTop: '1px solid rgba(0,220,168,0.08)' }}>
+                <span>{t('inventory.owned')}: {ownedCard.owned}</span>
+                {inDeck > 0 && <span>{t('inventory.inDeck')}: {inDeck}</span>}
               </div>
-              <div className={styles.popupInfo}>
-                <h3 className={styles.popupName}>{localize(popupCard).name}</h3>
-                {popupCard.name_en && popupCard.name_en !== popupCard.name && (
-                  <span className={styles.popupNameEn}>{localize(popupCard).secondaryName}</span>
-                )}
-                <div className={styles.popupType}>{localize(popupCard).type}</div>
-                {popupCard.atk !== undefined && (
-                  <div className={styles.popupStats}>
-                    <span className={styles.popupAtk}>ATK/{popupCard.atk}</span>
-                    <span className={styles.popupDef}>DEF/{popupCard.def ?? '?'}</span>
-                  </div>
-                )}
-                <p className={styles.popupDesc}>{localize(popupCard).desc}</p>
-                <div className={styles.popupActions}>
-                  {popupMode === 'add' ? (
-                    <button
-                      className={styles.popupAddBtn}
-                      onClick={handlePopupAction}
-                      disabled={(cardCounts.get(popupCard.id) ?? 0) >= 3}
-                    >
-                      {(cardCounts.get(popupCard.id) ?? 0) >= 3
-                        ? 'Max. 3 Kopien'
-                        : popupCard.frameType === 'fusion'
-                          ? extraDeck.length >= 15 ? 'Extra Deck voll' : 'Zum Extra Deck'
-                          : mainDeck.length >= 40 ? 'Hauptdeck voll' : 'Zum Hauptdeck'}
-                    </button>
-                  ) : (
-                    <button className={styles.popupRemoveBtn} onClick={handlePopupAction}>
-                      Aus Deck entfernen
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+            ) : null;
+          })()}
+          {/* Action buttons */}
+          <div>
+            {popupMode === 'add' ? (() => {
+              const noAvail = getAvailable(popupCard.id) <= 0;
+              const isFusion = popupCard.frameType === 'fusion';
+              const deckFull = isFusion ? extraDeck.length >= 15 : mainDeck.length >= 60;
+              const disabled = !activeDeckId || noAvail || deckFull;
+              const hint = !activeDeckId ? t('deckbuilder.noDeckSelected')
+                : noAvail ? t('deckbuilder.copyLimitReached')
+                : deckFull ? (isFusion ? t('deckbuilder.extraDeckFull') : t('deckbuilder.mainDeckFull'))
+                : '';
+              return (
+                <button
+                  style={{ fontFamily: 'var(--font-heading)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '10px 24px', border: '1px solid rgba(0,220,168,0.15)', background: 'rgba(0,200,160,0.05)', color: '#00dca8', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}
+                  onClick={handlePopupAction}
+                  disabled={disabled}
+                  title={hint}
+                >
+                  {t('deckbuilder.addToDeck')}
+                </button>
+              );
+            })() : (
+              <button
+                style={{ fontFamily: 'var(--font-heading)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '10px 24px', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.04)', color: '#ef4444', cursor: 'pointer' }}
+                onClick={handlePopupAction}
+              >
+                {t('deckbuilder.removeFromDeck')}
+              </button>
+            )}
           </div>
+        </CardDetailPopup>
+      )}
+
+      {/* Drag ghost — card follows cursor */}
+      {dragCardId !== null && dragPos && (
+        <div
+          className={styles.dragGhost}
+          style={{ left: dragPos.x, top: dragPos.y }}
+        >
+          <img src={getCardImageUrl(dragCardId)} alt="" draggable={false} />
         </div>
       )}
     </div>

@@ -94,6 +94,11 @@ export interface Card {
   available?: boolean;
 }
 
+export interface OwnedCard extends Card {
+  owned: number;
+  used_in_decks: number;
+}
+
 export interface CardApiResponse {
   data: Card[];
 }

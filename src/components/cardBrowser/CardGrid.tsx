@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { Card } from '../../types/card';
 import { CardTile } from './CardTile';
 import styles from './CardGrid.module.css';
@@ -8,10 +9,12 @@ interface CardGridProps {
 }
 
 export function CardGrid({ cards, onCardClick }: CardGridProps) {
+  const { t } = useTranslation();
+
   if (cards.length === 0) {
     return (
       <div className={styles.empty}>
-        Keine Karten gefunden.
+        {t('cards.noResults')}
       </div>
     );
   }

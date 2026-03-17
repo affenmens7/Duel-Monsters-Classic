@@ -51,9 +51,9 @@ export function SearchBar({
         value={availabilityFilter}
         onChange={(e) => onAvailabilityFilterChange(e.target.value)}
       >
-        <option value="all">Alle Karten</option>
-        <option value="available">Verfuegbar</option>
-        <option value="locked">Noch gesperrt</option>
+        <option value="all">{t('cards.allCards')}</option>
+        <option value="available">{t('cards.available')}</option>
+        <option value="locked">{t('cards.locked')}</option>
       </select>
 
       <span className={styles.resultCount}>

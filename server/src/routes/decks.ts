@@ -169,9 +169,9 @@ decksRouter.put('/:id/cards', async (req, res) => {
       return;
     }
 
-    // Validate main deck size (max 40)
-    if (mainDeck.length > 40) {
-      res.status(400).json({ error: 'Hauptdeck darf maximal 40 Karten haben' });
+    // Validate main deck size (40-60 per DM/GX era rules)
+    if (mainDeck.length > 60) {
+      res.status(400).json({ error: 'Hauptdeck darf maximal 60 Karten haben' });
       return;
     }
 
@@ -218,6 +218,27 @@ decksRouter.put('/:id/cards', async (req, res) => {
     for (const cardId of extraDeck) {
       if (validCards.get(cardId) !== 'fusion') {
         res.status(400).json({ error: 'Extra Deck darf nur Fusionsmonster enthalten' });
+        return;
+      }
+    }
+
+    // Verify ownership — check that user owns each card (max 3 per deck, max owned)
+    const ownedResult = await pool.query(
+      'SELECT card_id, quantity FROM user_cards WHERE user_id = $1 AND card_id = ANY($2)',
+      [req.user!.userId, cardIds]
+    );
+    const ownedMap = new Map<number, number>(
+      ownedResult.rows.map((r: { card_id: number; quantity: number }) => [r.card_id, r.quantity])
+    );
+
+    for (const [cardId, quantity] of counts) {
+      const owned = ownedMap.get(cardId) ?? 0;
+      if (owned === 0) {
+        res.status(400).json({ error: 'Du besitzt diese Karte nicht', card_id: cardId });
+        return;
+      }
+      if (quantity > Math.min(3, owned)) {
+        res.status(400).json({ error: 'Du besitzt nicht genug Kopien dieser Karte', card_id: cardId });
         return;
       }
     }

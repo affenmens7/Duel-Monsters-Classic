@@ -69,7 +69,7 @@ export function SettingsContent({ onClose }: SettingsContentProps) {
       <div className={styles.divider} />
 
       <button className={styles.logoutBtn} onClick={handleLogout}>
-        Logout
+        {t('common.logout')}
       </button>
 
       <span className={styles.versionLabel}>v{APP_VERSION}</span>

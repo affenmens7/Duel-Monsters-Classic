@@ -22,10 +22,6 @@
   filter: grayscale(0.8) brightness(0.6);
 }
 
-.owned img {
-  filter: grayscale(0.2) brightness(0.9) sepia(0.15);
-}
-
 @keyframes floatRight {
   0% {
     transform: translateX(0) rotate(-1deg);

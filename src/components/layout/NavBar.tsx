@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../store/AuthContext';
 import styles from './NavBar.module.css';
 
 const NAV_ITEMS = [
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
 
 export function NavBar() {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   return (
     <nav className={styles.subnav}>
@@ -28,6 +30,16 @@ export function NavBar() {
           {t(item.labelKey)}
         </NavLink>
       ))}
+      {user?.role === 'admin' && (
+        <NavLink
+          to="/app/admin"
+          className={({ isActive }) =>
+            `${styles.item} ${styles.adminItem} ${isActive ? styles.active : ''}`
+          }
+        >
+          {t('navAdmin.admin')}
+        </NavLink>
+      )}
     </nav>
   );
 }

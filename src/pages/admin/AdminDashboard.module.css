@@ -1,0 +1,119 @@
+.page {
+  width: 100%;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  margin-bottom: 24px;
+}
+
+.loading {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  padding: 40px 0;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 36px;
+}
+
+.statCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 14px;
+  border: 1px solid var(--orichalcos-faint);
+  background: rgba(0, 220, 168, 0.02);
+}
+
+.statCardWide {
+  grid-column: span 2;
+}
+
+.statValue {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+}
+
+.statValueGold {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--gold, #c8a830);
+}
+
+.statLabel {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.quickSection {
+  margin-top: 10px;
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.quickLinks {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.quickLink {
+  display: block;
+  padding: 14px 18px;
+  border: 1px solid var(--orichalcos-faint);
+  background: rgba(0, 220, 168, 0.015);
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.quickLink:hover {
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.04);
+}
+
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .statCardWide {
+    grid-column: span 2;
+  }
+
+  .quickLinks {
+    grid-template-columns: 1fr;
+  }
+}

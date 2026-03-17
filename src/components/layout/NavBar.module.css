@@ -29,3 +29,17 @@
   color: var(--orichalcos-light);
   border-bottom-color: var(--orichalcos-dim);
 }
+
+.adminItem {
+  margin-left: auto;
+  color: var(--gold-dim);
+}
+
+.adminItem:hover {
+  color: var(--gold);
+}
+
+.adminItem.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold-dim);
+}

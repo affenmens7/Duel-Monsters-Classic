@@ -1,0 +1,434 @@
+/* ============================================================
+   Admin Card Database Browser — paginated table with search,
+   filters, and card detail popup.
+   Theme: Orichalcos Gold
+   ============================================================ */
+
+.page {
+  width: 100%;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  margin-bottom: 24px;
+}
+
+.loading,
+.error {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  padding: 40px 0;
+}
+
+.loading {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+/* ---- Toolbar ---- */
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+.totalCount {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+/* ---- Table ---- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHead {
+  background: rgba(0, 220, 168, 0.02);
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.th {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.thSortable {
+  composes: th;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.thSortable:hover {
+  color: var(--orichalcos-light);
+}
+
+.tr {
+  border-bottom: 1px solid var(--orichalcos-faint);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.tr:hover {
+  background: rgba(0, 220, 168, 0.025);
+}
+
+.td {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  padding: 8px 14px;
+  vertical-align: middle;
+}
+
+.tdMuted {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  vertical-align: middle;
+}
+
+.tdCode {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  padding: 8px 14px;
+  vertical-align: middle;
+}
+
+.thumb {
+  width: 40px;
+  height: 58px;
+  object-fit: cover;
+  border: 1px solid var(--orichalcos-faint);
+  display: block;
+}
+
+/* ---- Pagination ---- */
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--orichalcos-faint);
+}
+
+.pageBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border: 1px solid var(--orichalcos-faint);
+  background: none;
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.03);
+}
+
+.pageBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+/* ---- Empty State ---- */
+
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+  }
+
+  .searchInput {
+    min-width: unset;
+    width: 100%;
+  }
+
+}
+
+/* ============================================================
+   Import from YGOPRODeck
+   ============================================================ */
+
+.importBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 1px solid var(--gold, #c8a830);
+  background: rgba(200, 168, 48, 0.08);
+  color: var(--gold, #c8a830);
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-left: auto;
+}
+
+.importBtn:hover {
+  background: rgba(200, 168, 48, 0.15);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: rgba(8, 12, 14, 0.95);
+  border: 1px solid var(--orichalcos-subtle);
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modalTitle {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  color: var(--orichalcos-light);
+  letter-spacing: 1px;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.modalClose:hover {
+  color: var(--orichalcos-light);
+}
+
+.importMsg {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  color: var(--gold, #c8a830);
+  letter-spacing: 1px;
+  margin: 8px 0;
+}
+
+.importResults {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  flex: 1;
+  margin-top: 12px;
+}
+
+.importRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--orichalcos-faint);
+  transition: border-color 0.15s;
+}
+
+.importRow:hover {
+  border-color: var(--orichalcos-subtle);
+}
+
+.importRowDone {
+  opacity: 0.5;
+}
+
+.importArtworks {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.importThumb {
+  width: 36px;
+  aspect-ratio: 59 / 86;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--orichalcos-faint);
+  transition: border-color 0.15s;
+}
+
+.importThumb:hover {
+  border-color: var(--orichalcos-subtle);
+}
+
+.importArtworkCount {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  color: var(--gold, #c8a830);
+  letter-spacing: 1px;
+}
+
+.importInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.importName {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.importNameEn {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.importType {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 60px;
+  text-align: center;
+}
+
+.importDone {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--orichalcos-light);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 90px;
+  text-align: center;
+}
+
+.importCardBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border: 1px solid var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.06);
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  width: 90px;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.importCardBtn:hover {
+  background: rgba(0, 220, 168, 0.12);
+}
+
+.importCardBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+

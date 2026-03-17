@@ -12,16 +12,23 @@ import { NewsDetailPage } from '../pages/NewsDetailPage';
 import { ShopPage } from '../pages/ShopPage';
 import { DeckbuilderPage } from '../pages/DeckbuilderPage';
 import { RoadmapDetailPage } from '../pages/RoadmapDetailPage';
-import { StarterChoicePage } from '../pages/StarterChoicePage';
+
+// Admin
+import { AdminGuard } from '../components/admin/AdminGuard';
+import { AdminLayout } from '../components/admin/AdminLayout';
+import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
+import { AdminSetsPage } from '../pages/admin/AdminSetsPage';
+import { AdminCardsPage } from '../pages/admin/AdminCardsPage';
+import { AdminNewsPage } from '../pages/admin/AdminNewsPage';
+import { AdminRoadmapPage } from '../pages/admin/AdminRoadmapPage';
+import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
+import { AdminCosmeticsPage } from '../pages/admin/AdminCosmeticsPage';
+import { AdminSetDetailPage } from '../pages/admin/AdminSetDetailPage';
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <TitleScreen />,
-  },
-  {
-    path: '/choose-starter',
-    element: <StarterChoicePage onComplete={() => { window.location.href = '/app'; }} />,
   },
   {
     path: '/app',
@@ -37,6 +44,29 @@ export const router = createBrowserRouter([
       // { path: 'duel', element: <DuelPage /> },
       // { path: 'story', element: <StoryPage /> },
       // { path: 'quests', element: <QuestsPage /> },
+
+      // Admin routes — guarded by AdminGuard (role check)
+      {
+        path: 'admin',
+        element: <AdminGuard />,
+        children: [
+          {
+            element: <AdminLayout />,
+            children: [
+              { index: true, element: <AdminDashboardPage /> },
+              { path: 'cards', element: <AdminCardsPage /> },
+              { path: 'sets/booster', element: <AdminSetsPage /> },
+              { path: 'sets/starter', element: <AdminSetsPage /> },
+              { path: 'sets/:name', element: <AdminSetDetailPage /> },
+              { path: 'shop-config', element: <AdminSetsPage /> },
+              { path: 'news', element: <AdminNewsPage /> },
+              { path: 'roadmap', element: <AdminRoadmapPage /> },
+              { path: 'users', element: <AdminUsersPage /> },
+              { path: 'cosmetics', element: <AdminCosmeticsPage /> },
+            ],
+          },
+        ],
+      },
     ],
   },
 ]);

@@ -24,10 +24,9 @@ export function TitleScreen() {
   const [loading, setLoading] = useState(false);
   const [fading, setFading] = useState(false);
 
-  function transitionToApp(userData?: { starterChosen: string | null }) {
+  function transitionToApp() {
     setFading(true);
-    const target = userData?.starterChosen ? '/app' : '/choose-starter';
-    setTimeout(() => navigate(target), 600);
+    setTimeout(() => navigate('/app'), 600);
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -38,9 +37,9 @@ export function TitleScreen() {
     try {
       const result = await loginUser(username, password);
       login(result.token, result.user);
-      transitionToApp(result.user);
+      transitionToApp();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login fehlgeschlagen');
+      setError(err instanceof Error ? err.message : t('title.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -54,9 +53,9 @@ export function TitleScreen() {
     try {
       const result = await registerUser(username, email, password);
       login(result.token, result.user);
-      transitionToApp(result.user);
+      transitionToApp();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registrierung fehlgeschlagen');
+      setError(err instanceof Error ? err.message : t('title.registerFailed'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +75,7 @@ export function TitleScreen() {
           <p className={styles.flavor}>{t('title.flavor')}</p>
           <div className={`${styles.actions} ${styles.panel}`}>
             <button className={styles.primaryBtn} onClick={transitionToApp}>
-              Fortsetzen als {user.displayName}
+              {t('title.continueAs', { name: user.displayName })}
             </button>
           </div>
           <div className={styles.footer}>
@@ -109,7 +108,7 @@ export function TitleScreen() {
                   {t('title.login')}
                 </button>
                 <button className={styles.secondaryBtn} onClick={() => setMode('register')}>
-                  Registrieren
+                  {t('title.register')}
                 </button>
                 <button className={styles.linkBtn} onClick={transitionToApp}>
                   {t('title.guestEnter')}
@@ -158,7 +157,7 @@ export function TitleScreen() {
                 <input
                   type="email"
                   className={styles.input}
-                  placeholder="E-Mail"
+                  placeholder={t('title.email')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -170,7 +169,7 @@ export function TitleScreen() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <button type="submit" className={styles.primaryBtn} disabled={loading}>
-                  {loading ? '...' : 'Account erstellen'}
+                  {loading ? '...' : t('title.createAccount')}
                 </button>
                 <button type="button" className={styles.linkBtn} onClick={() => { setMode('start'); setError(''); }}>
                   {t('title.back')}

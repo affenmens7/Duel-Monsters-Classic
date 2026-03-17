@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ROADMAP_PHASES } from '../../config/roadmap';
 import { ScrollReveal } from './ScrollReveal';
 import styles from './Roadmap.module.css';
 
 export function Roadmap() {
+  const { t } = useTranslation();
+
   return (
     <div className={styles.roadmap}>
       {ROADMAP_PHASES.map((phase, i) => {
@@ -16,9 +19,9 @@ export function Roadmap() {
                 <div className={styles.topRow}>
                   <span className={styles.phaseLabel}>{phase.phase}</span>
                   <span className={styles.badge}>
-                    {phase.status === 'done' && 'Fertig'}
-                    {phase.status === 'active' && 'Aktiv'}
-                    {phase.status === 'upcoming' && 'Geplant'}
+                    {phase.status === 'done' && t('roadmap.done')}
+                    {phase.status === 'active' && t('roadmap.active')}
+                    {phase.status === 'upcoming' && t('roadmap.upcoming')}
                   </span>
                 </div>
                 <h3 className={styles.title}>{phase.title}</h3>
@@ -29,7 +32,7 @@ export function Roadmap() {
                   ))}
                 </ul>
                 <Link to={`/app/roadmap/${phase.id}`} className={styles.moreLink}>
-                  mehr Infos
+                  {t('common.moreInfo')}
                 </Link>
               </div>
             </div>

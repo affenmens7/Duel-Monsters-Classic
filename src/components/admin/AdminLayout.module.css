@@ -1,0 +1,136 @@
+/* ============================================================
+   AdminLayout — Sidebar + Content Area
+   Theme: Orichalcos Gold — dark bg, teal accent, gold highlights
+   ============================================================ */
+
+.layout {
+  display: flex;
+  min-height: calc(100vh - 120px);
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+/* === Sidebar === */
+
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: transparent;
+  border-right: 1px solid var(--orichalcos-faint);
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.sidebarTitle {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 0 20px;
+  margin-bottom: 24px;
+}
+
+/* === Navigation === */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.navSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.navSectionTitle {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--gold, #c8a830);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 16px 20px 6px;
+  opacity: 0.6;
+}
+
+.navItem {
+  font-family: var(--font-heading);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 12px 20px;
+  border-left: 3px solid transparent;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.navItem:hover {
+  color: var(--text-secondary);
+  background: rgba(0, 200, 160, 0.02);
+}
+
+.navItemActive {
+  color: var(--orichalcos-light);
+  border-left-color: var(--orichalcos-dim);
+  background: rgba(0, 200, 160, 0.04);
+}
+
+/* === Content Area === */
+
+.content {
+  flex: 1;
+  padding: 28px 32px;
+  min-width: 0;
+}
+
+/* === Responsive === */
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--orichalcos-faint);
+    padding: 16px 0;
+  }
+
+  .sidebarTitle {
+    padding: 0 16px;
+    margin-bottom: 12px;
+  }
+
+  .nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0 16px;
+    gap: 0;
+  }
+
+  .navItem {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 16px;
+    white-space: nowrap;
+  }
+
+  .navItemActive {
+    border-left-color: transparent;
+    border-bottom-color: var(--orichalcos-dim);
+  }
+
+  .content {
+    padding: 20px 16px;
+  }
+}

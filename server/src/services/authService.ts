@@ -94,7 +94,7 @@ export async function registerUser({ username, email, password }: RegisterInput)
 
   return {
     token,
-    user: { id: user.id, username: user.username, tag: user.tag, displayName, role: user.role, dp: user.dp, starterChosen: null },
+    user: { id: user.id, username: user.username, tag: user.tag, displayName, role: user.role, dp: user.dp },
   };
 }
 
@@ -108,14 +108,14 @@ export async function loginUser({ login, password }: LoginInput) {
   let params: string[];
 
   if (login.includes('@')) {
-    query = 'SELECT u.id, u.username, u.tag, u.password_hash, u.role, u.dp, s.starter_chosen FROM users u LEFT JOIN user_stats s ON s.user_id = u.id WHERE u.email = $1';
+    query = 'SELECT u.id, u.username, u.tag, u.password_hash, u.role, u.dp FROM users u WHERE u.email = $1';
     params = [login];
   } else if (login.includes('#')) {
     const [name, tag] = login.split('#');
-    query = 'SELECT u.id, u.username, u.tag, u.password_hash, u.role, u.dp, s.starter_chosen FROM users u LEFT JOIN user_stats s ON s.user_id = u.id WHERE u.username = $1 AND u.tag = $2';
+    query = 'SELECT u.id, u.username, u.tag, u.password_hash, u.role, u.dp FROM users u WHERE u.username = $1 AND u.tag = $2';
     params = [name, tag];
   } else {
-    query = 'SELECT u.id, u.username, u.tag, u.password_hash, u.role, u.dp, s.starter_chosen FROM users u LEFT JOIN user_stats s ON s.user_id = u.id WHERE u.username = $1 ORDER BY u.id LIMIT 1';
+    query = 'SELECT u.id, u.username, u.tag, u.password_hash, u.role, u.dp FROM users u WHERE u.username = $1 ORDER BY u.id LIMIT 1';
     params = [login];
   }
 
@@ -142,6 +142,6 @@ export async function loginUser({ login, password }: LoginInput) {
 
   return {
     token,
-    user: { id: user.id, username: user.username, tag: user.tag, displayName, role: user.role, dp: user.dp, starterChosen: user.starter_chosen ?? null },
+    user: { id: user.id, username: user.username, tag: user.tag, displayName, role: user.role, dp: user.dp },
   };
 }

@@ -1,0 +1,405 @@
+/* ============================================================
+   Admin Sets Management — table with inline toggles and
+   expandable detail panels for set fields, shop config, rarity.
+   Theme: Orichalcos Gold
+   ============================================================ */
+
+.page {
+  width: 100%;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  margin-bottom: 24px;
+}
+
+.loading,
+.error {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  padding: 40px 0;
+}
+
+.loading {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+/* ---- Table ---- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHead {
+  background: rgba(0, 220, 168, 0.02);
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.th {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.tr {
+  border-bottom: 1px solid var(--orichalcos-faint);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.tr:hover {
+  background: rgba(0, 220, 168, 0.025);
+}
+
+.trSelected {
+  background: rgba(0, 220, 168, 0.04);
+}
+
+.td {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  padding: 10px 14px;
+  vertical-align: middle;
+}
+
+.tdCode {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  padding: 10px 14px;
+  vertical-align: middle;
+}
+
+/* ---- Toggle Switch ---- */
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--orichalcos-faint);
+  background: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.toggleOn {
+  background: var(--orichalcos-mid);
+  border-color: var(--orichalcos-dim);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+/* ---- Badges ---- */
+
+.badge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.badgeBooster {
+  color: var(--orichalcos-light);
+  background: var(--orichalcos-faint);
+  border: 1px solid var(--orichalcos-subtle);
+}
+
+.badgeStarter {
+  color: var(--gold);
+  background: var(--gold-faint);
+  border: 1px solid var(--gold-subtle);
+}
+
+/* ---- Detail Panel ---- */
+
+.detailRow {
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.detailCell {
+  padding: 20px 14px;
+  background: rgba(0, 220, 168, 0.015);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.detailSection {
+  padding: 0;
+}
+
+.detailSectionTitle {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--gold-faint);
+}
+
+/* ---- Form Fields ---- */
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.fieldLabel {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.fieldInput {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  padding: 6px 10px;
+  transition: border-color 0.2s ease;
+}
+
+.fieldInput:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+.fieldTextarea {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  padding: 6px 10px;
+  min-height: 50px;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.fieldTextarea:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+/* ---- Rarity Rates Table ---- */
+
+.ratesTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.ratesTable th {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.ratesTable td {
+  padding: 4px 8px;
+  vertical-align: middle;
+}
+
+.ratesInput {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  padding: 4px 8px;
+  width: 100%;
+  transition: border-color 0.2s ease;
+}
+
+.ratesInput:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+.ratesRemoveBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--color-error);
+  background: none;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: border-color 0.2s ease;
+}
+
+.ratesRemoveBtn:hover {
+  border-color: var(--color-error);
+}
+
+.ratesAddBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--orichalcos-light);
+  background: none;
+  border: 1px solid var(--orichalcos-faint);
+  padding: 6px 14px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ratesAddBtn:hover {
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.03);
+}
+
+.rateWarning {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--gold);
+  margin-top: 4px;
+}
+
+/* ---- Actions ---- */
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--orichalcos-faint);
+}
+
+.saveBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--orichalcos-mid);
+  border: none;
+  padding: 8px 24px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.saveBtn:hover {
+  background: var(--orichalcos-light);
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--orichalcos-faint);
+  padding: 8px 24px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.cancelBtn:hover {
+  border-color: var(--orichalcos-subtle);
+  color: var(--text-primary);
+}
+
+/* ---- Feedback Messages ---- */
+
+.successMsg {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--orichalcos-light);
+  margin-left: auto;
+  align-self: center;
+}
+
+.errorMsg {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--color-error);
+  margin-left: auto;
+  align-self: center;
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 768px) {
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .fieldLabel {
+    min-width: unset;
+  }
+}

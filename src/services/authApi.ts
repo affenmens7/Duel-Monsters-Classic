@@ -13,7 +13,6 @@ interface AuthResponse {
     displayName: string;
     role: string;
     dp: number;
-    starterChosen: string | null;
   };
 }
 

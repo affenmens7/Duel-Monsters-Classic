@@ -6,8 +6,8 @@
 import { env } from '../config/env';
 import type { Card } from '../types/card';
 
-const CACHE_KEY = 'dmc-cards-v2';
-const CACHE_MAX_AGE = 1000 * 60 * 60; // 1 hour
+const CACHE_KEY = 'dmc-cards-v3';
+const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours (invalidated on card count change)
 
 interface DbCard {
   id: number;
@@ -31,6 +31,7 @@ interface DbCard {
 
 interface CacheEntry {
   timestamp: number;
+  count: number;
   cards: Card[];
 }
 
@@ -79,7 +80,7 @@ function getCache(): Card[] | null {
 
 function setCache(cards: Card[]) {
   try {
-    const entry: CacheEntry = { timestamp: Date.now(), cards };
+    const entry: CacheEntry = { timestamp: Date.now(), count: cards.length, cards };
     localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch {
     // localStorage full or unavailable — ignore
@@ -87,11 +88,30 @@ function setCache(cards: Card[]) {
 }
 
 /**
- * Fetches all cards — from cache if fresh, otherwise from backend.
+ * Fetches all cards — from cache if fresh and count matches, otherwise from backend.
+ * Does a quick count check to detect new cards without loading everything.
  */
 export async function fetchAllCards(): Promise<Card[]> {
   const cached = getCache();
-  if (cached) return cached;
+
+  if (cached) {
+    // Quick count check — if card count changed, invalidate cache
+    try {
+      const countRes = await fetch(`${env.api.baseUrl}/cards/count`);
+      if (countRes.ok) {
+        const { count } = await countRes.json();
+        if (count !== cached.length) {
+          localStorage.removeItem(CACHE_KEY);
+        } else {
+          return cached;
+        }
+      } else {
+        return cached; // API error, use cache
+      }
+    } catch {
+      return cached; // Network error, use cache
+    }
+  }
 
   const response = await fetch(`${env.api.baseUrl}/cards/browse`);
 
@@ -116,7 +136,9 @@ export async function refreshCards(): Promise<Card[]> {
 
 /**
  * Returns the local image URL for a card.
+ * When artworkId is provided, returns the URL for that specific artwork instead of the default.
  */
-export function getCardImageUrl(cardId: number, _size: 'full' | 'small' | 'cropped' = 'small'): string {
-  return `/images/cards/${cardId}.jpg`;
+export function getCardImageUrl(cardId: number, _size: 'full' | 'small' | 'cropped' = 'small', artworkId?: number): string {
+  const id = artworkId ?? cardId;
+  return `/images/cards/${id}.jpg`;
 }

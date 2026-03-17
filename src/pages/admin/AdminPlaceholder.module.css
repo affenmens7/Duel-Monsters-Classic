@@ -1,0 +1,24 @@
+/* ============================================================
+   Admin Placeholder Pages — shared styles for coming-soon pages
+   Theme: Orichalcos Gold
+   ============================================================ */
+
+.page {
+  padding: 20px 0;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+}
+
+.hint {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}

@@ -15,8 +15,8 @@ export function Header() {
     <>
       <header className={styles.header}>
         <Link to="/app/home" className={styles.left}>
-          <span className={styles.logoText}>Duel Monsters</span>
-          <span className={styles.logoSub}>Classic</span>
+          <span className={styles.logoText}>{t('title.gameName')}</span>
+          <span className={styles.logoSub}>{t('title.subtitle')}</span>
         </Link>
         <div className={styles.right}>
           <div className={styles.dpBadge}>{user?.dp ?? 0} DP</div>

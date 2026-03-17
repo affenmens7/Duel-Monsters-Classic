@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { AuthProvider } from './store/AuthContext';
 import { ThemeProvider } from './store/ThemeContext';
 import { CardProvider } from './store/CardContext';
+import { InventoryProvider } from './store/InventoryContext';
 import { App } from './App';
 import './i18n';
 import './styles/global.css';
@@ -12,7 +13,9 @@ createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <ThemeProvider>
         <CardProvider>
-          <App />
+          <InventoryProvider>
+            <App />
+          </InventoryProvider>
         </CardProvider>
       </ThemeProvider>
     </AuthProvider>

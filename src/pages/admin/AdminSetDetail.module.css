@@ -1,0 +1,424 @@
+/* ============================================================
+   Admin Set Detail — card management page for a single set.
+   Shows set info, cards in set, and add-card search panel.
+   Theme: Orichalcos Gold
+   ============================================================ */
+
+.page {
+  width: 100%;
+}
+
+/* ---- Back Link ---- */
+
+.backLink {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  margin-bottom: 18px;
+  transition: color 0.2s ease;
+}
+
+.backLink:hover {
+  color: var(--orichalcos-light);
+}
+
+/* ---- Set Header ---- */
+
+.setHeader {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.setName {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  margin: 0;
+}
+
+.badge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.badgeCode {
+  color: var(--text-secondary);
+  background: rgba(0, 220, 168, 0.04);
+  border: 1px solid var(--orichalcos-faint);
+}
+
+.badgeType {
+  color: var(--gold);
+  background: var(--gold-faint);
+  border: 1px solid var(--gold-subtle);
+}
+
+.badgeWave {
+  color: var(--text-secondary);
+  background: rgba(0, 220, 168, 0.04);
+  border: 1px solid var(--orichalcos-faint);
+}
+
+.badgeActive {
+  color: var(--orichalcos-light);
+  background: var(--orichalcos-faint);
+  border: 1px solid var(--orichalcos-subtle);
+}
+
+.badgeInactive {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--orichalcos-faint);
+}
+
+.badgeCount {
+  color: var(--text-secondary);
+  background: rgba(0, 220, 168, 0.04);
+  border: 1px solid var(--orichalcos-faint);
+}
+
+/* ---- Section ---- */
+
+.section {
+  margin-bottom: 36px;
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+/* ---- Search Input ---- */
+
+.searchInput {
+  width: 100%;
+  max-width: 400px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  margin-bottom: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+/* ---- Card Table ---- */
+
+.cardTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cardTh {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 10px 14px;
+  text-align: left;
+  background: rgba(0, 220, 168, 0.02);
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.cardThSortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.cardThSortable:hover {
+  color: var(--orichalcos-light);
+}
+
+.cardTd {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  padding: 8px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.cardTdMuted {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 8px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.cardTdCode {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  padding: 8px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.cardThumb {
+  width: 40px;
+  height: 58px;
+  object-fit: cover;
+  border: 1px solid var(--orichalcos-faint);
+  display: block;
+}
+
+/* ---- Rarity Dropdown ---- */
+
+.raritySelect {
+  padding: 5px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.raritySelect:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+/* ---- Rarity Badges ---- */
+
+.rarityBadge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.rarityCommon {
+  color: #9a9a9a;
+  border-color: rgba(154, 154, 154, 0.3);
+  background: rgba(154, 154, 154, 0.06);
+}
+
+.rarityShortPrint {
+  color: #5a5a5a;
+  border-color: rgba(90, 90, 90, 0.4);
+  background: rgba(90, 90, 90, 0.08);
+}
+
+.rarityRare {
+  color: #4a90d9;
+  border-color: rgba(74, 144, 217, 0.3);
+  background: rgba(74, 144, 217, 0.06);
+}
+
+.raritySuperRare {
+  color: #d4a44a;
+  border-color: rgba(212, 164, 74, 0.3);
+  background: rgba(212, 164, 74, 0.08);
+}
+
+.rarityUltraRare {
+  color: #c44a6a;
+  border-color: rgba(196, 74, 106, 0.3);
+  background: rgba(196, 74, 106, 0.08);
+}
+
+.raritySecretRare {
+  background: linear-gradient(135deg, rgba(255,0,0,0.08), rgba(255,165,0,0.08), rgba(255,255,0,0.08), rgba(0,200,0,0.08), rgba(0,100,255,0.08), rgba(140,0,255,0.08));
+  border-image: linear-gradient(135deg, #ff4444, #ff9944, #eedd44, #44dd66, #4488ff, #aa44ff) 1;
+  color: #d0d0d0;
+}
+
+/* ---- Action Buttons ---- */
+
+.removeBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--color-error);
+  background: none;
+  border: 1px solid transparent;
+  padding: 5px 12px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease;
+}
+
+.removeBtn:hover {
+  border-color: var(--color-error);
+}
+
+.addBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--orichalcos-light);
+  background: none;
+  border: 1px solid var(--orichalcos-faint);
+  padding: 5px 12px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.addBtn:hover {
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.03);
+}
+
+.addBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ---- Already-in-Set row ---- */
+
+.cardAlreadyInSet {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.inSetMark {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--orichalcos-light);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ---- Pagination ---- */
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--orichalcos-faint);
+}
+
+.pageBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border: 1px solid var(--orichalcos-faint);
+  background: none;
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.03);
+}
+
+.pageBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+}
+
+/* ---- Loading / Error / Empty ---- */
+
+.loading,
+.error {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  padding: 40px 0;
+}
+
+.loading {
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 768px) {
+  .setHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .searchInput {
+    max-width: 100%;
+  }
+}
+
+/* ---- Clickable card row ---- */
+
+.cardRow {
+  cursor: pointer;
+}
+
+.cardRow:hover {
+  background: rgba(0, 220, 168, 0.03);
+}

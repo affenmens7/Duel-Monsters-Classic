@@ -1,0 +1,307 @@
+/* ============================================================
+   CardDetailPopup — shared card detail overlay.
+   Used everywhere: admin, shop, deckbuilder, card browser.
+   Theme: Orichalcos Gold
+   ============================================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  position: relative;
+  background: rgba(8, 12, 14, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  max-width: 720px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-muted, #6a6050);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  z-index: 1;
+}
+
+.close:hover {
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.content {
+  display: flex;
+  gap: 20px;
+  padding: 24px;
+}
+
+/* ---- Image Column ---- */
+
+.imageCol {
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.imageCol img {
+  width: 100%;
+}
+
+/* ---- Info Column ---- */
+
+.infoCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.secondaryName {
+  font-family: var(--font-body, 'Cormorant Garamond', serif);
+  font-size: 0.8rem;
+  color: var(--text-muted, #6a6050);
+  font-style: italic;
+}
+
+.typeLine {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.typeTag {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-secondary, #8a8070);
+  padding: 3px 8px;
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ---- Rarity Badges ---- */
+
+.rarityBadge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.rarityCommon {
+  color: #9a9a9a;
+  border-color: rgba(154, 154, 154, 0.3);
+  background: rgba(154, 154, 154, 0.06);
+}
+
+.rarityShortPrint {
+  color: #5a5a5a;
+  border-color: rgba(90, 90, 90, 0.4);
+  background: rgba(90, 90, 90, 0.08);
+}
+
+.rarityRare {
+  color: #4a90d9;
+  border-color: rgba(74, 144, 217, 0.3);
+  background: rgba(74, 144, 217, 0.06);
+}
+
+.raritySuperRare {
+  color: #d4a44a;
+  border-color: rgba(212, 164, 74, 0.3);
+  background: rgba(212, 164, 74, 0.08);
+}
+
+.rarityUltraRare {
+  color: #c44a6a;
+  border-color: rgba(196, 74, 106, 0.3);
+  background: rgba(196, 74, 106, 0.08);
+}
+
+.raritySecretRare {
+  background: linear-gradient(135deg, rgba(255, 0, 0, 0.08), rgba(255, 165, 0, 0.08), rgba(255, 255, 0, 0.08), rgba(0, 200, 0, 0.08), rgba(0, 100, 255, 0.08), rgba(140, 0, 255, 0.08));
+  border-image: linear-gradient(135deg, #ff4444, #ff9944, #eedd44, #44dd66, #4488ff, #aa44ff) 1;
+  color: #d0d0d0;
+}
+
+/* ---- Stats ---- */
+
+.stats {
+  display: flex;
+  gap: 16px;
+}
+
+.atk {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--color-atk, #ef4444);
+}
+
+.def {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--color-def, #3b82f6);
+}
+
+.meta {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-muted, #6a6050);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.desc {
+  font-family: var(--font-body, 'Cormorant Garamond', serif);
+  font-size: 0.9rem;
+  color: var(--text-secondary, #8a8070);
+  line-height: 1.5;
+  white-space: pre-line;
+  margin-top: 4px;
+}
+
+/* ---- Artwork Selection ---- */
+
+.artworkSection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+}
+
+.artworkTitle {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--gold, #c8a830);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.artworkGrid {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.artworkThumb {
+  width: 50px;
+  cursor: pointer;
+  border: 2px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  transition: border-color 0.15s;
+  text-align: center;
+}
+
+.artworkThumb:hover {
+  border-color: var(--orichalcos-subtle);
+}
+
+.artworkActive {
+  border-color: var(--orichalcos-light, #00dca8);
+  box-shadow: 0 0 6px rgba(0, 220, 168, 0.3);
+}
+
+.artworkThumb img {
+  width: 100%;
+  display: block;
+}
+
+/* Availability badge — shown above card info when previewing artwork */
+
+.availabilityBadge {
+  margin: 2px 0;
+}
+
+.badgeAvailable {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  color: var(--orichalcos-light, #00dca8);
+  border: 1px solid rgba(0, 220, 168, 0.25);
+  background: rgba(0, 220, 168, 0.06);
+}
+
+.badgeUnavailable {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  color: var(--text-muted, #6a6050);
+  border: 1px solid rgba(100, 90, 70, 0.2);
+  background: rgba(100, 90, 70, 0.06);
+}
+
+/* ---- Card ID ---- */
+
+.cardId {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  color: var(--text-muted, #6a6050);
+  letter-spacing: 1px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--orichalcos-faint);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 600px) {
+  .content {
+    flex-direction: column;
+  }
+
+  .imageCol {
+    width: 160px;
+    align-self: center;
+  }
+}

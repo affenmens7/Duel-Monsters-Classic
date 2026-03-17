@@ -9,6 +9,19 @@ import { pool } from '../config/db.js';
 export const cardsRouter = Router();
 
 /**
+ * GET /api/cards/count
+ * Returns total card count — used by frontend to check if cache is stale.
+ */
+cardsRouter.get('/count', async (_req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*)::int AS count FROM cards');
+    res.json({ count: result.rows[0].count });
+  } catch {
+    res.status(500).json({ count: 0 });
+  }
+});
+
+/**
  * GET /api/cards
  * Returns cards from active sets only (unless ?all=true for admin).
  * Optional: ?set=SetName&type=normal
@@ -61,20 +74,20 @@ cardsRouter.get('/', async (req, res) => {
 
 /**
  * GET /api/cards/browse
- * Returns ALL cards with availability flag — for the card browser.
- * Available cards first, then unavailable. Includes set info.
+ * Returns ALL cards in the database — for the public card browser.
+ * Includes availability flag (true if card is in any active set).
  */
 cardsRouter.get('/browse', async (_req, res) => {
   try {
     const result = await pool.query(`
-      SELECT DISTINCT c.*,
+      SELECT c.*,
         EXISTS(
-          SELECT 1 FROM card_set_entries cse2
-          JOIN card_sets cs2 ON cs2.name = cse2.set_name
-          WHERE cse2.card_id = c.id AND cs2.active = TRUE
-        ) as available
+          SELECT 1 FROM card_set_entries cse
+          WHERE cse.card_id = c.id
+        ) as available,
+        (SELECT COUNT(*)::int FROM card_artworks ca WHERE ca.card_id = c.id) as artwork_count
       FROM cards c
-      ORDER BY available DESC, c.name_en
+      ORDER BY c.name_en
     `);
     res.json(result.rows);
   } catch {
@@ -145,7 +158,19 @@ cardsRouter.get('/:id', async (req, res) => {
       [id]
     );
 
-    res.json({ ...cardResult.rows[0], sets: setsResult.rows });
+    const artworksResult = await pool.query(
+      `SELECT ca.artwork_id AS "artworkId", ca.label, ca.image_path AS "imagePath", ca.is_default AS "isDefault",
+        (SELECT string_agg(cse.set_name, ', ')
+         FROM card_set_entries cse
+         WHERE cse.card_id = ca.card_id AND cse.artwork_id = ca.artwork_id
+        ) AS "availableIn"
+       FROM card_artworks ca
+       WHERE ca.card_id = $1
+       ORDER BY ca.is_default DESC, ca.artwork_id`,
+      [id]
+    );
+
+    res.json({ ...cardResult.rows[0], sets: setsResult.rows, artworks: artworksResult.rows });
   } catch {
     res.status(500).json({ error: 'Karte konnte nicht geladen werden' });
   }
