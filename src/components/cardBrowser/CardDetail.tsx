@@ -1,14 +1,17 @@
 /**
  * CardDetail — public card browser detail popup.
- * Uses the shared CardDetailPopup component + loads artworks from API.
+ * Waits for artwork details to load before showing the popup.
+ * Set badges are passed via card.sets from AppDataContext cache.
  */
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import type { Card } from '../../types/card';
 import { useCardLocale } from '../../hooks/useCardLocale';
 import { env } from '../../config/env';
 import { CardDetailPopup, type ArtworkOption } from '../common/CardDetailPopup';
+import styles from './CardDetail.module.css';
 
 interface CardDetailProps {
   card: Card;
@@ -17,26 +20,44 @@ interface CardDetailProps {
 
 export function CardDetail({ card, onClose }: CardDetailProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { localize } = useCardLocale();
   const loc = localize(card);
   const [artworks, setArtworks] = useState<ArtworkOption[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load artworks from API
+  // Load artwork details, then show popup
   useEffect(() => {
     setArtworks([]);
-    async function load() {
-      try {
-        const res = await fetch(`${env.api.baseUrl}/cards/${card.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.artworks && data.artworks.length > 1) {
-            setArtworks(data.artworks);
-          }
-        }
-      } catch { /* ignore */ }
+    const artworkIds = card.artworkIds ?? [];
+
+    // No multi-artworks — ready immediately
+    if (artworkIds.length <= 1) {
+      setLoading(false);
+      return;
     }
-    load();
-  }, [card.id]);
+
+    // Fetch artwork details from API
+    setLoading(true);
+    fetch(`${env.api.baseUrl}/cards/${card.id}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.artworks?.length > 1) {
+          setArtworks(data.artworks);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [card.id, card.artworkIds]);
+
+  // Show loading overlay while artworks are being fetched
+  if (loading) {
+    return (
+      <div className={styles.loadingOverlay} onClick={onClose}>
+        <div className={styles.loadingSpinner}>{t('common.loading', 'Loading...')}</div>
+      </div>
+    );
+  }
 
   return (
     <CardDetailPopup
@@ -53,30 +74,12 @@ export function CardDetail({ card, onClose }: CardDetailProps) {
         level: card.level,
         attribute: card.attribute,
         race: loc.race,
+        sets: card.sets,
+        banStatus: card.banStatus,
       }}
       onClose={onClose}
       artworks={artworks}
-    >
-      {/* Set membership info */}
-      {card.card_sets && card.card_sets.length > 0 && (
-        <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(0,220,168,0.08)' }}>
-          <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.55rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '1.5px', textTransform: 'uppercase' as const }}>
-            {t('cardDetail.containedIn')}
-          </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-            {card.card_sets.slice(0, 8).map((set, i) => (
-              <span key={i} style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5rem', color: 'var(--orichalcos-light)', padding: '2px 6px', border: '1px solid rgba(0,220,168,0.15)', letterSpacing: '0.5px' }}>
-                {set.set_name}
-              </span>
-            ))}
-            {card.card_sets.length > 8 && (
-              <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.5rem', color: 'var(--text-muted)' }}>
-                {t('cardDetail.more', { count: card.card_sets.length - 8 })}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </CardDetailPopup>
+      onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
+    />
   );
 }

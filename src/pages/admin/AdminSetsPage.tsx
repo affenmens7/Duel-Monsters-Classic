@@ -369,12 +369,9 @@ export function AdminSetsPage() {
                   className={styles.td}
                   onClick={(e) => handleToggleActive(e, row)}
                 >
-                  <ToggleSwitch
-                    checked={row.active}
-                    onChange={() => {}}
-                    labelOn={t('admin.deactivate')}
-                    labelOff={t('admin.activate')}
-                  />
+                  <span className={row.active ? styles.statusActive : styles.statusInactive}>
+                    {row.active ? t('admin.statusActive') : t('admin.statusInactive')}
+                  </span>
                 </td>
                 <td className={styles.td}>{row.card_count}</td>
               </tr>

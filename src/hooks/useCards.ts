@@ -15,6 +15,8 @@ interface CardFilters {
   query: string;
   typeFilter: string;
   availabilityFilter: string;
+  setFilter?: string;
+  banFilter?: string;
 }
 
 export function useCardSearch(cards: Card[], filters: CardFilters): UseCardSearchResult {
@@ -38,6 +40,22 @@ export function useCardSearch(cards: Card[], filters: CardFilters): UseCardSearc
       result = result.filter((card) => card.frameType === filters.typeFilter);
     }
 
+    // Set filter
+    if (filters.setFilter && filters.setFilter !== 'all') {
+      result = result.filter((card) =>
+        card.sets?.some((s) => s.name === filters.setFilter)
+      );
+    }
+
+    // Ban status filter
+    if (filters.banFilter && filters.banFilter !== 'all') {
+      if (filters.banFilter === 'Unlimited') {
+        result = result.filter((card) => !card.banStatus);
+      } else {
+        result = result.filter((card) => card.banStatus === filters.banFilter);
+      }
+    }
+
     // Availability filter
     if (filters.availabilityFilter === 'available') {
       result = result.filter((card) => card.available);
@@ -52,7 +70,7 @@ export function useCardSearch(cards: Card[], filters: CardFilters): UseCardSearc
     });
 
     return result;
-  }, [cards, filters.query, filters.typeFilter, filters.availabilityFilter]);
+  }, [cards, filters.query, filters.typeFilter, filters.availabilityFilter, filters.setFilter, filters.banFilter]);
 
   return { filteredCards };
 }

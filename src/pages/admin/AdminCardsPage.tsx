@@ -5,7 +5,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
+import { useAppData } from '../../store/AppDataContext';
 import {
   fetchAdminCards,
   type AdminCardRow,
@@ -13,6 +15,7 @@ import {
 import { env } from '../../config/env';
 import { getCardImageUrl } from '../../services/cardApi';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
+import { Modal } from '../../components/common/Modal';
 import styles from './AdminCards.module.css';
 
 const PAGE_SIZE = 50;
@@ -20,6 +23,8 @@ const PAGE_SIZE = 50;
 export function AdminCardsPage() {
   const { token } = useAuth();
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { cards: cachedCards } = useAppData();
   const isEn = i18n.language === 'en';
 
   const FRAME_TYPE_OPTIONS = [
@@ -60,6 +65,10 @@ export function AdminCardsPage() {
   // Popup + artworks
   const [popupCard, setPopupCard] = useState<AdminCardRow | null>(null);
   const [popupArtworks, setPopupArtworks] = useState<any[]>([]);
+
+  // Delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<AdminCardRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Import from YGOPRODeck
   const [showImport, setShowImport] = useState(false);
@@ -185,18 +194,42 @@ export function AdminCardsPage() {
     finally { setImporting(null); }
   }, [token, importing, loadCards, t]);
 
-  // Open popup and fetch artworks
+  // Fetch artworks first, then show popup (so artworks are visible immediately)
+  const [popupLoading, setPopupLoading] = useState(false);
   const openCardPopup = useCallback(async (card: AdminCardRow) => {
-    setPopupCard(card);
-    setPopupArtworks([]);
     if (!token) return;
+    setPopupLoading(true);
     try {
       const res = await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/artworks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) setPopupArtworks(await res.json());
-    } catch { /* ignore */ }
+      const arts = res.ok ? await res.json() : [];
+      setPopupArtworks(arts);
+    } catch {
+      setPopupArtworks([]);
+    }
+    setPopupCard(card);
+    setPopupLoading(false);
   }, [token]);
+
+  // Delete card handler
+  const handleDeleteCard = useCallback(async () => {
+    if (!token || !deleteConfirm) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`${env.api.baseUrl}/admin/cards/${deleteConfirm.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setDeleteConfirm(null);
+        setPopupCard(null);
+        setPopupArtworks([]);
+        loadCards();
+      }
+    } catch { /* ignore */ }
+    setDeleting(false);
+  }, [token, deleteConfirm, loadCards]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -285,6 +318,9 @@ export function AdminCardsPage() {
                 <th className={styles.thSortable} onClick={() => handleSort('attribute')}>
                   {t('admin.attribute')}{sortArrow('attribute')}
                 </th>
+                <th className={styles.thSortable} onClick={() => handleSort('ban_status')}>
+                  {t('admin.banStatus')}{sortArrow('ban_status')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -297,7 +333,7 @@ export function AdminCardsPage() {
                   <td className={styles.td}>
                     <img
                       className={styles.thumb}
-                      src={getCardImageUrl(card.id)}
+                      src={getCardImageUrl(card.id, 'small', card.default_artwork_id ?? undefined)}
                       alt=""
                       loading="lazy"
                     />
@@ -311,10 +347,19 @@ export function AdminCardsPage() {
                       : '\u2014'}
                   </td>
                   <td className={styles.td}>
-                    {card.level !== null ? card.level : '\u2014'}
+                    {card.level ?? '\u2014'}
                   </td>
                   <td className={styles.tdCode}>
-                    {card.attribute ?? '\u2014'}
+                    {card.attribute
+                      ? t(`attributes.${card.attribute}`, card.attribute)
+                      : (card.frame_type === 'spell' || card.frame_type === 'trap')
+                        ? t(`spellTrapType.${card.race_en}`, card.race_en)
+                        : '\u2014'}
+                  </td>
+                  <td className={styles.td}>
+                    <span className={`${styles.banBadge} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}>
+                      {t(`banStatus.${card.ban_status ?? 'Unlimited'}`)}
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -344,6 +389,13 @@ export function AdminCardsPage() {
         </>
       )}
 
+      {/* Loading overlay while artworks are fetched */}
+      {popupLoading && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingSpinner}>{t('admin.loading')}</div>
+        </div>
+      )}
+
       {/* Card Detail Popup */}
       {popupCard && (
         <CardDetailPopup
@@ -360,10 +412,61 @@ export function AdminCardsPage() {
             attribute: popupCard.attribute,
             race: popupCard.race_de || popupCard.race_en,
             archetype: popupCard.archetype,
+            artworkId: popupCard.default_artwork_id,
+            sets: cachedCards.find((c) => c.id === popupCard.id)?.sets,
+            banStatus: popupCard.ban_status,
           }}
           onClose={() => { setPopupCard(null); setPopupArtworks([]); }}
           artworks={popupArtworks}
-        />
+          onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
+          currentArtworkId={popupCard.default_artwork_id}
+          onArtworkChange={async (artworkId) => {
+            if (!token || !popupCard) return;
+            try {
+              await fetch(`${env.api.baseUrl}/admin/cards/${popupCard.id}/artworks/${artworkId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ isDefault: true }),
+              });
+              setPopupCard({ ...popupCard, default_artwork_id: artworkId });
+              loadCards();
+            } catch { /* ignore */ }
+          }}
+        >
+          <div className={styles.popupActions}>
+            <div className={styles.banSelect}>
+              <span className={styles.banSelectLabel}>{t('admin.banStatus')}</span>
+              <select
+                className={styles.banSelectInput}
+                value={popupCard.ban_status ?? ''}
+                onChange={async (e) => {
+                  if (!token || !popupCard) return;
+                  const val = e.target.value || null;
+                  try {
+                    await fetch(`${env.api.baseUrl}/admin/cards/${popupCard.id}/ban`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ banStatus: val }),
+                    });
+                    setPopupCard({ ...popupCard, ban_status: val });
+                    loadCards();
+                  } catch { /* ignore */ }
+                }}
+              >
+                <option value="">{t('banStatus.Unlimited')}</option>
+                <option value="Semi-Limited">{t('banStatus.Semi-Limited')}</option>
+                <option value="Limited">{t('banStatus.Limited')}</option>
+                <option value="Forbidden">{t('banStatus.Forbidden')}</option>
+              </select>
+            </div>
+            <button
+              className={styles.deleteCardBtn}
+              onClick={() => { setDeleteConfirm(popupCard); setPopupCard(null); setPopupArtworks([]); }}
+            >
+              {t('admin.deleteCard')}
+            </button>
+          </div>
+        </CardDetailPopup>
       )}
 
       {/* API Card Detail Popup */}
@@ -452,6 +555,38 @@ export function AdminCardsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title={t('admin.deleteCardTitle')}
+      >
+        {deleteConfirm && (
+          <div className={styles.deleteConfirm}>
+            <p className={styles.deleteWarning}>{t('admin.deleteCardWarning')}</p>
+            <p className={styles.deleteCardName}>
+              {isEn ? deleteConfirm.name_en : deleteConfirm.name_de}
+            </p>
+            <p className={styles.deleteCardId}>ID: {deleteConfirm.id}</p>
+            <div className={styles.deleteActions}>
+              <button
+                className={styles.deleteCancelBtn}
+                onClick={() => setDeleteConfirm(null)}
+              >
+                {t('admin.cancel')}
+              </button>
+              <button
+                className={styles.deleteConfirmBtn}
+                onClick={handleDeleteCard}
+                disabled={deleting}
+              >
+                {deleting ? '...' : t('admin.deleteConfirm')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

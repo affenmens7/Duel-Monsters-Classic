@@ -39,8 +39,8 @@ cd server && npx tsx src/db/import-cards.ts
 │   ├── config/                   # news.ts, roadmap.ts, sets.ts, themes.ts, version.ts
 │   ├── hooks/                    # useCards, useCardLocale, useScrollReveal
 │   ├── i18n/                     # de.ts, en.ts (Deutsch/Englisch)
-│   ├── services/                 # authApi, cardApi, deckApi
-│   ├── store/                    # AuthContext, ThemeContext, CardContext
+│   ├── services/                 # authApi, cardApi, deckApi, shopApi, inventoryApi, versionApi
+│   ├── store/                    # AuthContext, ThemeContext, AppDataContext, CardContext, SessionContext, InventoryContext
 │   ├── styles/
 │   │   ├── global.css            # NUR Resets + Base-Defaults
 │   │   └── themes/orichalcos-gold/variables.css  # Theme CSS Variablen
@@ -51,8 +51,8 @@ cd server && npx tsx src/db/import-cards.ts
 │       ├── config/               # db.ts, env.ts, starterDecks.ts
 │       ├── db/                   # migrate.ts, import-cards.ts
 │       ├── middleware/           # auth.ts (JWT)
-│       ├── routes/               # auth.ts, cards.ts, user.ts, decks.ts
-│       └── services/             # authService.ts, emailService.ts
+│       ├── routes/               # auth.ts, cards.ts, user.ts, decks.ts, admin.ts, shop.ts, version.ts
+│       └── services/             # authService.ts, emailService.ts, versionService.ts
 ├── public/images/                # Karten- und Set-Bilder (gitignored)
 ├── docker-compose.yml            # PostgreSQL Container
 └── .env                          # Secrets (gitignored)
@@ -100,15 +100,28 @@ Sends: Welcome email + Verification email (5s delay between them to avoid spam)
 - Theme system (CSS-based, expandable)
 - 1719 cards imported, 318 available (active sets)
 - 20 pack artworks downloaded
+- Inventory system (InventoryContext, backend validation)
+- DB-driven shop (shop_set_config, shop_rarity_rates, shop_cosmetics)
+- Admin UI (dashboard, card database, set management, card picker, artwork selection)
+- Shared CardDetailPopup (admin, shop, deckbuilder, public browser)
+- Import script (npx tsx src/db/import-set.ts "Set Name")
+- 3-Tier Caching System:
+  - Tier 1: AppDataContext (localStorage, version-based) — cards + artworks + sets + shop
+  - Tier 2: SessionContext (React state) — inventory + DP + deck list (optimistic updates)
+  - Tier 3: On-demand — deck contents, admin data
+  - Version endpoint: GET /api/data-version
+  - Auto-invalidation on admin mutations (23 bump points)
+- Set-Badges in CardDetailPopup (shows which sets contain the card)
 
 ### Next Steps (Priority Order)
-1. Deckbuilder: nur eigene Karten anzeigen (aus Inventar)
-2. Shop: Booster kaufen, Pack-Opening, DP abziehen
-3. Admin UI: News/Roadmap/Sets verwalten
-4. Starter Deck Auswahl bugfrei machen
-5. Discord OAuth (spaeter, wenn Domain vorhanden)
-6. VPS Deployment
-7. Duel Engine (srvpro Integration)
+1. Restliche Sets importieren (MRD, SRL, Starter Decks, etc.)
+2. Admin: "Neues Set erstellen" Button
+3. Admin: News, Roadmap, Users, Cosmetics Seiten (Backend steht, Frontend Placeholders)
+4. Shop: Pack-Opening Animation
+5. Starter Deck Auswahl bugfrei machen
+6. Discord OAuth (spaeter, wenn Domain vorhanden)
+7. VPS Deployment
+8. Duel Engine (srvpro Integration)
 
 ## Important Conventions
 - German in UI, English in code (variable names, comments)

@@ -166,6 +166,8 @@ export interface AdminCardRow {
   race_en: string;
   archetype: string | null;
   image_path: string;
+  default_artwork_id: number | null;
+  ban_status: string | null;
 }
 
 export interface AdminCardPage {
@@ -193,6 +195,7 @@ export interface SetCardRow {
   race_en: string | null;
   archetype: string | null;
   image_path: string | null;
+  ban_status: string | null;
 }
 
 /**
@@ -265,7 +268,7 @@ export async function updateSet(
   const response = await fetch(
     `${env.api.baseUrl}/admin/sets/${encodeURIComponent(setName)}`,
     {
-      method: 'PATCH',
+      method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify(data),
     },

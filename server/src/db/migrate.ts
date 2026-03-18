@@ -230,6 +230,23 @@ const schema = `
     created_at    TIMESTAMPTZ DEFAULT NOW(),
     updated_at    TIMESTAMPTZ DEFAULT NOW()
   );
+
+  -- Data version counter (for client-side cache invalidation)
+  CREATE TABLE IF NOT EXISTS data_version (
+    id          INTEGER PRIMARY KEY DEFAULT 1,
+    version     INTEGER DEFAULT 1,
+    updated_at  TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT single_row CHECK (id = 1)
+  );
+
+  INSERT INTO data_version (id) VALUES (1) ON CONFLICT DO NOTHING;
+
+  -- Ban status column on cards (forbidden/limited/semi-limited, null = unlimited)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cards' AND column_name = 'ban_status') THEN
+      ALTER TABLE cards ADD COLUMN ban_status VARCHAR(16) DEFAULT NULL;
+    END IF;
+  END $$;
 `;
 
 async function migrate() {

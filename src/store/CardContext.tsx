@@ -1,17 +1,16 @@
 /**
- * CardContext — loads all cards ONCE at app start.
- * Cards are cached in localStorage and available everywhere via useCards().
+ * CardContext — thin wrapper around AppDataContext for backwards compatibility.
+ * All existing consumers of useCards() continue to work unchanged.
  */
 
-import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import type { Card } from '../types/card';
-import { fetchAllCards, refreshCards } from '../services/cardApi';
+import { useAppData } from './AppDataContext';
 
 interface CardContextValue {
   cards: Card[];
   loading: boolean;
   error: string | null;
-  /** Clear cache and re-fetch cards from the backend. */
   refresh: () => Promise<void>;
 }
 
@@ -23,29 +22,7 @@ const CardContext = createContext<CardContextValue>({
 });
 
 export function CardProvider({ children }: { children: ReactNode }) {
-  const [cards, setCards] = useState<Card[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchAllCards()
-      .then(setCards)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Fehler beim Laden'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const fresh = await refreshCards();
-      setCards(fresh);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { cards, loading, error, refresh } = useAppData();
 
   return (
     <CardContext.Provider value={{ cards, loading, error, refresh }}>

@@ -1,21 +1,28 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { useCards } from '../store/CardContext';
+import { useAppData } from '../store/AppDataContext';
 import { useInventory } from '../store/InventoryContext';
 import { useCardLocale } from '../hooks/useCardLocale';
 import { getCardImageUrl } from '../services/cardApi';
 import { fetchDecks, fetchDeck, createDeck, deleteDeck, saveDeckCards, type DeckSummary } from '../services/deckApi';
 import type { Card, OwnedCard } from '../types/card';
+import { SearchBar, type ViewMode } from '../components/cardBrowser/SearchBar';
+import { CardGrid } from '../components/cardBrowser/CardGrid';
+import { CardTable } from '../components/cardBrowser/CardTable';
 import { CardDetailPopup } from '../components/common/CardDetailPopup';
+import { Modal } from '../components/common/Modal';
 import styles from './DeckbuilderPage.module.css';
 
-type PopupMode = 'add' | 'remove-main' | 'remove-extra';
 
 export function DeckbuilderPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { cards } = useCards();
+  const { sets } = useAppData();
   const { collection, loading: inventoryLoading, refresh: refreshInventory } = useInventory();
   const { localize } = useCardLocale();
 
@@ -23,25 +30,32 @@ export function DeckbuilderPage() {
   const [activeDeckId, setActiveDeckId] = useState<number | null>(null);
   const [mainDeck, setMainDeck] = useState<number[]>([]);
   const [extraDeck, setExtraDeck] = useState<number[]>([]);
+  const [artworkPrefs, setArtworkPrefs] = useState<Map<number, number>>(new Map());
+  const [deckLoading, setDeckLoading] = useState(false);
+  const deckCache = useRef<Map<number, { main: number[]; extra: number[] }>>(new Map());
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [setFilter, setSetFilter] = useState('all');
+  const [banFilter, setBanFilter] = useState('all');
+  const [deckFilter, setDeckFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [error, setError] = useState('');
+  const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'clear'; deckId?: number; deckName?: string } | null>(null);
 
   // Track whether cards were changed by user (not by loadDeckCards)
   const [userEdited, setUserEdited] = useState(false);
 
-  // Auto-save to backend on every edit
+  // Auto-save to backend on every edit + update cache
   useEffect(() => {
     if (activeDeckId && userEdited) {
       saveDeckCards(activeDeckId, mainDeck, extraDeck).catch(() => {});
+      deckCache.current.set(activeDeckId, { main: mainDeck, extra: extraDeck });
       setUserEdited(false);
     }
   }, [activeDeckId, mainDeck, extraDeck, userEdited]);
 
   // Popup state
   const [popupCard, setPopupCard] = useState<Card | null>(null);
-  const [popupMode, setPopupMode] = useState<PopupMode>('add');
-  const [popupIndex, setPopupIndex] = useState(0);
 
   // Drag state
   const [dragCardId, setDragCardId] = useState<number | null>(null);
@@ -49,11 +63,13 @@ export function DeckbuilderPage() {
   const [dragIsFusion, setDragIsFusion] = useState(false);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
 
-  // Refresh inventory when deck changes (excludes current deck from usage calc)
+  // Load inventory once on mount (excludes current deck from usage calc)
   useEffect(() => {
     if (!user) return;
     refreshInventory(activeDeckId ?? undefined);
-  }, [user, activeDeckId, refreshInventory]);
+    // Only refresh on initial mount, not on every deck switch
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const filteredPool = useMemo(() => {
     let result: OwnedCard[] = collection;
@@ -67,8 +83,27 @@ export function DeckbuilderPage() {
     if (typeFilter !== 'all') {
       result = result.filter((c) => c.frameType === typeFilter);
     }
+    if (setFilter !== 'all') {
+      result = result.filter((c) =>
+        c.sets?.some((s) => s.name === setFilter)
+      );
+    }
+    if (banFilter !== 'all') {
+      if (banFilter === 'Unlimited') {
+        result = result.filter((c) => !c.banStatus);
+      } else {
+        result = result.filter((c) => c.banStatus === banFilter);
+      }
+    }
+    if (deckFilter === 'inDeck') {
+      const deckIds = new Set([...mainDeck, ...extraDeck]);
+      result = result.filter((c) => deckIds.has(c.id));
+    } else if (deckFilter === 'notInDeck') {
+      const deckIds = new Set([...mainDeck, ...extraDeck]);
+      result = result.filter((c) => !deckIds.has(c.id));
+    }
     return result;
-  }, [collection, search, typeFilter]);
+  }, [collection, search, typeFilter, setFilter, banFilter, deckFilter, mainDeck, extraDeck]);
 
 
   const cardCounts = useMemo(() => {
@@ -104,6 +139,15 @@ export function DeckbuilderPage() {
   }, [user]);
 
   async function loadDeckCards(deckId: number) {
+    // Use cache if available
+    const cached = deckCache.current.get(deckId);
+    if (cached) {
+      setMainDeck(cached.main);
+      setExtraDeck(cached.extra);
+      return;
+    }
+
+    setDeckLoading(true);
     try {
       const detail = await fetchDeck(deckId);
       const main: number[] = [];
@@ -117,21 +161,35 @@ export function DeckbuilderPage() {
           }
         }
       }
+      deckCache.current.set(deckId, { main, extra });
       setMainDeck(main);
       setExtraDeck(extra);
     } catch {
       setMainDeck([]);
       setExtraDeck([]);
+    } finally {
+      setDeckLoading(false);
     }
   }
+
+  // Get max allowed copies based on ban status
+  const getMaxCopies = useCallback((card: Card | OwnedCard) => {
+    switch (card.banStatus) {
+      case 'Forbidden': return 0;
+      case 'Limited': return 1;
+      case 'Semi-Limited': return 2;
+      default: return 3;
+    }
+  }, []);
 
   // Calculate how many copies can still be added to THIS deck
   const getAvailable = useCallback((cardId: number) => {
     const ownedCard = collection.find((c) => c.id === cardId);
     if (!ownedCard) return 0;
+    const maxCopies = getMaxCopies(ownedCard);
     const inThisDeck = cardCounts.get(cardId) ?? 0;
-    return Math.max(0, Math.min(3, ownedCard.owned) - inThisDeck);
-  }, [collection, cardCounts]);
+    return Math.max(0, Math.min(maxCopies, ownedCard.owned) - inThisDeck);
+  }, [collection, cardCounts, getMaxCopies]);
 
   const addCard = useCallback((card: Card) => {
     if (getAvailable(card.id) <= 0) return;
@@ -156,33 +214,24 @@ export function DeckbuilderPage() {
   }
 
   function clearDeck() {
+    setConfirmAction({ type: 'clear' });
+  }
+
+  function doClearDeck() {
     setMainDeck([]);
     setExtraDeck([]);
     setUserEdited(true);
+    setConfirmAction(null);
   }
 
   function openPoolPopup(card: Card) {
     setPopupCard(card);
-    setPopupMode('add');
   }
 
-  function openDeckPopup(card: Card, mode: 'remove-main' | 'remove-extra', index: number) {
+  function openDeckPopup(card: Card) {
     setPopupCard(card);
-    setPopupMode(mode);
-    setPopupIndex(index);
   }
 
-  function handlePopupAction() {
-    if (!popupCard) return;
-    if (popupMode === 'add') {
-      addCard(popupCard);
-    } else if (popupMode === 'remove-main') {
-      removeFromMain(popupIndex);
-    } else if (popupMode === 'remove-extra') {
-      removeFromExtra(popupIndex);
-    }
-    setPopupCard(null);
-  }
 
   // Custom drag & drop — card follows cursor, with click threshold
   function startDrag(cardId: number, e: React.MouseEvent, from?: { type: 'main' | 'extra'; index: number }) {
@@ -257,10 +306,15 @@ export function DeckbuilderPage() {
     }
   }
 
-  async function handleDeleteDeck(id: number) {
+  function handleDeleteDeck(id: number, name: string) {
+    setConfirmAction({ type: 'delete', deckId: id, deckName: name });
+  }
+
+  async function doDeleteDeck(id: number) {
     try {
       await deleteDeck(id);
       setDecks(decks.filter((d) => d.id !== id));
+      deckCache.current.delete(id);
       if (activeDeckId === id) {
         setActiveDeckId(null);
         setMainDeck([]);
@@ -268,6 +322,16 @@ export function DeckbuilderPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error'));
+    }
+    setConfirmAction(null);
+  }
+
+  function handleConfirm() {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'clear') {
+      doClearDeck();
+    } else if (confirmAction.type === 'delete' && confirmAction.deckId) {
+      doDeleteDeck(confirmAction.deckId);
     }
   }
 
@@ -283,11 +347,10 @@ export function DeckbuilderPage() {
     <div className={styles.page}>
       <div className={styles.layout}>
         {/* Left: Deck */}
-        <div
-          className={styles.deckPanel}
-        >
+        <div className={styles.deckColumn} data-drop="deck">
+        <div className={styles.deckPanel}>
           <div className={styles.deckHeader}>
-            <h2 className={styles.deckTitle}>{t('nav.deckbuilder')}</h2>
+            <h2 className={styles.deckTitle}>{t('deckbuilder.title')}</h2>
             <div className={styles.deckActions}>
               <button className={styles.newBtn} onClick={handleNewDeck}>{t('deckbuilder.newDeck')}</button>
             </div>
@@ -298,30 +361,38 @@ export function DeckbuilderPage() {
               <div
                 key={d.id}
                 className={`${styles.deckItem} ${activeDeckId === d.id ? styles.deckItemActive : ''}`}
-                onClick={() => { setActiveDeckId(d.id); loadDeckCards(d.id); }}
+                onClick={() => {
+                  if (activeDeckId === d.id) {
+                    setActiveDeckId(null);
+                    setMainDeck([]);
+                    setExtraDeck([]);
+                  } else {
+                    setActiveDeckId(d.id);
+                    loadDeckCards(d.id);
+                  }
+                }}
               >
                 <span className={styles.deckItemName}>{d.name}</span>
-                <button className={styles.deckItemDelete} onClick={(e) => { e.stopPropagation(); handleDeleteDeck(d.id); }}>x</button>
+                <button className={styles.deckItemDelete} onClick={(e) => { e.stopPropagation(); handleDeleteDeck(d.id, d.name); }}>x</button>
               </div>
             ))}
           </div>
 
           {error && <div className={styles.error}>{error}</div>}
+          {deckLoading && <div className={styles.deckLoadingHint}>{t('common.loading')}</div>}
 
-          {activeDeckId && (
-            <>
+          <div className={`${styles.deckContent} ${activeDeckId && !deckLoading ? styles.deckContentOpen : ''}`}>
+            <div className={styles.deckContentInner}>
               <div className={styles.deckSection}>
                 <div className={styles.deckSectionHeader}>
                   <span>{t('deckbuilder.mainDeck')} ({mainDeck.length}/40-60)</span>
                   <button className={styles.clearBtn} onClick={clearDeck}>{t('deckbuilder.clear')}</button>
                 </div>
-                {mainDeck.length > 0 && (
-                  <div className={styles.deckTypeStats}>
-                    <span className={styles.statMonster}>{t('deckbuilder.monsters')}: {deckTypeCounts.monsters}</span>
-                    <span className={styles.statSpell}>{t('deckbuilder.spells')}: {deckTypeCounts.spells}</span>
-                    <span className={styles.statTrap}>{t('deckbuilder.traps')}: {deckTypeCounts.traps}</span>
-                  </div>
-                )}
+                <div className={styles.deckTypeStats}>
+                  <span className={styles.statMonster}>{t('deckbuilder.monsters')}: {deckTypeCounts.monsters}</span>
+                  <span className={styles.statSpell}>{t('deckbuilder.spells')}: {deckTypeCounts.spells}</span>
+                  <span className={styles.statTrap}>{t('deckbuilder.traps')}: {deckTypeCounts.traps}</span>
+                </div>
                 <div className={`${styles.deckGrid} ${dragCardId && !dragFromDeck && !dragIsFusion ? styles.deckGridDropTarget : ''}`} data-drop="deck">
                   {mainDeck.map((cardId, i) => {
                     const card = getCardById(cardId);
@@ -329,11 +400,11 @@ export function DeckbuilderPage() {
                       <div
                         key={`m-${i}`}
                         className={styles.deckCard}
-                        onClick={() => card && openDeckPopup(card, 'remove-main', i)}
+                        onClick={() => card && openDeckPopup(card)}
                         onMouseDown={(e) => { e.stopPropagation(); startDrag(cardId, e, { type: 'main', index: i }); }}
                         title={card ? localize(card).name : ''}
                       >
-                        <img src={getCardImageUrl(cardId)} alt="" draggable={false} />
+                        <img src={getCardImageUrl(cardId, 'small', artworkPrefs.get(cardId))} alt="" draggable={false} />
                       </div>
                     );
                   })}
@@ -349,11 +420,11 @@ export function DeckbuilderPage() {
                       <div
                         key={`e-${i}`}
                         className={styles.deckCard}
-                        onClick={() => card && openDeckPopup(card, 'remove-extra', i)}
+                        onClick={() => card && openDeckPopup(card)}
                         onMouseDown={(e) => { e.stopPropagation(); startDrag(cardId, e, { type: 'extra', index: i }); }}
                         title={card ? localize(card).name : ''}
                       >
-                        <img src={getCardImageUrl(cardId)} alt="" draggable={false} />
+                        <img src={getCardImageUrl(cardId, 'small', artworkPrefs.get(cardId))} alt="" draggable={false} />
                       </div>
                     );
                   })}
@@ -365,56 +436,55 @@ export function DeckbuilderPage() {
                   ? t('deckbuilder.ready', { count: mainDeck.length })
                   : t('deckbuilder.cardProgress', { count: mainDeck.length })}
               </div>
-
-            </>
-          )}
+            </div>
+          </div>
+        </div>
         </div>
 
-        {/* Right: Card pool */}
-        <div className={`${styles.poolPanel} ${dragFromDeck ? styles.poolPanelDropTarget : ''}`} data-drop="pool">
-          <div className={styles.poolHeader}>
-            <input
-              className={styles.poolSearch}
-              placeholder={t('cards.searchPlaceholder')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+        {/* Right: Card pool — uses same components as Public Database */}
+        <div className={styles.poolPanel} data-drop="pool">
+          <SearchBar
+            query={search}
+            onQueryChange={setSearch}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
+            setFilter={setFilter}
+            onSetFilterChange={setSetFilter}
+            sets={sets.filter((s) => s.active)}
+            availabilityFilter={deckFilter}
+            onAvailabilityFilterChange={setDeckFilter}
+            availabilityOptions={[
+              { value: 'all', label: t('cards.allCards') },
+              { value: 'inDeck', label: t('deckbuilder.inDeck') },
+              { value: 'notInDeck', label: t('deckbuilder.notInDeck') },
+            ]}
+            banFilter={banFilter}
+            onBanFilterChange={setBanFilter}
+            resultCount={filteredPool.length}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
+
+          {inventoryLoading ? (
+            <div className={styles.poolLoading}>{t('common.loading')}</div>
+          ) : collection.length === 0 ? (
+            <div className={styles.poolEmpty}>
+              <p>{t('inventory.noCardsOwned')}</p>
+              <a href="/app/shop" className={styles.poolEmptyLink}>{t('inventory.goToShop')}</a>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <CardGrid
+              cards={filteredPool}
+              onCardClick={openPoolPopup}
+              isCardMaxed={(id) => getAvailable(id) <= 0}
             />
-            <select className={styles.poolFilter} value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-              <option value="all">{t('deckbuilder.filterAll')}</option>
-              <option value="normal">{t('deckbuilder.filterNormal')}</option>
-              <option value="effect">{t('deckbuilder.filterEffect')}</option>
-              <option value="ritual">{t('deckbuilder.filterRitual')}</option>
-              <option value="fusion">{t('deckbuilder.filterFusion')}</option>
-              <option value="spell">{t('deckbuilder.filterSpell')}</option>
-              <option value="trap">{t('deckbuilder.filterTrap')}</option>
-            </select>
-            <span className={styles.poolCount}>{filteredPool.length}</span>
-          </div>
-          <div className={styles.poolGrid}>
-            {inventoryLoading && <div className={styles.poolLoading}>{t('common.loading')}</div>}
-            {!inventoryLoading && collection.length === 0 && (
-              <div className={styles.poolEmpty}>
-                <p>{t('inventory.noCardsOwned')}</p>
-                <a href="/app/shop" className={styles.poolEmptyLink}>{t('inventory.goToShop')}</a>
-              </div>
-            )}
-            {filteredPool.map((card) => {
-              const avail = getAvailable(card.id);
-              const maxed = avail <= 0;
-              const loc = localize(card);
-              return (
-                <div
-                  key={card.id}
-                  className={`${styles.poolCard} ${maxed ? styles.poolCardMaxed : ''}`}
-                  onClick={() => openPoolPopup(card)}
-                  onMouseDown={(e) => { if (!maxed) startDrag(card.id, e); }}
-                  title={loc.name}
-                >
-                  <img src={getCardImageUrl(card.id)} alt={loc.name} loading="lazy" draggable={false} />
-                </div>
-              );
-            })}
-          </div>
+          ) : (
+            <CardTable
+              cards={filteredPool}
+              onCardClick={openPoolPopup}
+              isCardMaxed={(id) => getAvailable(id) <= 0}
+            />
+          )}
         </div>
       </div>
 
@@ -433,8 +503,33 @@ export function DeckbuilderPage() {
             def: popupCard.def,
             level: popupCard.level,
             attribute: popupCard.attribute,
+            sets: popupCard.sets,
+            banStatus: popupCard.banStatus,
           }}
           onClose={() => setPopupCard(null)}
+          onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
+          artworks={(popupCard.artworkIds ?? []).length > 1
+            ? (popupCard.artworkIds ?? []).map((aId, i) => ({
+                artworkId: aId,
+                label: i === 0 ? 'Original' : `Artwork ${i + 1}`,
+                imagePath: `/images/cards/${aId}.jpg`,
+                isDefault: i === 0,
+              }))
+            : undefined
+          }
+          onArtworkChange={(artworkId) => {
+            setArtworkPrefs((prev) => {
+              const next = new Map(prev);
+              next.set(popupCard.id, artworkId);
+              return next;
+            });
+          }}
+          ownedArtworkIds={
+            popupCard.sets
+              ?.filter((s) => s.active && s.artworkId != null)
+              .map((s) => s.artworkId!)
+              .filter((v, i, a) => a.indexOf(v) === i)
+          }
         >
           {/* Inventory info */}
           {(() => {
@@ -448,35 +543,46 @@ export function DeckbuilderPage() {
             ) : null;
           })()}
           {/* Action buttons */}
-          <div>
-            {popupMode === 'add' ? (() => {
-              const noAvail = getAvailable(popupCard.id) <= 0;
-              const isFusion = popupCard.frameType === 'fusion';
-              const deckFull = isFusion ? extraDeck.length >= 15 : mainDeck.length >= 60;
-              const disabled = !activeDeckId || noAvail || deckFull;
-              const hint = !activeDeckId ? t('deckbuilder.noDeckSelected')
-                : noAvail ? t('deckbuilder.copyLimitReached')
-                : deckFull ? (isFusion ? t('deckbuilder.extraDeckFull') : t('deckbuilder.mainDeckFull'))
-                : '';
-              return (
+          {(() => {
+            const isForbidden = popupCard.banStatus === 'Forbidden';
+            const noAvail = getAvailable(popupCard.id) <= 0;
+            const isFusion = popupCard.frameType === 'fusion';
+            const deckFull = isFusion ? extraDeck.length >= 15 : mainDeck.length >= 60;
+            const addDisabled = !activeDeckId || isForbidden || noAvail || deckFull;
+            const inDeck = cardCounts.get(popupCard.id) ?? 0;
+            const removeDisabled = inDeck <= 0;
+            const addHint = !activeDeckId ? t('deckbuilder.noDeckSelected')
+              : isForbidden ? t('banStatus.Forbidden')
+              : noAvail ? t('deckbuilder.copyLimitReached')
+              : deckFull ? (isFusion ? t('deckbuilder.extraDeckFull') : t('deckbuilder.mainDeckFull'))
+              : '';
+            return (
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', paddingTop: '8px', borderTop: '1px solid rgba(0,220,168,0.08)' }}>
                 <button
-                  style={{ fontFamily: 'var(--font-heading)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '10px 24px', border: '1px solid rgba(0,220,168,0.15)', background: 'rgba(0,200,160,0.05)', color: '#00dca8', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}
-                  onClick={handlePopupAction}
-                  disabled={disabled}
-                  title={hint}
+                  style={{ fontFamily: 'var(--font-heading)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '10px 20px', border: '1px solid rgba(0,220,168,0.15)', background: 'rgba(0,200,160,0.05)', color: '#00dca8', cursor: addDisabled ? 'not-allowed' : 'pointer', opacity: addDisabled ? 0.4 : 1 }}
+                  onClick={() => { addCard(popupCard); }}
+                  disabled={addDisabled}
+                  title={addHint}
                 >
                   {t('deckbuilder.addToDeck')}
                 </button>
-              );
-            })() : (
-              <button
-                style={{ fontFamily: 'var(--font-heading)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '10px 24px', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.04)', color: '#ef4444', cursor: 'pointer' }}
-                onClick={handlePopupAction}
-              >
-                {t('deckbuilder.removeFromDeck')}
-              </button>
-            )}
-          </div>
+                <button
+                  style={{ fontFamily: 'var(--font-heading)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', padding: '10px 20px', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.04)', color: '#ef4444', cursor: removeDisabled ? 'not-allowed' : 'pointer', opacity: removeDisabled ? 0.4 : 1 }}
+                  onClick={() => {
+                    if (removeDisabled) return;
+                    // Find last occurrence in main or extra deck
+                    const mainIdx = mainDeck.lastIndexOf(popupCard.id);
+                    const extraIdx = extraDeck.lastIndexOf(popupCard.id);
+                    if (mainIdx >= 0) { removeFromMain(mainIdx); }
+                    else if (extraIdx >= 0) { removeFromExtra(extraIdx); }
+                  }}
+                  disabled={removeDisabled}
+                >
+                  {t('deckbuilder.removeFromDeck')}
+                </button>
+              </div>
+            );
+          })()}
         </CardDetailPopup>
       )}
 
@@ -489,6 +595,35 @@ export function DeckbuilderPage() {
           <img src={getCardImageUrl(dragCardId)} alt="" draggable={false} />
         </div>
       )}
+
+      {/* Confirm Modal (delete deck / clear deck) */}
+      <Modal
+        open={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        title={confirmAction?.type === 'delete' ? t('deckbuilder.deleteDeckTitle') : t('deckbuilder.clearDeckTitle')}
+      >
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+            {confirmAction?.type === 'delete'
+              ? t('deckbuilder.deleteDeckWarning', { name: confirmAction.deckName ?? '' })
+              : t('deckbuilder.clearDeckWarning')}
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+            <button
+              style={{ fontFamily: 'var(--font-heading)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 24px', border: '1px solid var(--orichalcos-faint)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              onClick={() => setConfirmAction(null)}
+            >
+              {t('admin.cancel')}
+            </button>
+            <button
+              style={{ fontFamily: 'var(--font-heading)', fontSize: '0.6rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', padding: '8px 24px', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: 'pointer' }}
+              onClick={handleConfirm}
+            >
+              {confirmAction?.type === 'delete' ? t('deckbuilder.deleteDeckConfirm') : t('deckbuilder.clearDeckConfirm')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

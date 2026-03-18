@@ -7,7 +7,7 @@
  * Deckbuilder, Shop Set Preview.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
 import styles from './CardDetailPopup.module.css';
@@ -21,6 +21,11 @@ function rarityClass(rarity: string): string {
   if (lower.includes('rare')) return styles.rarityRare;
   if (lower.includes('short')) return styles.rarityShortPrint;
   return styles.rarityCommon;
+}
+
+export interface CardSetBadgeData {
+  name: string;
+  code: string;
 }
 
 export interface CardDetailData {
@@ -40,6 +45,8 @@ export interface CardDetailData {
   archetype?: string | null;
   rarity?: string | null;
   artworkId?: number | null;
+  sets?: CardSetBadgeData[];
+  banStatus?: string | null;
 }
 
 export interface ArtworkOption {
@@ -56,6 +63,8 @@ interface CardDetailPopupProps {
   artworks?: ArtworkOption[];
   currentArtworkId?: number | null;
   onArtworkChange?: (artworkId: number) => void;
+  onSetClick?: (setName: string) => void;
+  ownedArtworkIds?: number[];
   children?: React.ReactNode;
 }
 
@@ -65,6 +74,8 @@ export function CardDetailPopup({
   artworks,
   currentArtworkId,
   onArtworkChange,
+  onSetClick,
+  ownedArtworkIds,
   children,
 }: CardDetailPopupProps) {
   const { i18n, t } = useTranslation();
@@ -72,6 +83,12 @@ export function CardDetailPopup({
 
   const defaultArtId = currentArtworkId ?? card.artworkId ?? card.id;
   const [previewArtId, setPreviewArtId] = useState<number>(defaultArtId);
+
+  // Sync preview when card or default artwork changes
+  useEffect(() => {
+    setPreviewArtId(defaultArtId);
+  }, [defaultArtId]);
+
   const artId = previewArtId;
 
   // Find the currently previewed artwork info
@@ -97,8 +114,8 @@ export function CardDetailPopup({
               <span className={styles.secondaryName}>{secondaryName}</span>
             )}
 
-            {/* Artwork availability badge — shows when previewing a specific artwork */}
-            {activeArtwork && artworks && artworks.length > 1 && (
+            {/* Availability badges — artwork-specific when previewing, otherwise from cached sets */}
+            {activeArtwork && artworks && artworks.length > 1 ? (
               <div className={styles.availabilityBadge}>
                 {activeArtwork.availableIn ? (
                   <span className={styles.badgeAvailable}>{activeArtwork.availableIn}</span>
@@ -106,7 +123,23 @@ export function CardDetailPopup({
                   <span className={styles.badgeUnavailable}>{t('cardDetail.notAvailable')}</span>
                 )}
               </div>
-            )}
+            ) : card.sets !== undefined ? (
+              <div className={styles.availabilityBadge}>
+                {card.sets && card.sets.length > 0 ? (
+                  card.sets.map((s) => (
+                    <span
+                      key={s.code ?? s.name}
+                      className={`${s.active !== false ? styles.badgeAvailable : styles.badgeUnavailable} ${onSetClick ? styles.badgeClickable : ''}`}
+                      onClick={onSetClick ? () => { onClose(); onSetClick(s.name); } : undefined}
+                    >
+                      {s.name}
+                    </span>
+                  ))
+                ) : (
+                  <span className={styles.badgeUnavailable}>{t('cardDetail.notAvailable')}</span>
+                )}
+              </div>
+            ) : null}
 
             <div className={styles.typeLine}>
               {(card.type || card.frameType) && (
@@ -117,6 +150,9 @@ export function CardDetailPopup({
                   {card.rarity}
                 </span>
               )}
+              <span className={`${styles.banBadge} ${styles[`ban${(card.banStatus ?? 'Unlimited').replace('-', '')}`]}`}>
+                {t(`banStatus.${card.banStatus ?? 'Unlimited'}`)}
+              </span>
             </div>
 
             {card.atk != null && (
@@ -141,18 +177,21 @@ export function CardDetailPopup({
               <div className={styles.artworkSection}>
                 <span className={styles.artworkTitle}>Artworks ({artworks.length})</span>
                 <div className={styles.artworkGrid}>
-                  {artworks.map((art) => (
-                    <div
-                      key={art.artworkId}
-                      className={`${styles.artworkThumb} ${art.artworkId === artId ? styles.artworkActive : ''}`}
-                      onClick={() => {
-                        setPreviewArtId(art.artworkId);
-                        onArtworkChange?.(art.artworkId);
-                      }}
-                    >
-                      <img src={getCardImageUrl(card.id, 'small', art.artworkId)} alt="" />
-                    </div>
-                  ))}
+                  {artworks.map((art) => {
+                    const owned = !ownedArtworkIds || ownedArtworkIds.includes(art.artworkId);
+                    return (
+                      <div
+                        key={art.artworkId}
+                        className={`${styles.artworkThumb} ${art.artworkId === artId ? styles.artworkActive : ''} ${!owned ? styles.artworkLocked : ''}`}
+                        onClick={owned ? () => {
+                          setPreviewArtId(art.artworkId);
+                          onArtworkChange?.(art.artworkId);
+                        } : undefined}
+                      >
+                        <img src={getCardImageUrl(card.id, 'small', art.artworkId)} alt="" />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

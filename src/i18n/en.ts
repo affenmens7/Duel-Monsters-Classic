@@ -51,9 +51,43 @@ export const en = {
     loading: 'Loading card data...',
     errorTitle: 'Error loading data',
     retry: 'Retry',
+    allSets: 'All Sets',
+    allBanStatus: 'All Status',
     allCards: 'All Cards',
+    gridView: 'Card View',
+    tableView: 'Table View',
     available: 'Available',
     locked: 'Not yet available',
+  },
+
+  // Ban status
+  banStatus: {
+    Forbidden: 'Forbidden',
+    Limited: 'Limited',
+    'Semi-Limited': 'Semi-Limited',
+    Unlimited: 'Unlimited',
+  },
+
+  // Spell/Trap subtypes (race field)
+  spellTrapType: {
+    Normal: 'Normal',
+    'Quick-Play': 'Quick-Play',
+    Field: 'Field',
+    Continuous: 'Continuous',
+    Equip: 'Equip',
+    Ritual: 'Ritual',
+    Counter: 'Counter',
+  },
+
+  // Card attributes
+  attributes: {
+    DARK: 'Dark',
+    LIGHT: 'Light',
+    EARTH: 'Earth',
+    WATER: 'Water',
+    FIRE: 'Fire',
+    WIND: 'Wind',
+    DIVINE: 'Divine',
   },
 
   // Card Detail
@@ -62,6 +96,7 @@ export const en = {
     level: 'Level',
     type: 'Type',
     containedIn: 'Contained in:',
+    availableIn: 'Available in',
     more: '+{{count}} more',
     notAvailable: 'Not available',
     artworks: 'Artworks',
@@ -183,6 +218,9 @@ export const en = {
 
   // Deckbuilder
   deckbuilder: {
+    title: 'Deck Builder',
+    myDecks: 'My Decks',
+    myCollection: 'My Collection',
     newDeck: 'New Deck',
     mainDeck: 'Main Deck',
     extraDeck: 'Extra Deck',
@@ -207,6 +245,14 @@ export const en = {
     filterFusion: 'Fusion',
     filterSpell: 'Spell',
     filterTrap: 'Trap',
+    deleteDeckTitle: 'Delete Deck',
+    deleteDeckWarning: 'The deck "{{name}}" will be permanently deleted.',
+    deleteDeckConfirm: 'Delete Deck',
+    clearDeckTitle: 'Clear Deck',
+    clearDeckWarning: 'Remove all cards from this deck?',
+    clearDeckConfirm: 'Clear Deck',
+    inDeck: 'In Deck',
+    notInDeck: 'Not in Deck',
   },
 
   // Home Page
@@ -333,6 +379,11 @@ export const en = {
     notImported: 'Not yet imported',
     noImportResults: 'No results',
     importFailed: 'Import failed',
+    banStatus: 'Status',
+    deleteCard: 'Delete card',
+    deleteCardTitle: 'Delete card',
+    deleteCardWarning: 'This card will be permanently deleted. All artworks, set assignments, and player inventory entries will be removed.',
+    deleteConfirm: 'Delete permanently',
 
     // Frame types
     frameNormal: 'Normal',
@@ -348,6 +399,8 @@ export const en = {
     wave: 'Wave',
     active: 'Active',
     inactive: 'Inactive',
+    statusActive: 'Active',
+    statusInactive: 'Inactive',
     activate: 'Activate',
     deactivate: 'Deactivate',
     loading: 'Loading...',

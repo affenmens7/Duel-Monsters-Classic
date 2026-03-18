@@ -8,19 +8,18 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
-import { useInventory } from '../store/InventoryContext';
-import { useCards } from '../store/CardContext';
+import { useSession } from '../store/SessionContext';
+import { useAppData } from '../store/AppDataContext';
 import { useCardLocale } from '../hooks/useCardLocale';
 import { getCardImageUrl } from '../services/cardApi';
 import {
-  fetchShopProducts,
   fetchSetDetail,
   buyPack,
   buyDisplay,
   buyStarter,
   buyCosmetic,
-  type ShopData,
   type ShopSetProduct,
   type SetDetail,
   type ShopCosmetic,
@@ -31,8 +30,6 @@ import { CardDetailPopup } from '../components/common/CardDetailPopup';
 import styles from './ShopPage.module.css';
 
 type ViewMode = 'storefront' | 'detail';
-type CardFilter = 'all';
-
 /** Returns the pack artwork URL for a set code, or null if unknown. */
 function getSetImageUrl(code: string | null): string | null {
   if (!code) return null;
@@ -52,20 +49,21 @@ function rarityColorClass(rarity: string): string {
 
 export function ShopPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const isEn = i18n.language === 'en';
-  const { user, token, login } = useAuth();
-  const { refresh: refreshInventory } = useInventory();
-  const { cards: allCards } = useCards();
+  const { user, token } = useAuth();
+  const { dp, updateDp, addCardsToInventory } = useSession();
+  const { cards: allCards, shopProducts: cachedShopData } = useAppData();
   const { localize } = useCardLocale();
 
   // View state
   const [view, setView] = useState<ViewMode>('storefront');
   const [selectedSetName, setSelectedSetName] = useState<string | null>(null);
 
-  // Data
-  const [shopData, setShopData] = useState<ShopData | null>(null);
+  // Data — shop products come from AppDataContext cache
+  const shopData = cachedShopData;
   const [setDetail, setSetDetail] = useState<SetDetail | null>(null);
-  const [shopLoading, setShopLoading] = useState(true);
+  const shopLoading = !shopData;
   const [detailLoading, setDetailLoading] = useState(false);
 
   // Purchase state
@@ -79,14 +77,6 @@ export function ShopPage() {
   // ============================================================
   // Data fetching
   // ============================================================
-
-  useEffect(() => {
-    setShopLoading(true);
-    fetchShopProducts()
-      .then(setShopData)
-      .catch((err) => setError(err instanceof Error ? err.message : t('shop.loadError')))
-      .finally(() => setShopLoading(false));
-  }, []);
 
   const openDetail = useCallback(async (setName: string) => {
     if (!token) {
@@ -128,10 +118,10 @@ export function ShopPage() {
 
     try {
       const result = await buyPack(selectedSetName, token);
-      login(token, { ...user, dp: result.dpRemaining });
+      updateDp(result.dpRemaining);
+      if (result.cards) addCardsToInventory(result.cards);
       setBuyResult(result);
-      refreshInventory();
-      // Refresh detail to update ownership
+      // Refresh detail to update ownership counts
       const updatedDetail = await fetchSetDetail(selectedSetName, token);
       setSetDetail(updatedDetail);
     } catch (err) {
@@ -139,7 +129,7 @@ export function ShopPage() {
     } finally {
       setBuying(false);
     }
-  }, [token, user, selectedSetName, buying, login, refreshInventory]);
+  }, [token, user, selectedSetName, buying, updateDp, addCardsToInventory]);
 
   const handleBuyDisplay = useCallback(async () => {
     if (!token || !user || !selectedSetName || buying) return;
@@ -148,9 +138,9 @@ export function ShopPage() {
 
     try {
       const result = await buyDisplay(selectedSetName, token);
-      login(token, { ...user, dp: result.dpRemaining });
+      updateDp(result.dpRemaining);
+      if (result.cards) addCardsToInventory(result.cards);
       setBuyResult(result);
-      refreshInventory();
       const updatedDetail = await fetchSetDetail(selectedSetName, token);
       setSetDetail(updatedDetail);
     } catch (err) {
@@ -158,7 +148,7 @@ export function ShopPage() {
     } finally {
       setBuying(false);
     }
-  }, [token, user, selectedSetName, buying, login, refreshInventory]);
+  }, [token, user, selectedSetName, buying, updateDp, addCardsToInventory]);
 
   const handleBuyStarter = useCallback(async (setName: string) => {
     if (!token || !user || buying) return;
@@ -167,10 +157,9 @@ export function ShopPage() {
 
     try {
       const result = await buyStarter(setName, token);
-      login(token, { ...user, dp: result.dpRemaining });
+      updateDp(result.dpRemaining);
+      if (result.cards) addCardsToInventory(result.cards);
       setBuyResult(result);
-      refreshInventory();
-      // Refresh detail to update ownership
       if (selectedSetName) {
         const updatedDetail = await fetchSetDetail(selectedSetName, token);
         setSetDetail(updatedDetail);
@@ -180,7 +169,7 @@ export function ShopPage() {
     } finally {
       setBuying(false);
     }
-  }, [token, user, buying, login, refreshInventory, selectedSetName]);
+  }, [token, user, buying, updateDp, addCardsToInventory, selectedSetName]);
 
   const handleBuyCosmetic = useCallback(async (itemId: string) => {
     if (!token || !user || buying) return;
@@ -189,14 +178,14 @@ export function ShopPage() {
 
     try {
       const result = await buyCosmetic(itemId, token);
-      login(token, { ...user, dp: result.dpRemaining });
+      updateDp(result.dpRemaining);
       setBuyResult(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('shop.purchaseFailed'));
     } finally {
       setBuying(false);
     }
-  }, [token, user, buying, login]);
+  }, [token, user, buying, updateDp]);
 
   // ============================================================
   // Detail view: filtered cards
@@ -258,8 +247,8 @@ export function ShopPage() {
     const { set, rarityRates, cards } = setDetail;
     const imageUrl = getSetImageUrl(set.code);
     const isStarter = set.productType === 'starter';
-    const canBuyPack = user && (user.dp >= set.pricePack) && set.active;
-    const canBuyDisplay = user && set.priceDisplay != null && (user.dp >= set.priceDisplay) && set.active;
+    const canBuyPack = user && (dp >= set.pricePack) && set.active;
+    const canBuyDisplay = user && set.priceDisplay != null && (dp >= set.priceDisplay) && set.active;
 
     return (
       <div className={styles.page}>
@@ -436,8 +425,11 @@ export function ShopPage() {
                   level: cardData.level,
                   attribute: cardData.attribute,
                   rarity: setEntry?.rarity,
+                  sets: cardData.sets,
+                  banStatus: cardData.banStatus,
                 }}
                 onClose={() => setPopupCardId(null)}
+                onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
               >
                 {setEntry && (
                   <div style={{ fontFamily: 'var(--font-heading)', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#c8a830', padding: '8px 0', borderTop: '1px solid rgba(0,220,168,0.08)' }}>
@@ -497,7 +489,7 @@ export function ShopPage() {
         {user && (
           <div className={styles.dpBadge}>
             <span className={styles.dpLabel}>{t('common.dp')}</span>
-            {user.dp.toLocaleString()}
+            {dp.toLocaleString()}
           </div>
         )}
       </div>

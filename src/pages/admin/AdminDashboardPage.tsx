@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../store/AuthContext';
+import { Link } from 'react-router-dom';
 import { fetchAdminStats, type AdminStats } from '../../services/adminApi';
 import styles from './AdminDashboard.module.css';
 
@@ -60,10 +61,10 @@ export function AdminDashboardPage() {
       <div className={styles.quickSection}>
         <h2 className={styles.sectionTitle}>{t('admin.quickAccess')}</h2>
         <div className={styles.quickLinks}>
-          <a href="/app/admin/sets" className={styles.quickLink}>{t('admin.manageSets')}</a>
-          <a href="/app/admin/shop-config" className={styles.quickLink}>{t('admin.configureShop')}</a>
-          <a href="/app/admin/news" className={styles.quickLink}>{t('admin.editNews')}</a>
-          <a href="/app/admin/users" className={styles.quickLink}>{t('admin.managePlayers')}</a>
+          <Link to="/app/admin/sets/booster" className={styles.quickLink}>{t('admin.manageSets')}</Link>
+          <Link to="/app/admin/shop-config" className={styles.quickLink}>{t('admin.configureShop')}</Link>
+          <Link to="/app/admin/news" className={styles.quickLink}>{t('admin.editNews')}</Link>
+          <Link to="/app/admin/users" className={styles.quickLink}>{t('admin.managePlayers')}</Link>
         </div>
       </div>
     </div>

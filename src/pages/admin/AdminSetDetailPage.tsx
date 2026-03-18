@@ -16,6 +16,7 @@ import {
   fetchAdminCards,
   assignCardToSet,
   removeCardFromSet,
+  updateSet,
   type AdminSetRow,
   type SetCardRow,
   type AdminCardRow,
@@ -58,22 +59,30 @@ const SET_CARDS_LIMIT = 200;
 // SetInfoBar — top section with set metadata
 // ============================================================
 
-function SetInfoBar({ set, t }: { set: AdminSetRow; t: (key: string) => string }) {
+function SetInfoBar({
+  set,
+  t,
+  onToggleActive,
+}: {
+  set: AdminSetRow;
+  t: (key: string) => string;
+  onToggleActive: () => void;
+}) {
   return (
     <div className={styles.setHeader}>
       <h1 className={styles.setName}>{set.name}</h1>
-      <span className={styles.badgeCode + ' ' + styles.badge}>{set.code}</span>
-      <span className={styles.badgeType + ' ' + styles.badge}>{set.product_type}</span>
-      <span className={styles.badgeWave + ' ' + styles.badge}>Wave {set.wave}</span>
-      <span
-        className={
-          styles.badge + ' ' + (set.active ? styles.badgeActive : styles.badgeInactive)
-        }
-      >
-        {set.active ? t('admin.active') : t('admin.inactive')}
-      </span>
-      <span className={styles.badgeCount + ' ' + styles.badge}>
+      <span className={styles.badge}>{set.code}</span>
+      <span className={styles.badge}>{set.product_type}</span>
+      <span className={styles.badge}>Wave {set.wave}</span>
+      <span className={styles.badge}>
         {set.card_count} {t('admin.cards')}
+      </span>
+      <span
+        className={`${styles.badge} ${set.active ? styles.badgeActive : styles.badgeInactive}`}
+        onClick={onToggleActive}
+        title={set.active ? t('admin.deactivate') : t('admin.activate')}
+      >
+        {set.active ? t('admin.statusActive') : t('admin.statusInactive')}
       </span>
     </div>
   );
@@ -187,6 +196,7 @@ function SetCardsTable({
                 >
                   {t('admin.rarity')}{sortArrow('rarity')}
                 </th>
+                <th className={styles.cardTh}>{t('admin.banStatus')}</th>
                 <th className={styles.cardTh}>{t('admin.action')}</th>
               </tr>
             </thead>
@@ -207,6 +217,11 @@ function SetCardsTable({
                   <td className={styles.cardTd}>
                     <span className={`${styles.rarityBadge} ${rarityBadgeClass(card.rarity)}`}>
                       {card.rarity}
+                    </span>
+                  </td>
+                  <td className={styles.cardTd}>
+                    <span className={`${styles.banBadge} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}>
+                      {t(`banStatus.${card.ban_status ?? 'Unlimited'}`)}
                     </span>
                   </td>
                   <td className={styles.cardTd}>
@@ -452,6 +467,21 @@ export function AdminSetDetailPage() {
   const [setCardsPage, setSetCardsPage] = useState(1);
   const [setCardsSearch, setSetCardsSearch] = useState('');
 
+  // Toggle active/inactive status
+  const handleToggleActive = useCallback(async () => {
+    if (!token || !decodedName) return;
+    const prev = setInfo?.active ?? false;
+    const next = !prev;
+    // Optimistic update
+    setSetInfo((s) => s ? { ...s, active: next } : s);
+    try {
+      await updateSet(token, decodedName, { active: next } as never);
+    } catch {
+      // Revert on failure
+      setSetInfo((s) => s ? { ...s, active: prev } : s);
+    }
+  }, [token, decodedName, setInfo?.active]);
+
   // General state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -692,20 +722,22 @@ export function AdminSetDetailPage() {
     [token, decodedName, loadSetCards, loadSetInfo],
   );
 
-  // Open card popup + load artworks
+  // Fetch artworks first, then show popup (so artworks are visible immediately)
+  const [popupLoading, setPopupLoading] = useState(false);
   const openCardPopup = useCallback(async (cardId: number) => {
-    setPopupCardId(cardId);
-    setPopupArtworks([]);
     if (!token) return;
+    setPopupLoading(true);
     try {
       const res = await fetch(`${env.api.baseUrl}/admin/cards/${cardId}/artworks`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setPopupArtworks(data);
-      }
-    } catch { /* ignore */ }
+      const data = res.ok ? await res.json() : [];
+      setPopupArtworks(data);
+    } catch {
+      setPopupArtworks([]);
+    }
+    setPopupCardId(cardId);
+    setPopupLoading(false);
   }, [token]);
 
   // Change artwork for a card in this set
@@ -780,8 +812,12 @@ export function AdminSetDetailPage() {
   // Render
   // ----------------------------------------------------------
 
+  const backPath = setInfo?.type === 'starter'
+    ? '/app/admin/sets/starter'
+    : '/app/admin/sets/booster';
+
   if (!decodedName) {
-    navigate('/app/admin/sets');
+    navigate(backPath);
     return null;
   }
 
@@ -796,7 +832,7 @@ export function AdminSetDetailPage() {
   if (error) {
     return (
       <div className={styles.page}>
-        <Link to="/app/admin/sets" className={styles.backLink}>
+        <Link to={backPath} className={styles.backLink}>
           {t('admin.backToSets')}
         </Link>
         <p className={styles.error}>{error}</p>
@@ -806,12 +842,18 @@ export function AdminSetDetailPage() {
 
   return (
     <div className={styles.page}>
-      <Link to="/app/admin/sets" className={styles.backLink}>
+      <Link to={backPath} className={styles.backLink}>
         {t('admin.backToSets')}
       </Link>
 
       {/* Section A: Set Info */}
-      {setInfo && <SetInfoBar set={setInfo} t={t} />}
+      {setInfo && (
+        <SetInfoBar
+          set={setInfo}
+          t={t}
+          onToggleActive={handleToggleActive}
+        />
+      )}
 
       {/* Add Cards — compact search at top */}
       <div className={styles.section}>
@@ -847,6 +889,13 @@ export function AdminSetDetailPage() {
         />
       </div>
 
+      {/* Loading overlay while artworks are fetched */}
+      {popupLoading && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingSpinner}>{t('admin.loading')}</div>
+        </div>
+      )}
+
       {/* Card Detail Popup with Artwork Selection */}
       {popupCardId && (() => {
         const card = setCards.find((c) => c.id === popupCardId);
@@ -868,9 +917,12 @@ export function AdminSetDetailPage() {
               archetype: card.archetype,
               rarity: card.rarity,
               artworkId: card.artwork_id,
+              sets: [{ name: decodedName ?? '', code: setInfo?.code ?? '' }],
+              banStatus: card.ban_status,
             }}
             onClose={() => setPopupCardId(null)}
             artworks={popupArtworks}
+            onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
             currentArtworkId={card.artwork_id}
             onArtworkChange={(artworkId) => handleArtworkChange(card.id, artworkId)}
           />

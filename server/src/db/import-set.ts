@@ -12,6 +12,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { bumpDataVersion } from '../services/versionService.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IMAGE_DIR = resolve(__dirname, '../../../public/images/cards');
@@ -87,15 +88,16 @@ async function main() {
     const raceDe = de?.race ?? raceEn;
 
     // 1. Insert card (skip if exists)
+    const banStatus = c.banlist_info?.ban_tcg ?? null;
     const existing = await pool.query('SELECT id FROM cards WHERE id = $1', [cardId]);
     if (existing.rows.length === 0) {
       await pool.query(
-        `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
         [cardId, nameDe, nameEn, descDe, descEn, typeDe, typeEn, c.frameType,
          c.atk ?? null, c.def ?? null, c.level ?? null,
          raceDe, raceEn, c.attribute ?? null, c.archetype ?? null,
-         `/images/cards/${cardId}.jpg`]
+         `/images/cards/${cardId}.jpg`, banStatus]
       );
       cardsInserted++;
     } else {
@@ -162,6 +164,9 @@ async function main() {
   console.log(`Artworks inserted:   ${artworksInserted}`);
   console.log(`Images downloaded:   ${imagesDownloaded}`);
   console.log(`Set entries created: ${setEntriesInserted}`);
+
+  await bumpDataVersion();
+  console.log('Data version bumped.');
   console.log('Done.\n');
 
   await pool.end();

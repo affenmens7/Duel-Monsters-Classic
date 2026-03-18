@@ -1,13 +1,10 @@
 /**
- * Card API service — fetches card data from our own backend.
- * Cards are cached in localStorage to avoid reloading on every page visit.
+ * Card API service — pure data fetchers for cards and sets.
+ * Caching is handled by AppDataContext, not here.
  */
 
 import { env } from '../config/env';
 import type { Card } from '../types/card';
-
-const CACHE_KEY = 'dmc-cards-v3';
-const CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours (invalidated on card count change)
 
 interface DbCard {
   id: number;
@@ -27,15 +24,12 @@ interface DbCard {
   archetype: string | null;
   image_path: string;
   available?: boolean;
+  artwork_ids?: number[];
+  sets?: { name: string; code: string }[];
+  ban_status?: string | null;
 }
 
-interface CacheEntry {
-  timestamp: number;
-  count: number;
-  cards: Card[];
-}
-
-function dbCardToCard(db: DbCard): Card {
+export function dbCardToCard(db: DbCard): Card {
   return {
     id: db.id,
     name: db.name_de ?? db.name_en,
@@ -53,6 +47,9 @@ function dbCardToCard(db: DbCard): Card {
     attribute: db.attribute as Card['attribute'],
     archetype: db.archetype ?? undefined,
     available: db.available ?? true,
+    artworkIds: db.artwork_ids ?? [],
+    sets: db.sets ?? [],
+    banStatus: db.ban_status ?? null,
     card_images: [{
       id: db.id,
       image_url: `/images/cards/${db.id}.jpg`,
@@ -62,57 +59,10 @@ function dbCardToCard(db: DbCard): Card {
   };
 }
 
-function getCache(): Card[] | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-
-    const entry: CacheEntry = JSON.parse(raw);
-    const age = Date.now() - entry.timestamp;
-
-    if (age > CACHE_MAX_AGE) return null;
-
-    return entry.cards;
-  } catch {
-    return null;
-  }
-}
-
-function setCache(cards: Card[]) {
-  try {
-    const entry: CacheEntry = { timestamp: Date.now(), count: cards.length, cards };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
-  } catch {
-    // localStorage full or unavailable — ignore
-  }
-}
-
 /**
- * Fetches all cards — from cache if fresh and count matches, otherwise from backend.
- * Does a quick count check to detect new cards without loading everything.
+ * Fetches all cards from the browse endpoint (no caching).
  */
 export async function fetchAllCards(): Promise<Card[]> {
-  const cached = getCache();
-
-  if (cached) {
-    // Quick count check — if card count changed, invalidate cache
-    try {
-      const countRes = await fetch(`${env.api.baseUrl}/cards/count`);
-      if (countRes.ok) {
-        const { count } = await countRes.json();
-        if (count !== cached.length) {
-          localStorage.removeItem(CACHE_KEY);
-        } else {
-          return cached;
-        }
-      } else {
-        return cached; // API error, use cache
-      }
-    } catch {
-      return cached; // Network error, use cache
-    }
-  }
-
   const response = await fetch(`${env.api.baseUrl}/cards/browse`);
 
   if (!response.ok) {
@@ -120,18 +70,30 @@ export async function fetchAllCards(): Promise<Card[]> {
   }
 
   const dbCards: DbCard[] = await response.json();
-  const cards = dbCards.map(dbCardToCard);
+  return dbCards.map(dbCardToCard);
+}
 
-  setCache(cards);
-  return cards;
+export interface CachedSet {
+  name: string;
+  code: string;
+  type: string;
+  wave: number;
+  active: boolean;
+  image_path: string | null;
+  card_count: number;
 }
 
 /**
- * Forces a fresh reload from the backend (ignores cache).
+ * Fetches all sets with card counts.
  */
-export async function refreshCards(): Promise<Card[]> {
-  localStorage.removeItem(CACHE_KEY);
-  return fetchAllCards();
+export async function fetchAllSets(): Promise<CachedSet[]> {
+  const response = await fetch(`${env.api.baseUrl}/cards/sets/all`);
+
+  if (!response.ok) {
+    throw new Error('Sets konnten nicht geladen werden.');
+  }
+
+  return response.json();
 }
 
 /**

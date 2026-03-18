@@ -21,6 +21,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  /** Update user fields without re-login (e.g., DP reconciliation). */
+  updateUser: (partial: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -69,8 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  function updateUser(partial: Partial<User>) {
+    setUser((prev) => prev ? { ...prev, ...partial } : prev);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

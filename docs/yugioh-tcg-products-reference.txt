@@ -1,0 +1,682 @@
+================================================================================
+  YU-GI-OH! TCG PRODUCT REFERENCE — DM ERA THROUGH EARLY GX (2002–2008)
+  Master Reference Document for Duell Monsters Classic
+  Generated: 2026-03-17
+================================================================================
+
+This document covers ALL English TCG products from the original Duel Monsters
+era through the end of the GX era (before 5D's/Synchro mechanics, roughly
+2002–mid 2008). Products are organized by type and listed chronologically.
+
+Key:
+  [API] = Set exists in YGOPRODeck API (can be imported)
+  [NO API] = Not found in API or has no importable cards
+  Cards = Number of unique cards in the YGOPRODeck API database
+
+Notes on card counts:
+  - API counts include ALL printings/rarities, so they may be higher than
+    the "unique cards" count you see on booster boxes.
+  - Early sets (LOB, MRD, MRL, PSV, LON, LOD) have very high API card counts
+    because they include 1st Edition, Unlimited, and reprint variants.
+  - GX-era sets (60-card standard) have more consistent counts.
+
+
+================================================================================
+  1. BOOSTER PACKS (Main Sets) — Chronological
+================================================================================
+
+  #  | Code | Name                              | Release Date | Cards(API) | Era
+  ---|------|-----------------------------------|--------------|------------|----
+   1 | LOB  | Legend of Blue Eyes White Dragon   | 2002-03-08   | 355        | DM
+   2 | MRD  | Metal Raiders                     | 2002-06-26   | 432        | DM
+   3 | MRL  | Magic Ruler (later: Spell Ruler)   | 2002-09-16   | 235        | DM
+   4 | PSV  | Pharaoh's Servant                 | 2002-10-20   | 315        | DM
+   5 | LON  | Labyrinth of Nightmare            | 2003-03-01   | 315        | DM
+   6 | LOD  | Legacy of Darkness                | 2003-06-06   | 202        | DM
+   7 | PGD  | Pharaonic Guardian                | 2003-07-18   | 108        | DM
+   8 | MFC  | Magician's Force                  | 2003-10-10   | 108        | DM
+   9 | DCR  | Dark Crisis                       | 2003-12-01   | 212        | DM
+  10 | IOC  | Invasion of Chaos                 | 2004-03-01   | 224        | DM
+  11 | AST  | Ancient Sanctuary                 | 2004-06-01   | 112        | DM
+  12 | SOD  | Soul of the Duelist               | 2004-10-01   | 60         | DM
+  13 | RDS  | Rise of Destiny                   | 2004-11-20   | 60         | DM
+  14 | FET  | Flaming Eternity                  | 2005-03-01   | 60         | DM
+  15 | TLM  | The Lost Millennium               | 2005-06-01   | 60         | DM/GX
+  16 | CRV  | Cybernetic Revolution             | 2005-08-17   | 60         | GX
+  17 | EEN  | Elemental Energy                  | 2005-11-16   | 60         | GX
+  18 | SOI  | Shadow of Infinity                | 2006-02-18   | 60         | GX
+  19 | EOJ  | Enemy of Justice                  | 2006-05-17   | 60         | GX
+  20 | POTD | Power of the Duelist              | 2006-08-16   | 60         | GX
+  21 | CDIP | Cyberdark Impact                  | 2006-11-15   | 60         | GX
+  22 | STON | Strike of Neos                    | 2007-02-28   | 60         | GX
+  23 | FOTB | Force of the Breaker              | 2007-05-16   | 69         | GX
+  24 | TAEV | Tactical Evolution                | 2007-08-15   | 60         | GX
+  25 | GLAS | Gladiator's Assault               | 2007-11-14   | 95         | GX
+  26 | PTDN | Phantom Darkness                  | 2008-02-13   | 100        | GX
+  27 | LODT | Light of Destruction              | 2008-05-13   | 100        | GX
+
+  ALL booster packs above are [API] — confirmed in the YGOPRODeck database.
+
+  Note: "Magic Ruler" (MRL) was later renamed "Spell Ruler" (SRL) in
+  reprints. The API lists it as "Magic Ruler" with code MRL. The SRL
+  prefix was used for the Legendary Collection reprint (2010).
+
+  IMPORTANT: LODT (Light of Destruction) is generally considered the last
+  GX-era main booster. The next set, The Duelist Genesis (TDGS, Sep 2008),
+  introduced Synchro monsters and belongs to the 5D's era.
+
+
+================================================================================
+  2. STARTER DECKS — Chronological
+================================================================================
+
+  Code | Name                          | Release Date | Cards | Era    | [API]
+  -----|-------------------------------|--------------|-------|--------|------
+  SDY  | Starter Deck: Yugi            | 2002-03-29   | 50    | DM     | [API]
+  SDK  | Starter Deck: Kaiba           | 2002-03-29   | 50    | DM     | [API]
+  SDJ  | Starter Deck: Joey            | 2003-03-30   | 50    | DM     | [API]
+  SDP  | Starter Deck: Pegasus         | 2003-03-30   | 50    | DM     | [API]
+  SYE  | Starter Deck: Yugi Evolution  | 2004-03-01   | 50    | DM     | [API]
+  SKE  | Starter Deck: Kaiba Evolution | 2004-03-01   | 50    | DM     | [API]
+  YSD  | Starter Deck 2006             | 2006-03-23   | 40    | GX     | [API]
+  YSDJ | Starter Deck: Jaden Yuki      | 2007-07-25   | 41    | GX     | [API]
+  YSDS | Starter Deck: Syrus Truesdale | 2007-07-25   | 41    | GX     | [API]
+
+  Note: The next starter deck after these is the 5D's Starter Deck (5DS1,
+  Aug 2008) which is outside our scope.
+
+  API Set Names (must match exactly for import):
+    "Starter Deck: Yugi"
+    "Starter Deck: Kaiba"
+    "Starter Deck: Joey"
+    "Starter Deck: Pegasus"
+    "Starter Deck: Yugi Evolution"
+    "Starter Deck: Kaiba Evolution"
+    "Starter Deck 2006"
+    "Starter Deck: Jaden Yuki"
+    "Starter Deck: Syrus Truesdale"
+
+
+================================================================================
+  3. STRUCTURE DECKS — Chronological
+================================================================================
+
+  Code | Name                                  | Release Date | Cards | [API]
+  -----|---------------------------------------|--------------|-------|------
+  SD1  | Structure Deck: Dragon's Roar         | 2005-01-01   | 40    | [API]
+  SD2  | Structure Deck: Zombie Madness        | 2005-01-01   | 40    | [API]
+  SD3  | Structure Deck: Blaze of Destruction  | 2005-05-09   | 40    | [API]
+  SD4  | Structure Deck: Fury from the Deep    | 2005-05-09   | 40    | [API]
+  SD5  | Structure Deck: Warrior's Triumph     | 2005-10-28   | 40    | [API]
+  SD6  | Structure Deck: Spellcaster's Judgment| 2006-01-18   | 40    | [API]
+  SD7  | Structure Deck: Invincible Fortress   | 2006-05-15   | 40    | [API]
+  SD8  | Structure Deck: Lord of the Storm     | 2006-07-12   | 40    | [API]
+  SD09 | Structure Deck: Dinosaur's Rage       | 2006-10-20   | 40    | [API]
+  SD10 | Structure Deck: Machine Re-Volt       | 2007-01-17   | 40    | [API]
+  SDRL | Rise of the Dragon Lords Str. Deck    | 2007-10-24   | 37    | [API]
+  SDDE | The Dark Emperor Structure Deck       | 2008-04-02   | 40    | [API]
+
+  API Set Names (must match exactly for import):
+    "Structure Deck: Dragon's Roar"
+    "Structure Deck: Zombie Madness"
+    "Structure Deck: Blaze of Destruction"
+    "Structure Deck: Fury from the Deep"
+    "Structure Deck: Warrior's Triumph"
+    "Structure Deck: Spellcaster's Judgment"
+    "Structure Deck: Invincible Fortress"
+    "Structure Deck: Lord of the Storm"
+    "Structure Deck: Dinosaur's Rage"
+    "Structure Deck: Machine Re-Volt"
+    "Rise of the Dragon Lords Structure Deck"
+    "The Dark Emperor Structure Deck"
+
+  Note: Starting with SDRL, Konami changed the naming scheme from "SD##"
+  to thematic prefixes. SDDE is the last GX-era structure deck. The next
+  one is Zombie World (SDZW, Oct 2008) which is 5D's era.
+
+
+================================================================================
+  4. COLLECTOR'S TINS & BOX PRODUCTS
+================================================================================
+
+  4a. Collector's Tins
+  --------------------
+  Code | Name                        | Release Date | Cards(API) | [API]
+  -----|-----------------------------|--------------|------------|------
+  BPT  | Booster Pack Collectors Tins 2002 | 2002-10-04 | 6      | [API]
+  BPT  | Collectible Tins 2003       | 2003-09-01   | 6          | [API]
+  CT1  | Collectible Tins 2004       | 2004-09-01   | 6          | [API]
+  CT2  | Collectible Tins 2005       | 2005-09-01   | 6          | [API]
+  CT03 | Collectible Tins 2006 Wave 1| 2006-09-11   | 3          | [API]
+  CT03 | Collectible Tins 2006 Wave 2| 2006-11-01   | 3          | [API]
+  CT04 | Collectible Tins 2007 Wave 1| 2007-08-29   | 3          | [API]
+  CT04 | Collectible Tins 2007 Wave 2| 2007-11-15   | 3          | [API]
+
+  2002 Tins included: Blue-Eyes White Dragon, Dark Magician, Summoned Skull,
+    Red-Eyes Black Dragon, Buster Blader, XYZ-Dragon Cannon (BPT-001 to BPT-012)
+  2003 Tins: Jinzo, Gearfried, Lord of D. variants
+  2004 Tins: Blade Knight, Command Knight, Insect Queen, Swift Gaia, etc.
+  2005 Tins: Gilford the Lightning, Panther Warrior, Rocket Warrior, Total Defense
+  2006 Tins Wave 1: Elemental Hero Shining Flare Wingman, Raviel, Uria
+         Wave 2: Elemental Hero Tempest, Hamon
+  2007 Tins Wave 1: Elemental Hero Plasma Vice, Rainbow Dragon
+         Wave 2: Elemental Hero Darkbright
+
+  4b. Master Collection Boxes
+  ---------------------------
+  Code | Name                     | Release Date | Cards(API) | [API]
+  -----|--------------------------|--------------|------------|------
+  MC1  | Master Collection Vol. 1 | 2004-12-01   | 6          | [API]
+  MC2  | Master Collection Vol. 2 | 2005-10-18   | 6          | [API]
+
+  4c. Special Edition Boxes
+  -------------------------
+  These were value products containing 3 booster packs + bonus promo cards.
+  Released for most booster sets starting with IOC.
+
+  Code   | Name                                     | Release Date | [API]
+  -------|------------------------------------------|--------------|------
+  IOC-SE | Invasion of Chaos: Special Edition        | 2004-04-01   | [API]
+  RDS-SE | Rise of Destiny: Special Edition          | 2005-02-01   | [API]
+  EEN-SE | Elemental Energy: Special Edition         | 2005-11-30   | [API]
+  SOI-SE | Shadow of Infinity: Special Edition       | 2006-04-01   | [API]
+  FOTB-SE| Force of the Breaker: Special Edition     | 2007-06-25   | [API]
+  GLAS-SE| Gladiator's Assault: Special Edition      | 2007-12-12   | [API]
+  PTDN-SE| Phantom Darkness: Special Edition         | 2008-03-12   | [API]
+  LODT-SE| Light of Destruction: Special Edition     | 2008-06-18   | [API]
+
+  Note: Special Editions contain only 2-4 promo cards in the API; the bulk
+  of the cards come from the parent booster packs.
+
+
+================================================================================
+  5. REPRINT/COMPILATION SETS
+================================================================================
+
+  5a. Dark Beginning (Reprints of Early Sets)
+  --------------------------------------------
+  Code | Name              | Release Date | Cards(API) | Contents              | [API]
+  -----|-------------------|--------------|------------|-----------------------|------
+  DB1  | Dark Beginning 1  | 2004-10-12   | 262        | LOB through LON       | [API]
+  DB2  | Dark Beginning 2  | 2005-07-27   | 264        | LON through PGD + MRD | [API]
+
+  5b. Dark Revelation (Reprints of Later Sets)
+  ---------------------------------------------
+  Code | Name                  | Release Date | Cards(API) | Contents           | [API]
+  -----|-----------------------|--------------|------------|--------------------|------
+  DR1  | Dark Revelation Vol 1 | 2005-03-19   | 267        | PGD through DCR    | [API]
+  DR2  | Dark Revelation Vol 2 | 2005-10-20   | 228        | IOC and AST        | [API]
+  DR3  | Dark Revelation Vol 3 | 2006-11-25   | 240        | SOD, RDS, FET, TLM | [API]
+  DR04 | Dark Revelation Vol 4 | 2007-11-14   | 245        | CRV, EEN, SOI, EOJ | [API]
+
+
+================================================================================
+  6. TOURNAMENT PACKS
+================================================================================
+
+  Code | Name                           | Release Date | Cards(API) | [API]
+  -----|--------------------------------|--------------|------------|------
+  TP1  | Tournament Pack: 1st Season    | 2002-09-01   | 28         | [API]
+  TP2  | Tournament Pack: 2nd Season    | 2002-10-01   | 28         | [API]
+  TP3  | Tournament Pack: 3rd Season    | 2003-03-01   | 28         | [API]
+  TP4  | Tournament Pack 4              | 2003-10-01   | 28         | [API]
+  TP5  | Tournament Pack 5              | 2004-11-01   | 28         | [API]
+  TP6  | Tournament Pack 6              | 2005-06-01   | 28         | [API]
+  TP7  | Tournament Pack 7              | 2005-11-01   | 28         | [API]
+  TP8  | Tournament Pack 8              | 2006-04-28   | 28         | [API]
+
+  API Set Names:
+    "Tournament Pack: 1st Season"
+    "Tournament Pack: 2nd Season"
+    "Tournament Pack: 3rd Season"
+    "Tournament Pack 4"
+    "Tournament Pack 5"
+    "Tournament Pack 6"
+    "Tournament Pack 7"
+    "Tournament Pack 8"
+
+  Note: Tournament Packs were given to participants at official Konami
+  tournaments. Each contained 3 cards (1 rare + 2 commons). Total pool
+  of ~28 cards per season, but each pack only had 3.
+
+
+================================================================================
+  7. CHAMPION PACKS
+================================================================================
+
+  Code | Name                     | Release Date | Cards(API) | [API]
+  -----|--------------------------|--------------|------------|------
+  CP01 | Champion Pack: Game One  | 2006-11-11   | 20         | [API]
+  CP02 | Champion Pack: Game Two  | 2007-02-06   | 20         | [API]
+  CP03 | Champion Pack: Game Three| 2007-05-15   | 20         | [API]
+  CP04 | Champion Pack: Game Four | 2007-09-06   | 20         | [API]
+  CP05 | Champion Pack: Game Five | 2008-01-08   | 20         | [API]
+  CP06 | Champion Pack: Game Six  | 2008-05-12   | 20         | [API]
+  CP07 | Champion Pack: Game Seven| 2008-09-01   | 20         | [API]
+  CP08 | Champion Pack: Game Eight| 2009-01-05   | 20         | [API]
+
+  API Set Names:
+    "Champion Pack: Game One"
+    "Champion Pack: Game Two"
+    "Champion Pack: Game Three"
+    "Champion Pack: Game Four"
+    "Champion Pack: Game Five"
+    "Champion Pack: Game Six"
+    "Champion Pack: Game Seven"
+    "Champion Pack: Game Eight"
+
+  Note: CP01-CP04 are solidly GX era. CP05-CP08 overlap with late GX
+  and early 5D's. Cards in these are reprints with alternate rarities.
+
+
+================================================================================
+  8. DUELIST PACKS
+================================================================================
+
+  Code | Name                              | Release Date | Cards(API) | [API]
+  -----|-----------------------------------|--------------|------------|------
+  DP1  | Duelist Pack: Jaden Yuki          | 2006-02-08   | 30         | [API]
+  DP2  | Duelist Pack: Chazz Princeton     | 2006-02-08   | 30         | [API]
+  DPK  | Duelist Pack: Special Edition     | 2006-03-09   | 3          | [API]
+  DP03 | Duelist Pack: Jaden Yuki 2        | 2007-02-07   | 30         | [API]
+  DP05 | Duelist Pack: Aster Phoenix       | 2007-02-07   | 30         | [API]
+  DP04 | Duelist Pack: Zane Truesdale      | 2007-03-07   | 30         | [API]
+  DP06 | Duelist Pack: Jaden Yuki 3        | 2008-01-26   | 25         | [API]
+  DP07 | Duelist Pack: Jesse Anderson      | 2008-01-26   | 25         | [API]
+
+  API Set Names:
+    "Duelist Pack: Jaden Yuki"
+    "Duelist Pack: Chazz Princeton"
+    "Duelist Pack: Special Edition"
+    "Duelist Pack: Jaden Yuki 2"
+    "Duelist Pack: Aster Phoenix"
+    "Duelist Pack: Zane Truesdale"
+    "Duelist Pack: Jaden Yuki 3"
+    "Duelist Pack: Jesse Anderson"
+
+  Note: These are character-themed packs containing cards used by
+  anime characters. Great thematic additions for GX-era content.
+
+
+================================================================================
+  9. PROMOTIONAL & SPECIAL SETS
+================================================================================
+
+  9a. McDonald's Promotional Cards
+  --------------------------------
+  Code | Name                        | Release Date | Cards(API) | [API]
+  -----|-----------------------------|--------------|----- ------|------
+  MP1  | McDonald's Promotional Cards  | 2002-12-20 | 15         | [API]
+  MDP2 | McDonald's Promotional Cards 2| 2006-12-22 | 20         | [API]
+
+  9b. Movie Promos
+  -----------------
+  Code | Name           | Release Date | Cards(API) | [API]
+  -----|----------------|--------------|------------|------
+  MOV  | Movie Pack     | 2004-08-13   | 4          | [API]
+  EP1  | Exclusive Pack | 2004-07-25   | 8          | [API]
+
+  9c. Video Game Promos
+  ---------------------
+  Code | Name                                        | Release Date | [API]
+  -----|---------------------------------------------|--------------|------
+  DDS  | Dark Duel Stories                           | 2002-03-18   | [API]
+  FMR  | Forbidden Memories                          | 2002-03-20   | [API]
+  TSC  | The Sacred Cards                            | 2002-07-04   | [API]
+  TFK  | The Falsebound Kingdom                      | 2002-12-05   | [API]
+  GBI  | Gameboy Worldwide Edition Promos            | 2003-04-08   | [API]
+  SDD  | Stairway to the Destined Duel               | 2003-04-08   | [API]
+  WCS  | World Championship Series                   | 2003-06-27   | [API]
+  PCY  | Power of Chaos: Yugi the Destiny            | 2003-11-21   | [API]
+  WC4  | World Championship Tournament 2004          | 2004-02-05   | [API]
+  DOD  | Dawn of Destiny                             | 2004-03-23   | [API]
+  PCK  | Power of Chaos: Kaiba the Revenge           | 2004-04-06   | [API]
+  ROD  | Reshef of Destruction                       | 2004-06-29   | [API]
+  PCJ  | Power of Chaos: Joey the Passion            | 2004-07-02   | [API]
+  DBT  | Destiny Board Traveler                      | 2004-10-26   | [API]
+  WC5  | 7 Trials to Glory: WC Tournament 2005       | 2004-12-30   | [API]
+  NTR  | Nightmare Troubadour                        | 2005-07-21   | [API]
+  GX1  | GX Duel Academy                             | 2006-01-10   | [API]
+  WC6  | Ultimate Masters: WC Tournament 2006        | 2006-02-23   | [API]
+  GX02 | GX Tag Force                                | 2006-11-16   | [API]
+  GX03 | Spirit Caller                               | 2007-01-02   | [API]
+  GX04 | GX Tag Force 2                              | 2007-09-18   | [API]
+  YDB1 | GX Card Almanac                             | 2007-08-09   | [API]
+
+  9d. Shonen Jump Promos
+  ----------------------
+  Code | Name                                      | Release Date | [API]
+  -----|-------------------------------------------|--------------|------
+  JMP  | Shonen Jump Vol. 1-3 promos               | 2002-2005    | [API]
+  JUMP | Shonen Jump Vol. 4+ promos                | 2006-2008+   | [API]
+
+  Various promo cards distributed through Shonen Jump magazine
+  subscriptions. Includes iconic cards like:
+    - Blue-Eyes Ultimate Dragon (JMP-EN005)
+    - Elemental Hero Neos (JUMP-EN011)
+    - Raviel, Lord of Phantasms (JUMP-EN028)
+  API has these under "Shonen Jump Vol. X, Issue Y promotional card"
+
+  9e. Duelist League Series
+  -------------------------
+  Code | Name                          | Release Date | [API]
+  -----|-------------------------------|--------------|------
+  DL1  | Duelist League Series 1       | 2003-01-10   | [API]
+  DL2  | Duelist League Series 2       | 2003-05-10   | [API]
+  DL3  | Duelist League Series 3       | 2003-09-13   | [API]
+  DL4  | Duelist League Series 4       | 2004-01-10   | [API]
+  DL5  | Duelist League Series 5       | 2004-09-01   | [API]
+  DL6  | Duelist League Series 6       | 2004-12-01   | [API]
+  DL7  | Duelist League Series 7       | 2005-04-01   | [API]
+  DL8  | Duelist League Series 8       | 2005-06-30   | [API]
+  DL9  | Duelist League Series 9       | 2006-01-03   | [API]
+  DL10 | Duelist League Series 10      | 2006-04-28   | [API]
+
+  Note: Most DL cards are just 1-4 cards per "series" in the API.
+  They are participation promo cards, not full sets.
+
+  9f. Hobby League
+  -----------------
+  Code | Name             | Release Date | [API]
+  -----|------------------|--------------|------
+  HL1  | Hobby League 1   | 2004-10-01   | [API]
+  HL2  | Hobby League 2   | 2006-01-01   | [API]
+  HL03 | Hobby League 3   | 2006-01-01   | [API]
+  HL04 | Hobby League 4   | 2007-01-01   | [API]
+  HL05 | Hobby League 5   | 2007-01-01   | [API]
+  HL06 | Hobby League 6   | 2008-01-21   | [API]
+  HL07 | Hobby League 7   | 2008-01-01   | [API]
+
+  Note: Hobby League cards are parallel rare reprints of common cards,
+  distributed through retailers. Each "league" has about 6 cards.
+
+  9g. Sneak Preview / Sneak Peek Cards
+  -------------------------------------
+  Code | Name                                         | Release Date | [API]
+  -----|----------------------------------------------|--------------|------
+  SP1  | Sneak Preview Series 1                       | 2005-02-26   | [API]
+  SP2  | Sneak Preview Series 2                       | 2006-02-18   | [API]
+
+  Participation cards given at pre-release events. These evolved into
+  individual "Sneak Peek Participation Cards" for each booster set
+  (all are in the API as "[Set Name] Sneak Peek Participation Card").
+
+  Sneak Peek cards for our era:
+    - Cybernetic Revolution Sneak Peek (SP1, 2005-08-06)
+    - Elemental Energy Sneak Peek (SP1, 2005-11-05)
+    - Flaming Eternity Sneak Peek (SP1, 2005-02-26)
+    - Shadow of Infinity Sneak Peek (SP2, 2006-02-18)
+    - Enemy of Justice Sneak Peek (SP2, 2006-05-13)
+    - Power of the Duelist Sneak Peek (SP02, 2006-08-05)
+    - Cyberdark Impact Sneak Peek (SP02, 2006-11-04)
+    - Force of the Breaker Sneak Peek (FOTB, 2007-05-05)
+    - Gladiator's Assault Sneak Peek (GLAS, 2007-11-03)
+    - Phantom Darkness Sneak Peek (PTDN, 2008-01-26)
+    - Light of Destruction Sneak Peek (LODT, 2008-05-03)
+
+  9h. Premium Packs
+  -----------------
+  Code | Name             | Release Date | Cards(API) | [API]
+  -----|------------------|--------------|------------|------
+  PP01 | Premium Pack 1   | 2007-07-26   | 15         | [API]
+  PP02 | Premium Pack 2   | 2008-07-31   | 20         | [API]
+
+  Contained OCG-exclusive cards brought over to the TCG for the first time.
+
+  9i. Shonen Jump Championship Prize Cards
+  -----------------------------------------
+  Code | Name                                    | Release Date | [API]
+  -----|------------------------------------------|----- --------|------
+  SJC  | SJ Championship 2004 Prize Card         | 2004-12-04   | [API]
+  SJC  | SJ Championship 2005 Prize Card         | 2005-08-20   | [API]
+  SJC  | SJ Championship 2006 Prize Card         | 2006-05-06   | [API]
+  SJCS | SJ Championship 2007 Prize Card A       | 2007-01-27   | [API]
+  SJCS | SJ Championship 2007 Prize Card B       | 2007-08-18   | [API]
+  SJCS | SJ Championship 2008 Prize Card         | 2008-03-08   | [API]
+
+  9j. Duel Master's Guide
+  ------------------------
+  Code | Name                                    | Release Date | [API]
+  -----|------------------------------------------|----- --------|------
+  DMG  | Duel Master's Guide promotional cards    | 2003-10-28   | [API]
+
+  9k. Mattel Action Figure Promos
+  --------------------------------
+  Code | Name                               | Release Date | [API]
+  -----|------------------------------------|----- --------|------
+  MF01 | Mattel Action Figure Series 1      | 2006-01-01   | [API]
+  MF02 | Mattel Action Figure Series 2      | 2006-01-01   | [API]
+  MF03 | Mattel Action Figure Series 3      | 2006-01-01   | [API]
+
+  9l. Forbidden Legacy
+  --------------------
+  Code | Name              | Release Date | Cards(API) | [API]
+  -----|-------------------|--------------|------------|------
+  FL1  | Forbidden Legacy  | 2005-10-01   | 3          | [API]
+
+  9m. Pharaoh Tour Promos
+  ------------------------
+  Code | Name                            | Release Date | [API]
+  -----|-------------------------------|--------------|------
+  PT1  | Pharaoh Tour 2005 promos       | 2005-12-17   | [API]
+  PT02 | Pharaoh Tour 2006 promos       | 2006-10-28   | [API]
+  PT03 | Pharaoh Tour 2007 promos       | 2007-10-13   | [API]
+
+  9n. Other Misc Promos
+  ----------------------
+  Code  | Name                                    | Release Date | [API]
+  ------|------------------------------------------|----- --------|------
+  YMA   | Yu-Gi-Oh! The Movie Ani-Manga           | 2004-11-23   | [API]
+  GXNG  | GX Next Generation                      | 2007-11-03   | [API]
+  LDPP  | Light and Darkness Power Pack            | 2007-11-14   | [API]
+  GX05  | GX Tag Force Evolution                   | 2006-09-14   | [API]
+  GSE   | GX Special Edition                       | 2006-04-01   | [API]
+  UBP1  | GX Ultimate Beginner's Pack              | 2006-07-19   | [API]
+  TKN1  | San Diego Comic-Con promotional cards    | 2006-07-20   | [API]
+
+
+================================================================================
+  10. RETRO PACKS (Late-era reprints, for reference)
+================================================================================
+
+  Code | Name          | Release Date | Cards(API) | [API]
+  -----|---------------|--------------|------------|------
+  RP01 | Retro Pack    | 2008-07-08   | 101        | [API]
+
+  Note: Retro Pack reprints classic DM-era cards. RP02 (2009) is outside scope.
+
+
+================================================================================
+  11. GOLD SERIES (Late-era, for reference)
+================================================================================
+
+  Code | Name          | Release Date | Cards(API) | [API]
+  -----|---------------|--------------|------------|------
+  GLD1 | Gold Series   | 2008-04-02   | 45         | [API]
+
+  Note: Gold Series reprints iconic cards in Gold Rare. GLD1 is the only
+  one within the GX era timeframe.
+
+
+================================================================================
+  12. SET NAME MAPPING — YGOPRODeck API Exact Names
+================================================================================
+
+  This section lists the EXACT set names as they appear in the YGOPRODeck
+  API. These names MUST be used when querying the API for card data.
+
+  BOOSTER PACKS:
+    "Legend of Blue Eyes White Dragon"
+    "Metal Raiders"
+    "Magic Ruler"                       (NOT "Spell Ruler")
+    "Pharaoh's Servant"
+    "Labyrinth of Nightmare"
+    "Legacy of Darkness"
+    "Pharaonic Guardian"
+    "Magician's Force"
+    "Dark Crisis"
+    "Invasion of Chaos"
+    "Ancient Sanctuary"
+    "Soul of the Duelist"
+    "Rise of Destiny"
+    "Flaming Eternity"
+    "The Lost Millennium"
+    "Cybernetic Revolution"
+    "Elemental Energy"
+    "Shadow of Infinity"
+    "Enemy of Justice"
+    "Power of the Duelist"
+    "Cyberdark Impact"
+    "Strike of Neos"
+    "Force of the Breaker"
+    "Tactical Evolution"
+    "Gladiator's Assault"
+    "Phantom Darkness"
+    "Light of Destruction"
+
+  STARTER DECKS:
+    "Starter Deck: Yugi"
+    "Starter Deck: Kaiba"
+    "Starter Deck: Joey"
+    "Starter Deck: Pegasus"
+    "Starter Deck: Yugi Evolution"
+    "Starter Deck: Kaiba Evolution"
+    "Starter Deck 2006"
+    "Starter Deck: Jaden Yuki"
+    "Starter Deck: Syrus Truesdale"
+
+  STRUCTURE DECKS:
+    "Structure Deck: Dragon's Roar"
+    "Structure Deck: Zombie Madness"
+    "Structure Deck: Blaze of Destruction"
+    "Structure Deck: Fury from the Deep"
+    "Structure Deck: Warrior's Triumph"
+    "Structure Deck: Spellcaster's Judgment"
+    "Structure Deck: Invincible Fortress"
+    "Structure Deck: Lord of the Storm"
+    "Structure Deck: Dinosaur's Rage"
+    "Structure Deck: Machine Re-Volt"
+    "Rise of the Dragon Lords Structure Deck"
+    "The Dark Emperor Structure Deck"
+
+  REPRINT SETS:
+    "Dark Beginning 1"
+    "Dark Beginning 2"
+    "Dark Revelation Volume 1"
+    "Dark Revelation Volume 2"
+    "Dark Revelation Volume 3"
+    "Dark Revelation Volume 4"
+
+  TOURNAMENT/CHAMPION PACKS:
+    "Tournament Pack: 1st Season"
+    "Tournament Pack: 2nd Season"
+    "Tournament Pack: 3rd Season"
+    "Tournament Pack 4"
+    "Tournament Pack 5"
+    "Tournament Pack 6"
+    "Tournament Pack 7"
+    "Tournament Pack 8"
+    "Champion Pack: Game One"
+    "Champion Pack: Game Two"
+    "Champion Pack: Game Three"
+    "Champion Pack: Game Four"
+    "Champion Pack: Game Five"
+    "Champion Pack: Game Six"
+    "Champion Pack: Game Seven"
+    "Champion Pack: Game Eight"
+
+  DUELIST PACKS:
+    "Duelist Pack: Jaden Yuki"
+    "Duelist Pack: Chazz Princeton"
+    "Duelist Pack: Special Edition"
+    "Duelist Pack: Jaden Yuki 2"
+    "Duelist Pack: Aster Phoenix"
+    "Duelist Pack: Zane Truesdale"
+    "Duelist Pack: Jaden Yuki 3"
+    "Duelist Pack: Jesse Anderson"
+
+  COLLECTOR'S TINS:
+    "Booster Pack Collectors Tins 2002"
+    "Collectible Tins 2003"
+    "Collectible Tins 2004"
+    "Collectible Tins 2005"
+    "Collectible Tins 2006 Wave 1"
+    "Collectible Tins 2006 Wave 2"
+    "Collectible Tins 2007 Wave 1"
+    "Collectible Tins 2007 Wave 2"
+
+  PROMO/SPECIAL:
+    "McDonald's Promotional Cards"
+    "McDonald's Promotional Cards 2"
+    "Movie Pack"
+    "Exclusive Pack"
+    "Master Collection Volume 1"
+    "Master Collection Volume 2"
+    "Premium Pack (TCG)"
+    "Premium Pack 2 (TCG)"
+    "Gold Series"
+    "Retro Pack"
+    "Forbidden Legacy"
+
+
+================================================================================
+  13. WAVE PLANNING RECOMMENDATION
+================================================================================
+
+  Based on the chronological product releases, here is a recommended wave
+  structure for the Duell Monsters Classic game progression:
+
+  Wave 0: Starter Decks (SDY, SDK)
+  Wave 1: LOB, MRD, SDJ
+  Wave 2: MRL/SRL, PSV, SDP
+  Wave 3: LON, LOD, PGD, SYE, SKE
+  Wave 4: MFC, DCR
+  Wave 5: IOC, AST
+  Wave 6: SOD, RDS, FET, SD1, SD2
+  Wave 7: TLM, CRV, EEN, SD3, SD4, SD5
+  Wave 8: SOI, EOJ, POTD, SD6, SD7, SD8, YSD, DP1, DP2
+  Wave 9: CDIP, STON, FOTB, SD09, SD10, DP03, DP04, DP05
+  Wave 10: TAEV, GLAS, SDRL, DP06, DP07
+  Wave 11: PTDN, LODT, SDDE (Final GX wave)
+
+  Optional additions per wave:
+    - Tournament Packs (TP1-TP8) can be sprinkled in as bonus content
+    - Champion Packs (CP01-CP08) as tournament rewards
+    - Duelist Packs as themed shop offerings
+    - Collector's Tins as special shop products
+    - Structure Decks as purchasable pre-built decks
+    - Dark Beginning / Dark Revelation as "catch-up" packs
+
+
+================================================================================
+  14. SUMMARY STATISTICS
+================================================================================
+
+  Product Type           | Count | In API
+  -----------------------|-------|-------
+  Main Booster Packs     |    27 |    27
+  Starter Decks          |     9 |     9
+  Structure Decks        |    12 |    12
+  Collector's Tins       |     8 |     8
+  Special Edition Boxes  |     8 |     8
+  Reprint Sets (DB/DR)   |     6 |     6
+  Tournament Packs       |     8 |     8
+  Champion Packs         |     8 |     8
+  Duelist Packs          |     8 |     8
+  Master Collection      |     2 |     2
+  Premium Packs          |     2 |     2
+  McDonald's Promos      |     2 |     2
+  Movie Promos           |     2 |     2
+  Video Game Promos      |   ~20 |  ~20
+  Duelist League         |    10 |    10
+  Hobby League           |     7 |     7
+  Other Promos           |   ~15 |  ~15
+  -----------------------|-------|-------
+  Total                  |  ~154 | ~154
+
+  All products from this era are available in the YGOPRODeck API.
+
+
+================================================================================
+  END OF DOCUMENT
+================================================================================

@@ -14,6 +14,7 @@ import { cardsRouter } from './routes/cards.js';
 import { decksRouter } from './routes/decks.js';
 import { adminRouter } from './routes/admin.js';
 import { contentRouter } from './routes/content.js';
+import { versionRouter } from './routes/version.js';
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/cards', cardsRouter);
 app.use('/api/decks', decksRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/content', contentRouter);
+app.use('/api/data-version', versionRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

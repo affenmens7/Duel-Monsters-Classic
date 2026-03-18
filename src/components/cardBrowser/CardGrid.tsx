@@ -6,9 +6,11 @@ import styles from './CardGrid.module.css';
 interface CardGridProps {
   cards: Card[];
   onCardClick: (card: Card) => void;
+  setFilter?: string;
+  isCardMaxed?: (cardId: number) => boolean;
 }
 
-export function CardGrid({ cards, onCardClick }: CardGridProps) {
+export function CardGrid({ cards, onCardClick, setFilter, isCardMaxed }: CardGridProps) {
   const { t } = useTranslation();
 
   if (cards.length === 0) {
@@ -26,6 +28,8 @@ export function CardGrid({ cards, onCardClick }: CardGridProps) {
           key={card.id}
           card={card}
           onClick={() => onCardClick(card)}
+          setFilter={setFilter}
+          forceMaxed={isCardMaxed?.(card.id)}
         />
       ))}
     </div>

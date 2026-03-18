@@ -1,0 +1,183 @@
+/* CardTable — tabular view for public card browser */
+
+.tableWrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 var(--spacing-xl);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.thead {
+  background: rgba(0, 220, 168, 0.02);
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.th {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.thSort {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+}
+
+.thSort:hover {
+  color: var(--orichalcos-light);
+}
+
+.tr {
+  border-bottom: 1px solid var(--orichalcos-faint);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tr:hover {
+  background: rgba(0, 220, 168, 0.025);
+}
+
+.trLocked {
+  opacity: 0.4;
+}
+
+.td {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+.tdCode {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+.thumb {
+  width: 36px;
+  height: auto;
+  display: block;
+}
+
+.cardName {
+  display: block;
+  font-weight: 600;
+}
+
+.cardNameSub {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+}
+
+/* Pagination */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.pageBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border: 1px solid var(--orichalcos-faint);
+  background: none;
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pageBtn:hover {
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 220, 168, 0.03);
+}
+
+.pageBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+/* Ban Status Badges */
+
+.banBadge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.45rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  white-space: nowrap;
+  opacity: 0.55;
+}
+
+.banForbidden {
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.banLimited {
+  color: #ff8c00;
+  border: 1px solid rgba(255, 140, 0, 0.2);
+  background: rgba(255, 140, 0, 0.06);
+}
+
+.banSemiLimited {
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.banUnlimited {
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.06);
+}

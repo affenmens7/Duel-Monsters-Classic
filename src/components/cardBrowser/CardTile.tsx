@@ -7,6 +7,8 @@ import styles from './CardTile.module.css';
 interface CardTileProps {
   card: Card;
   onClick: () => void;
+  setFilter?: string;
+  forceMaxed?: boolean;
 }
 
 function getFrameClass(frameType: string): string {
@@ -21,15 +23,20 @@ function getFrameClass(frameType: string): string {
   }
 }
 
-export function CardTile({ card, onClick }: CardTileProps) {
+export function CardTile({ card, onClick, setFilter, forceMaxed }: CardTileProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { localize } = useCardLocale();
   const loc = localize(card);
-  const imageUrl = getCardImageUrl(card.id, 'small');
+
+  // Use set-specific artwork when filtering by set, otherwise the default artwork
+  const artworkId = setFilter && setFilter !== 'all'
+    ? card.sets?.find((s) => s.name === setFilter)?.artworkId ?? card.artworkIds?.[0]
+    : card.artworkIds?.[0] ?? undefined;
+  const imageUrl = getCardImageUrl(card.id, 'small', artworkId);
 
   return (
     <button
-      className={`${styles.tile} ${getFrameClass(card.frameType)} ${card.available === false ? styles.locked : ''}`}
+      className={`${styles.tile} ${getFrameClass(card.frameType)} ${card.available === false || forceMaxed ? styles.locked : ''}`}
       onClick={onClick}
       title={loc.name}
     >

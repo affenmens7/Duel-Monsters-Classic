@@ -7,7 +7,6 @@
 .content {
   flex: 1;
   padding: var(--spacing-lg);
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
+  overflow-x: hidden;
 }

@@ -51,9 +51,43 @@ export const de = {
     loading: 'Lade Kartendaten...',
     errorTitle: 'Fehler beim Laden',
     retry: 'Erneut versuchen',
+    allSets: 'Alle Sets',
+    allBanStatus: 'Alle Status',
     allCards: 'Alle Karten',
+    gridView: 'Kartenansicht',
+    tableView: 'Tabellenansicht',
     available: 'Verfuegbar',
     locked: 'Noch gesperrt',
+  },
+
+  // Ban status
+  banStatus: {
+    Forbidden: 'Verboten',
+    Limited: 'Limitiert',
+    'Semi-Limited': 'Semi-Limitiert',
+    Unlimited: 'Unbegrenzt',
+  },
+
+  // Spell/Trap subtypes (race field)
+  spellTrapType: {
+    Normal: 'Normal',
+    'Quick-Play': 'Schnellzauber',
+    Field: 'Feldzauber',
+    Continuous: 'Permanentzauber',
+    Equip: 'Ausruestungszauber',
+    Ritual: 'Ritualzauber',
+    Counter: 'Konterfalle',
+  },
+
+  // Card attributes
+  attributes: {
+    DARK: 'Finsternis',
+    LIGHT: 'Licht',
+    EARTH: 'Erde',
+    WATER: 'Wasser',
+    FIRE: 'Feuer',
+    WIND: 'Wind',
+    DIVINE: 'Goettlich',
   },
 
   // Card Detail
@@ -62,6 +96,7 @@ export const de = {
     level: 'Level',
     type: 'Typ',
     containedIn: 'Enthalten in:',
+    availableIn: 'Erhaeltlich in',
     more: '+{{count}} weitere',
     notAvailable: 'Nicht verfuegbar',
     artworks: 'Artworks',
@@ -183,6 +218,9 @@ export const de = {
 
   // Deckbuilder
   deckbuilder: {
+    title: 'Deck Builder',
+    myDecks: 'Meine Decks',
+    myCollection: 'Meine Sammlung',
     newDeck: 'Neues Deck',
     mainDeck: 'Hauptdeck',
     extraDeck: 'Extra Deck',
@@ -207,6 +245,14 @@ export const de = {
     filterFusion: 'Fusion',
     filterSpell: 'Zauber',
     filterTrap: 'Fallen',
+    deleteDeckTitle: 'Deck loeschen',
+    deleteDeckWarning: 'Das Deck "{{name}}" wird unwiderruflich geloescht.',
+    deleteDeckConfirm: 'Deck loeschen',
+    clearDeckTitle: 'Deck leeren',
+    clearDeckWarning: 'Alle Karten aus diesem Deck entfernen?',
+    clearDeckConfirm: 'Deck leeren',
+    inDeck: 'Im Deck',
+    notInDeck: 'Nicht im Deck',
   },
 
   // Home Page
@@ -333,6 +379,11 @@ export const de = {
     notImported: 'Noch nicht importiert',
     noImportResults: 'Keine Ergebnisse',
     importFailed: 'Import fehlgeschlagen',
+    banStatus: 'Status',
+    deleteCard: 'Karte loeschen',
+    deleteCardTitle: 'Karte loeschen',
+    deleteCardWarning: 'Diese Karte wird unwiderruflich geloescht. Alle Artworks, Set-Zuordnungen und Spieler-Inventar-Eintraege werden entfernt.',
+    deleteConfirm: 'Endgueltig loeschen',
 
     // Frame types
     frameNormal: 'Normal',
@@ -348,6 +399,8 @@ export const de = {
     wave: 'Wave',
     active: 'Aktiv',
     inactive: 'Inaktiv',
+    statusActive: 'Aktiv',
+    statusInactive: 'Inaktiv',
     activate: 'Aktivieren',
     deactivate: 'Deaktivieren',
     loading: 'Laden...',

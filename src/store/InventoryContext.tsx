@@ -1,12 +1,12 @@
 /**
- * InventoryContext — provides the user's card collection.
- * Does NOT auto-fetch on mount — consumers call refresh() with the correct excludeDeckId.
+ * InventoryContext — thin wrapper around SessionContext for backwards compatibility.
+ * Converts the SessionContext inventory Map to OwnedCard[] for existing consumers.
  */
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useMemo, type ReactNode } from 'react';
 import type { OwnedCard } from '../types/card';
-import { fetchCollectionDetails } from '../services/inventoryApi';
-import { useAuth } from './AuthContext';
+import { useSession } from './SessionContext';
+import { useAppData } from './AppDataContext';
 
 interface InventoryContextValue {
   collection: OwnedCard[];
@@ -18,29 +18,31 @@ interface InventoryContextValue {
 const InventoryContext = createContext<InventoryContextValue | null>(null);
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
-  const [collection, setCollection] = useState<OwnedCard[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { inventory, inventoryLoading, refreshInventory } = useSession();
+  const { cards } = useAppData();
+
+  // Build OwnedCard[] by combining inventory Map with card data from AppDataContext
+  const collection = useMemo(() => {
+    const result: OwnedCard[] = [];
+    for (const [cardId, entry] of inventory) {
+      const card = cards.find((c) => c.id === cardId);
+      if (card) {
+        result.push({
+          ...card,
+          owned: entry.quantity,
+          used_in_decks: entry.usedInDecks,
+        });
+      }
+    }
+    return result.sort((a, b) => (a.name_en ?? a.name).localeCompare(b.name_en ?? b.name));
+  }, [inventory, cards]);
 
   const refresh = useCallback(async (excludeDeckId?: number) => {
-    if (!token) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const data = await fetchCollectionDetails(token, excludeDeckId);
-      setCollection(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden der Sammlung');
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+    await refreshInventory(excludeDeckId);
+  }, [refreshInventory]);
 
   return (
-    <InventoryContext.Provider value={{ collection, loading, error, refresh }}>
+    <InventoryContext.Provider value={{ collection, loading: inventoryLoading, error: null, refresh }}>
       {children}
     </InventoryContext.Provider>
   );

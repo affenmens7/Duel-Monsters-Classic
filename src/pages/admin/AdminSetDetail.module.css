@@ -55,43 +55,33 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   padding: 3px 8px;
-  border-radius: 2px;
-}
-
-.badgeCode {
-  color: var(--text-secondary);
+  color: var(--text-secondary, #8a8070);
   background: rgba(0, 220, 168, 0.04);
-  border: 1px solid var(--orichalcos-faint);
-}
-
-.badgeType {
-  color: var(--gold);
-  background: var(--gold-faint);
-  border: 1px solid var(--gold-subtle);
-}
-
-.badgeWave {
-  color: var(--text-secondary);
-  background: rgba(0, 220, 168, 0.04);
-  border: 1px solid var(--orichalcos-faint);
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
 }
 
 .badgeActive {
-  color: var(--orichalcos-light);
-  background: var(--orichalcos-faint);
-  border: 1px solid var(--orichalcos-subtle);
+  color: var(--orichalcos-light, #00dca8);
+  border-color: rgba(0, 220, 168, 0.25);
+  background: rgba(0, 220, 168, 0.06);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.badgeActive:hover {
+  background: rgba(0, 220, 168, 0.12);
 }
 
 .badgeInactive {
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-muted, #6a6050);
+  border-color: rgba(100, 90, 70, 0.2);
+  background: rgba(100, 90, 70, 0.06);
+  cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.badgeCount {
-  color: var(--text-secondary);
-  background: rgba(0, 220, 168, 0.04);
-  border: 1px solid var(--orichalcos-faint);
+.badgeInactive:hover {
+  background: rgba(100, 90, 70, 0.12);
 }
 
 /* ---- Section ---- */
@@ -421,4 +411,70 @@
 
 .cardRow:hover {
   background: rgba(0, 220, 168, 0.03);
+}
+
+/* ---- Ban Status Badges ---- */
+
+.banBadge {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.45rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  white-space: nowrap;
+  opacity: 0.55;
+}
+
+.banForbidden {
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.banLimited {
+  color: #ff8c00;
+  border: 1px solid rgba(255, 140, 0, 0.2);
+  background: rgba(255, 140, 0, 0.06);
+}
+
+.banSemiLimited {
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.banUnlimited {
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.06);
+}
+
+/* ---- Loading Overlay ---- */
+
+.loadingOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(4px);
+}
+
+.loadingSpinner {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orichalcos-light, #00dca8);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }

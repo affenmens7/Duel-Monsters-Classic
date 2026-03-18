@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { pool } from '../config/db.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { bumpDataVersion } from '../services/versionService.js';
 
 export const adminRouter = Router();
 
@@ -190,6 +191,7 @@ adminRouter.put('/sets/:name', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_set target=${name}`);
 
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Admin update set failed:', err);
@@ -274,6 +276,7 @@ adminRouter.put('/sets/:name/config', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_set_config target=${name}`);
 
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Admin update set config failed:', err);
@@ -362,6 +365,7 @@ adminRouter.put('/sets/:name/rates', async (req, res) => {
       [name]
     );
 
+    await bumpDataVersion();
     res.json(result.rows);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -394,7 +398,7 @@ adminRouter.get('/cards', async (req, res) => {
     const offset = (page - 1) * limit;
 
     // Whitelist sortable columns
-    const sortableColumns = ['name_en', 'name_de', 'frame_type', 'atk', 'def', 'level', 'attribute', 'id'];
+    const sortableColumns = ['name_en', 'name_de', 'frame_type', 'atk', 'def', 'level', 'attribute', 'id', 'ban_status'];
     const safeSort = sortableColumns.includes(sortBy) ? sortBy : 'name_en';
 
     const conditions: string[] = [];
@@ -427,10 +431,16 @@ adminRouter.get('/cards', async (req, res) => {
       params
     );
 
-    // Fetch paginated results
+    // Fetch paginated results (include default artwork ID)
     const dataParams = [...params, limit, offset];
     const result = await pool.query(
-      `SELECT * FROM cards ${whereClause} ORDER BY ${safeSort} ${sortDir} NULLS LAST LIMIT $${idx} OFFSET $${idx + 1}`,
+      `SELECT c.*,
+        (SELECT ca.artwork_id FROM card_artworks ca WHERE ca.card_id = c.id ORDER BY ca.is_default DESC, ca.artwork_id LIMIT 1) AS default_artwork_id
+       FROM cards c ${whereClause} ORDER BY ${
+        safeSort === 'ban_status'
+          ? `CASE ban_status WHEN 'Forbidden' THEN 0 WHEN 'Limited' THEN 1 WHEN 'Semi-Limited' THEN 2 ELSE 3 END`
+          : safeSort
+       } ${sortDir} NULLS LAST LIMIT $${idx} OFFSET $${idx + 1}`,
       dataParams
     );
 
@@ -469,6 +479,7 @@ adminRouter.post('/cards', async (req, res) => {
     );
 
     console.log(`[ADMIN] user=${req.user!.userId} action=create_card target=${id}`);
+    await bumpDataVersion();
     res.status(201).json(result.rows[0]);
   } catch (err: any) {
     if (err?.code === '23505') {
@@ -519,10 +530,96 @@ adminRouter.put('/cards/:id', async (req, res) => {
     }
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_card target=${cardId}`);
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Update card failed:', err);
     res.status(500).json({ error: 'Karte konnte nicht aktualisiert werden' });
+  }
+});
+
+/**
+ * PATCH /api/admin/cards/:id/ban
+ * Updates the ban status for a card.
+ * Body: { banStatus: "Forbidden" | "Limited" | "Semi-Limited" | null }
+ */
+adminRouter.patch('/cards/:id/ban', async (req, res) => {
+  try {
+    const cardId = parseInt(req.params.id, 10);
+    if (isNaN(cardId)) {
+      res.status(400).json({ error: 'Ungueltige Karten-ID' });
+      return;
+    }
+
+    const { banStatus } = req.body;
+    const valid = [null, 'Forbidden', 'Limited', 'Semi-Limited'];
+    if (!valid.includes(banStatus)) {
+      res.status(400).json({ error: 'Ungueltiger Ban-Status. Erlaubt: Forbidden, Limited, Semi-Limited, null' });
+      return;
+    }
+
+    const result = await pool.query(
+      'UPDATE cards SET ban_status = $1 WHERE id = $2 RETURNING id, ban_status',
+      [banStatus, cardId]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Karte nicht gefunden' });
+      return;
+    }
+
+    console.log(`[ADMIN] user=${req.user!.userId} action=set_ban_status target=${cardId} status=${banStatus}`);
+
+    await bumpDataVersion();
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Set ban status failed:', err);
+    res.status(500).json({ error: 'Ban-Status konnte nicht gesetzt werden' });
+  }
+});
+
+/**
+ * DELETE /api/admin/cards/:id
+ * Deletes a card from the database including all artworks, set entries, and image files.
+ */
+adminRouter.delete('/cards/:id', async (req, res) => {
+  try {
+    const cardId = parseInt(req.params.id, 10);
+    if (isNaN(cardId)) {
+      res.status(400).json({ error: 'Ungueltige Karten-ID' });
+      return;
+    }
+
+    // Get artwork IDs before deletion (for file cleanup)
+    const artworks = await pool.query(
+      'SELECT artwork_id FROM card_artworks WHERE card_id = $1',
+      [cardId]
+    );
+    const artworkIds = artworks.rows.map((r: { artwork_id: number }) => r.artwork_id);
+
+    // Delete card (cascades to card_artworks, card_set_entries, user_cards, deck_cards)
+    const result = await pool.query('DELETE FROM cards WHERE id = $1 RETURNING id', [cardId]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Karte nicht gefunden' });
+      return;
+    }
+
+    // Delete image files
+    const fs = await import('fs');
+    const path = await import('path');
+    const imageDir = path.default.join(process.cwd(), '..', 'public', 'images', 'cards');
+    for (const artId of [cardId, ...artworkIds]) {
+      const filePath = path.default.join(imageDir, `${artId}.jpg`);
+      try { fs.default.unlinkSync(filePath); } catch { /* file may not exist */ }
+    }
+
+    console.log(`[ADMIN] user=${req.user!.userId} action=delete_card target=${cardId} artworks=${artworkIds.length}`);
+
+    await bumpDataVersion();
+    res.json({ success: true, deletedArtworks: artworkIds.length });
+  } catch (err) {
+    console.error('Delete card failed:', err);
+    res.status(500).json({ error: 'Karte konnte nicht geloescht werden' });
   }
 });
 
@@ -619,31 +716,51 @@ adminRouter.post('/cards/import', async (req, res) => {
       return;
     }
 
-    // Fetch from YGOPRODeck API
-    const apiUrl = `https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${cardId}&language=de`;
-    const apiRes = await fetch(apiUrl);
-    if (!apiRes.ok) {
+    // Fetch EN by id, then also by fname to get all artworks (API quirk: id returns fewer)
+    const enRes = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${cardId}`);
+    if (!enRes.ok) {
       res.status(404).json({ error: 'Karte nicht in YGOPRODeck gefunden' });
       return;
     }
-
-    const data = await apiRes.json();
-    const c = data.data?.[0];
-    if (!c) {
+    const enData = await enRes.json();
+    const enCard = enData.data?.[0];
+    if (!enCard) {
       res.status(404).json({ error: 'Kartendaten leer' });
       return;
     }
 
-    // Insert card into DB
-    const nameDe = c.misc_info?.[0]?.translated_name ?? c.name;
-    const descDe = c.misc_info?.[0]?.translated_desc ?? c.desc;
-    const typeDe = c.type; // fallback to English type
-    const raceDe = c.race; // fallback to English race
+    // Fetch by exact name to get ALL artworks (fname with exact match returns more card_images)
+    let allImages = enCard.card_images ?? [];
+    try {
+      const fnameRes = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?name=${encodeURIComponent(enCard.name)}`);
+      if (fnameRes.ok) {
+        const fnameData = await fnameRes.json();
+        const fnameCard = fnameData.data?.[0];
+        if (fnameCard?.card_images && fnameCard.card_images.length > allImages.length) {
+          allImages = fnameCard.card_images;
+        }
+      }
+    } catch { /* fallback to id-based images */ }
+
+    // Fetch DE data for translations
+    const deRes = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?id=${cardId}&language=de`);
+    const deCard = deRes.ok ? (await deRes.json()).data?.[0] : null;
+
+    // Merge: EN for structure, fname for artworks, DE for translations
+    const c = {
+      ...enCard,
+      card_images: allImages,
+    };
+    const nameDe = deCard?.name ?? c.misc_info?.[0]?.translated_name ?? c.name;
+    const descDe = deCard?.desc ?? c.misc_info?.[0]?.translated_desc ?? c.desc;
+    const typeDe = deCard?.type ?? c.type;
+    const raceDe = deCard?.race ?? c.race;
+    const banStatus = c.banlist_info?.ban_tcg ?? null;
 
     await pool.query(
-      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-      [c.id, nameDe, c.name, descDe, c.desc, typeDe, c.type, c.frameType, c.atk ?? null, c.def ?? null, c.level ?? null, raceDe, c.race, c.attribute ?? null, c.archetype ?? null, `/images/cards/${c.id}.jpg`]
+      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+      [c.id, nameDe, c.name, descDe, c.desc, typeDe, c.type, c.frameType, c.atk ?? null, c.def ?? null, c.level ?? null, raceDe, c.race, c.attribute ?? null, c.archetype ?? null, `/images/cards/${c.id}.jpg`, banStatus]
     );
 
     // Download all artworks
@@ -683,6 +800,7 @@ adminRouter.post('/cards/import', async (req, res) => {
     }
 
     console.log(`[ADMIN] user=${req.user!.userId} action=import_card target=${c.id} name=${c.name} artworks=${artworkCount}`);
+    await bumpDataVersion();
     res.status(201).json({ success: true, cardId: c.id, name: c.name, nameDe, artworkCount });
   } catch (err: any) {
     if (err?.code === '23505') {
@@ -759,6 +877,7 @@ adminRouter.post('/sets', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=create_set target=${name}`);
 
+    await bumpDataVersion();
     res.status(201).json(setResult.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -789,6 +908,7 @@ adminRouter.delete('/sets/:name', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=delete_set target=${name}`);
 
+    await bumpDataVersion();
     res.json({ success: true });
   } catch (err) {
     console.error('Admin delete set failed:', err);
@@ -840,7 +960,7 @@ adminRouter.get('/sets/:name/cards', async (req, res) => {
       `SELECT
         c.id, c.name_de, c.name_en, c.desc_de, c.desc_en, c.frame_type,
         c.atk, c.def, c.level, c.attribute, c.race_de, c.race_en, c.archetype, c.image_path,
-        cse.rarity, cse.rarity_code, cse.artwork_id
+        c.ban_status, cse.rarity, cse.rarity_code, cse.artwork_id
        FROM card_set_entries cse
        JOIN cards c ON c.id = cse.card_id
        ${whereClause}
@@ -887,6 +1007,7 @@ adminRouter.post('/sets/:name/cards', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=add_set_card target=${name} card=${cardId}`);
 
+    await bumpDataVersion();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Admin add set card failed:', err);
@@ -936,6 +1057,7 @@ adminRouter.post('/sets/:name/cards/bulk', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=bulk_add_set_cards target=${name} count=${cards.length}`);
 
+    await bumpDataVersion();
     res.status(201).json({ count: cards.length });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -972,6 +1094,7 @@ adminRouter.delete('/sets/:name/cards/:cardId', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=remove_set_card target=${name} card=${cardIdNum}`);
 
+    await bumpDataVersion();
     res.json({ success: true });
   } catch (err) {
     console.error('Admin remove set card failed:', err);
@@ -1008,6 +1131,7 @@ adminRouter.delete('/sets/:name/cards', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=bulk_remove_set_cards target=${name} count=${result.rowCount}`);
 
+    await bumpDataVersion();
     res.json({ count: result.rowCount });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -1072,6 +1196,7 @@ adminRouter.post('/news', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=create_news target=${slug}`);
 
+    await bumpDataVersion();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Admin create news failed:', err);
@@ -1133,6 +1258,7 @@ adminRouter.put('/news/:id', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_news target=${id}`);
 
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Admin update news failed:', err);
@@ -1164,6 +1290,7 @@ adminRouter.delete('/news/:id', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=delete_news target=${id}`);
 
+    await bumpDataVersion();
     res.json({ success: true });
   } catch (err) {
     console.error('Admin delete news failed:', err);
@@ -1228,6 +1355,7 @@ adminRouter.post('/roadmap', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=create_roadmap target=${slug}`);
 
+    await bumpDataVersion();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Admin create roadmap failed:', err);
@@ -1291,6 +1419,7 @@ adminRouter.put('/roadmap/:id', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_roadmap target=${id}`);
 
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Admin update roadmap failed:', err);
@@ -1322,6 +1451,7 @@ adminRouter.delete('/roadmap/:id', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=delete_roadmap target=${id}`);
 
+    await bumpDataVersion();
     res.json({ success: true });
   } catch (err) {
     console.error('Admin delete roadmap failed:', err);
@@ -1504,6 +1634,7 @@ adminRouter.post('/cosmetics', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=create_cosmetic target=${item_id}`);
 
+    await bumpDataVersion();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Admin create cosmetic failed:', err);
@@ -1562,6 +1693,7 @@ adminRouter.put('/cosmetics/:id', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_cosmetic target=${id}`);
 
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Admin update cosmetic failed:', err);
@@ -1593,6 +1725,7 @@ adminRouter.delete('/cosmetics/:id', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=delete_cosmetic target=${id}`);
 
+    await bumpDataVersion();
     res.json({ success: true });
   } catch (err) {
     console.error('Admin delete cosmetic failed:', err);
@@ -1702,6 +1835,7 @@ adminRouter.put('/cards/:id/artworks/:artworkId', async (req, res) => {
 
     console.log(`[ADMIN] user=${req.user!.userId} action=update_artwork target=${cardId}/${artworkId}`);
 
+    await bumpDataVersion();
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Admin update artwork failed:', err);

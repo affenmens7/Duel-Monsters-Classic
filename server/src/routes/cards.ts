@@ -83,9 +83,21 @@ cardsRouter.get('/browse', async (_req, res) => {
       SELECT c.*,
         EXISTS(
           SELECT 1 FROM card_set_entries cse
-          WHERE cse.card_id = c.id
+          JOIN card_sets cs ON cs.name = cse.set_name
+          WHERE cse.card_id = c.id AND cs.active = TRUE
         ) as available,
-        (SELECT COUNT(*)::int FROM card_artworks ca WHERE ca.card_id = c.id) as artwork_count
+        COALESCE(
+          (SELECT ARRAY_AGG(ca.artwork_id ORDER BY ca.is_default DESC, ca.artwork_id)
+           FROM card_artworks ca WHERE ca.card_id = c.id),
+          ARRAY[]::int[]
+        ) as artwork_ids,
+        COALESCE(
+          (SELECT JSON_AGG(JSON_BUILD_OBJECT('name', cs.name, 'code', cs.code, 'active', cs.active, 'artworkId', cse.artwork_id) ORDER BY cs.active DESC, cs.wave, cs.name)
+           FROM card_set_entries cse
+           JOIN card_sets cs ON cs.name = cse.set_name
+           WHERE cse.card_id = c.id),
+          '[]'::json
+        ) as sets
       FROM cards c
       ORDER BY c.name_en
     `);

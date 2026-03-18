@@ -72,6 +72,13 @@ export interface CardSet {
   set_price: string;
 }
 
+export interface CardSetBadge {
+  name: string;
+  code: string;
+  active?: boolean;
+  artworkId?: number | null;
+}
+
 export interface Card {
   id: number;
   name: string;
@@ -92,6 +99,9 @@ export interface Card {
   card_sets?: CardSet[];
   card_images: CardImage[];
   available?: boolean;
+  artworkIds?: number[];
+  sets?: CardSetBadge[];
+  banStatus?: string | null;
 }
 
 export interface OwnedCard extends Card {
