@@ -15,10 +15,11 @@ import styles from './CardDetail.module.css';
 
 interface CardDetailProps {
   card: Card;
+  setFilter?: string;
   onClose: () => void;
 }
 
-export function CardDetail({ card, onClose }: CardDetailProps) {
+export function CardDetail({ card, setFilter, onClose }: CardDetailProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { localize } = useCardLocale();
@@ -76,9 +77,15 @@ export function CardDetail({ card, onClose }: CardDetailProps) {
         race: loc.race,
         sets: card.sets,
         banStatus: card.banStatus,
+        artworkId: card.artworkIds?.[0] ?? null,
       }}
       onClose={onClose}
       artworks={artworks}
+      currentArtworkId={
+        setFilter && setFilter !== 'all'
+          ? card.sets?.find((s) => s.name === setFilter)?.artworkId ?? card.artworkIds?.[0] ?? null
+          : card.artworkIds?.[0] ?? null
+      }
       onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
     />
   );

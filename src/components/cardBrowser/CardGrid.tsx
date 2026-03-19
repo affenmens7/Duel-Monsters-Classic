@@ -6,11 +6,14 @@ import styles from './CardGrid.module.css';
 interface CardGridProps {
   cards: Card[];
   onCardClick: (card: Card) => void;
+  onCardDragStart?: (cardId: number, e: React.MouseEvent) => void;
   setFilter?: string;
   isCardMaxed?: (cardId: number) => boolean;
+  isCardGreyed?: (cardId: number) => boolean;
+  artworkPrefs?: Map<number, number>;
 }
 
-export function CardGrid({ cards, onCardClick, setFilter, isCardMaxed }: CardGridProps) {
+export function CardGrid({ cards, onCardClick, onCardDragStart, setFilter, isCardMaxed, isCardGreyed, artworkPrefs }: CardGridProps) {
   const { t } = useTranslation();
 
   if (cards.length === 0) {
@@ -28,8 +31,11 @@ export function CardGrid({ cards, onCardClick, setFilter, isCardMaxed }: CardGri
           key={card.id}
           card={card}
           onClick={() => onCardClick(card)}
+          onMouseDown={onCardDragStart ? (e) => onCardDragStart(card.id, e) : undefined}
           setFilter={setFilter}
           forceMaxed={isCardMaxed?.(card.id)}
+          forceGreyed={isCardGreyed?.(card.id)}
+          preferredArtworkId={artworkPrefs?.get(card.id)}
         />
       ))}
     </div>

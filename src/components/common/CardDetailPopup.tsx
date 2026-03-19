@@ -10,17 +10,21 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
+import { getRarityTier } from '../../utils/rarity';
 import styles from './CardDetailPopup.module.css';
 
-// Rarity badge color mapping
+// Maps rarity tier to CSS module class
+const RARITY_STYLE: Record<string, string> = {
+  SecretRare: styles.raritySecretRare,
+  UltraRare: styles.rarityUltraRare,
+  SuperRare: styles.raritySuperRare,
+  Rare: styles.rarityRare,
+  ShortPrint: styles.rarityShortPrint,
+  Common: styles.rarityCommon,
+};
+
 function rarityClass(rarity: string): string {
-  const lower = rarity.toLowerCase();
-  if (lower.includes('secret')) return styles.raritySecretRare;
-  if (lower.includes('ultra')) return styles.rarityUltraRare;
-  if (lower.includes('super')) return styles.raritySuperRare;
-  if (lower.includes('rare')) return styles.rarityRare;
-  if (lower.includes('short')) return styles.rarityShortPrint;
-  return styles.rarityCommon;
+  return RARITY_STYLE[getRarityTier(rarity)] ?? styles.rarityCommon;
 }
 
 export interface CardSetBadgeData {
@@ -65,6 +69,8 @@ interface CardDetailPopupProps {
   onArtworkChange?: (artworkId: number) => void;
   onSetClick?: (setName: string) => void;
   ownedArtworkIds?: number[];
+  isPreviewGreyed?: boolean;
+  onPreviewArtworkChange?: (artworkId: number) => void;
   children?: React.ReactNode;
 }
 
@@ -76,6 +82,8 @@ export function CardDetailPopup({
   onArtworkChange,
   onSetClick,
   ownedArtworkIds,
+  isPreviewGreyed,
+  onPreviewArtworkChange,
   children,
 }: CardDetailPopupProps) {
   const { i18n, t } = useTranslation();
@@ -105,7 +113,7 @@ export function CardDetailPopup({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <button className={styles.close} onClick={onClose}>x</button>
         <div className={styles.content}>
-          <div className={styles.imageCol}>
+          <div className={`${styles.imageCol} ${isPreviewGreyed ? styles.imageGreyed : ''}`}>
             <img src={getCardImageUrl(card.id, 'full', artId)} alt={displayName} />
           </div>
           <div className={styles.infoCol}>
@@ -114,11 +122,19 @@ export function CardDetailPopup({
               <span className={styles.secondaryName}>{secondaryName}</span>
             )}
 
-            {/* Availability badges — artwork-specific when previewing, otherwise from cached sets */}
+            {/* Availability badges — artwork-specific when artworks loaded, otherwise card-level sets */}
             {activeArtwork && artworks && artworks.length > 1 ? (
               <div className={styles.availabilityBadge}>
                 {activeArtwork.availableIn ? (
-                  <span className={styles.badgeAvailable}>{activeArtwork.availableIn}</span>
+                  activeArtwork.availableIn.split(', ').map((setName) => (
+                    <span
+                      key={setName}
+                      className={`${styles.badgeAvailable} ${onSetClick ? styles.badgeClickable : ''}`}
+                      onClick={onSetClick ? () => { onClose(); onSetClick(setName.trim()); } : undefined}
+                    >
+                      {setName.trim()}
+                    </span>
+                  ))
                 ) : (
                   <span className={styles.badgeUnavailable}>{t('cardDetail.notAvailable')}</span>
                 )}
@@ -183,10 +199,15 @@ export function CardDetailPopup({
                       <div
                         key={art.artworkId}
                         className={`${styles.artworkThumb} ${art.artworkId === artId ? styles.artworkActive : ''} ${!owned ? styles.artworkLocked : ''}`}
-                        onClick={owned ? () => {
+                        title={!owned ? t('cardDetail.artworkLocked') : undefined}
+                        onClick={() => {
                           setPreviewArtId(art.artworkId);
-                          onArtworkChange?.(art.artworkId);
-                        } : undefined}
+                          if (owned) {
+                            onArtworkChange?.(art.artworkId);
+                          } else {
+                            onPreviewArtworkChange?.(art.artworkId);
+                          }
+                        }}
                       >
                         <img src={getCardImageUrl(card.id, 'small', art.artworkId)} alt="" />
                       </div>

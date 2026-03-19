@@ -30,8 +30,9 @@ const ADMIN_SECTIONS: NavSection[] = [
   {
     titleKey: 'admin.shop',
     items: [
-      { to: '/app/admin/shop-config', labelKey: 'admin.boosterAndDecks' },
-      { to: '/app/admin/cosmetics', labelKey: 'admin.cosmetics' },
+      { to: '/app/admin/shop/featured-sektion', labelKey: 'admin.shopFeatured' },
+      { to: '/app/admin/shop/booster-sets', labelKey: 'admin.boosterPacks' },
+      { to: '/app/admin/shop/starter-decks', labelKey: 'admin.starterDecks' },
     ],
   },
   {

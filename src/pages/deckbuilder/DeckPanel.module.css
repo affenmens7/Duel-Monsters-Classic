@@ -1,0 +1,375 @@
+/* DeckPanel — List-based deck builder (Demo 5b style) */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Thin scrollbar */
+.panel::-webkit-scrollbar { width: 3px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: rgba(0, 220, 168, 0.15); border-radius: 2px; }
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 220, 168, 0.04);
+  position: sticky;
+  top: 0;
+  background: rgba(6, 8, 10, 0.98);
+  z-index: 2;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.newBtn {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  padding: 7px 14px;
+  background: none;
+  border: 1px solid rgba(0, 220, 168, 0.1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+
+.newBtn:hover {
+  border-color: rgba(0, 220, 168, 0.3);
+  color: var(--orichalcos-light);
+}
+
+/* Deck select dropdown */
+.selectRow {
+  padding: 10px 18px;
+  border-bottom: 1px solid rgba(0, 220, 168, 0.04);
+  display: flex;
+  gap: 6px;
+}
+
+.deckSelect {
+  flex: 1;
+  padding: 10px 12px;
+  background: rgba(8, 12, 14, 0.8);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.deckSelect option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.deleteBtn {
+  padding: 8px 10px;
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.15s;
+}
+
+.deleteBtn:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Stats bar */
+.statsBar {
+  display: flex;
+  border-bottom: 1px solid rgba(0, 220, 168, 0.04);
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+  padding: 10px 2px;
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.statValue {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.statTotal { color: var(--orichalcos-light); }
+.statMonster { color: #d4a44a; }
+.statSpell { color: #2d9e6e; }
+.statTrap { color: #b44a7a; }
+
+/* Section headers (sticky within scroll) — same flex layout as .cardRow */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+  background: rgba(8, 12, 14, 0.5);
+  border-bottom: 1px solid rgba(0, 220, 168, 0.03);
+  position: sticky;
+  top: 48px;
+  z-index: 1;
+}
+
+.sectionTitle {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.colRemove { width: 24px; flex-shrink: 0; }
+
+.colLabel {
+  font-family: var(--font-heading);
+  font-size: 0.45rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.colLabelType { width: 68px; }
+.colLabelQty { width: 32px; }
+
+.clearBtn {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+
+.clearBtn:hover {
+  color: #ef4444;
+}
+
+/* Card rows */
+.cardRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px;
+  border-bottom: 1px solid rgba(0, 220, 168, 0.015);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.cardRow:hover {
+  background: rgba(0, 200, 160, 0.03);
+}
+
+.cardThumb {
+  width: 32px;
+  flex-shrink: 0;
+  aspect-ratio: 59 / 86;
+  object-fit: cover;
+  border: 1px solid rgba(0, 200, 160, 0.04);
+  border-radius: 1px;
+}
+
+.cardName {
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardType {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid rgba(0, 220, 168, 0.06);
+  white-space: nowrap;
+  width: 68px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.typeNormal { color: #c8a86e; border-color: rgba(200, 168, 110, 0.12); }
+.typeEffect { color: #c06030; border-color: rgba(192, 96, 48, 0.12); }
+.typeRitual { color: #4a6ab8; border-color: rgba(74, 106, 184, 0.12); }
+.typeFusion { color: #7a4ab8; border-color: rgba(122, 74, 184, 0.12); }
+.typeSpell { color: #2d9e6e; border-color: rgba(45, 158, 110, 0.12); }
+.typeTrap { color: #b44a7a; border-color: rgba(180, 74, 122, 0.12); }
+
+.cardQty {
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  width: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  width: 24px;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 0;
+  opacity: 0.3;
+  transition: all 0.15s;
+}
+
+.removeBtn:hover {
+  color: #ef4444;
+  opacity: 1;
+}
+
+/* Status bar */
+.deckStatus {
+  padding: 10px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(0, 220, 168, 0.04);
+}
+
+.statusReady {
+  color: #4ade80;
+  background: rgba(0, 200, 80, 0.03);
+}
+
+.statusIncomplete {
+  color: var(--gold);
+  background: rgba(200, 160, 0, 0.02);
+}
+
+/* Footer buttons */
+.footer {
+  padding: 10px 18px;
+  display: flex;
+  gap: 6px;
+  border-top: 1px solid rgba(0, 220, 168, 0.04);
+}
+
+.footerBtn {
+  flex: 1;
+  padding: 10px;
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.btnFullscreen {
+  background: rgba(0, 200, 160, 0.04);
+  border: 1px solid rgba(0, 220, 168, 0.1);
+  color: var(--orichalcos-light);
+}
+
+.btnClear {
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.6);
+  transition: all 0.15s;
+}
+
+.btnClear:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.btnShare {
+  background: rgba(200, 168, 48, 0.04);
+  border: 1px solid rgba(200, 168, 48, 0.1);
+  color: var(--gold);
+}
+
+/* Loading + Error */
+.loading {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--orichalcos-light);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 16px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  padding: 8px 14px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+/* Empty state */
+.emptyHint {
+  text-align: center;
+  padding: 24px 14px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Deck zones (main / extra) */
+.deckZone {
+  transition: background 0.2s, box-shadow 0.2s;
+  border-radius: 2px;
+}
+
+/* Drop target highlight when dragging a card from the pool */
+.dropHighlight {
+  background: rgba(0, 220, 168, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(0, 220, 168, 0.25);
+}
+
+.dropTarget {
+  outline: 2px solid var(--orichalcos-dim, #00dca8);
+  outline-offset: -2px;
+  background: rgba(0, 220, 168, 0.04);
+}

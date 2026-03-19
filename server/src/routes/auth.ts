@@ -3,6 +3,7 @@
  */
 
 import { Router } from 'express';
+import { randomInt } from 'crypto';
 import { registerUser, loginUser } from '../services/authService.js';
 import { pool } from '../config/db.js';
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../services/emailService.js';
@@ -11,8 +12,9 @@ import bcrypt from 'bcrypt';
 
 export const authRouter = Router();
 
+/** Generates a cryptographically secure 6-digit code. */
 function generateCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
 }
 
 // Register
@@ -158,8 +160,8 @@ authRouter.post('/reset-password', async (req, res) => {
     return;
   }
 
-  if (newPassword.length < 6) {
-    res.status(400).json({ error: 'Passwort muss mindestens 6 Zeichen lang sein' });
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: 'Passwort muss mindestens 8 Zeichen lang sein' });
     return;
   }
 

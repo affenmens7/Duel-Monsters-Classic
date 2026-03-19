@@ -247,6 +247,120 @@ const schema = `
       ALTER TABLE cards ADD COLUMN ban_status VARCHAR(16) DEFAULT NULL;
     END IF;
   END $$;
+
+  -- Artwork preference per deck card (cosmetic, nullable = default artwork)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deck_cards' AND column_name = 'artwork_id') THEN
+      ALTER TABLE deck_cards ADD COLUMN artwork_id INTEGER;
+    END IF;
+  END $$;
+
+  -- Preferred artwork per card per user (null = use card default)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_cards' AND column_name = 'preferred_artwork_id') THEN
+      ALTER TABLE user_cards ADD COLUMN preferred_artwork_id INTEGER;
+    END IF;
+  END $$;
+
+  -- Shop featured carousel (admin-managed rotating banners)
+  CREATE TABLE IF NOT EXISTS shop_featured (
+    id          SERIAL PRIMARY KEY,
+    product_type VARCHAR(32) NOT NULL,
+    product_id  VARCHAR(128) NOT NULL,
+    title_de    VARCHAR(255) NOT NULL,
+    title_en    VARCHAR(255),
+    subtitle_de TEXT,
+    subtitle_en TEXT,
+    image_path  VARCHAR(255),
+    active      BOOLEAN DEFAULT TRUE,
+    sort_order  INTEGER DEFAULT 0,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  -- Per-copy artwork support: expand deck_cards from (card_id, quantity, artwork_id)
+  -- to one row per copy with copy_index (0, 1, 2).
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deck_cards' AND column_name = 'copy_index') THEN
+      ALTER TABLE deck_cards ADD COLUMN copy_index SMALLINT NOT NULL DEFAULT 0;
+
+      -- Expand existing rows: quantity=N becomes N individual rows with copy_index 0..N-1
+      INSERT INTO deck_cards (deck_id, card_id, artwork_id, copy_index)
+      SELECT dc.deck_id, dc.card_id, dc.artwork_id, gs.idx
+      FROM deck_cards dc
+      CROSS JOIN LATERAL generate_series(1, dc.quantity - 1) AS gs(idx)
+      WHERE dc.quantity > 1;
+
+      -- Set all original rows to quantity=1 (they keep copy_index=0)
+      UPDATE deck_cards SET quantity = 1 WHERE quantity > 1;
+    END IF;
+  END $$;
+
+  -- Unique constraint: one copy_index per card per deck
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_deck_cards_copy
+    ON deck_cards (deck_id, card_id, copy_index);
+
+  -- Showcase card IDs for set artwork composition in the shop
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'showcase_card_ids') THEN
+      ALTER TABLE shop_set_config ADD COLUMN showcase_card_ids INTEGER[];
+    END IF;
+  END $$;
+
+  -- Showcase animated toggle (true = animated, false = static)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'showcase_animated') THEN
+      ALTER TABLE shop_set_config ADD COLUMN showcase_animated BOOLEAN NOT NULL DEFAULT FALSE;
+    END IF;
+  END $$;
+
+  -- Clear set image paths (set cover images removed, card images stay)
+  UPDATE card_sets SET image_path = NULL WHERE image_path IS NOT NULL;
+
+  -- Shop visibility toggle (hide sets from shop without deleting config)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'shop_visible') THEN
+      ALTER TABLE shop_set_config ADD COLUMN shop_visible BOOLEAN NOT NULL DEFAULT TRUE;
+    END IF;
+  END $$;
+
+  -- Display-specific showcase card IDs (separate from booster showcase)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_card_ids') THEN
+      ALTER TABLE shop_set_config ADD COLUMN display_showcase_card_ids INTEGER[];
+    END IF;
+  END $$;
+
+  -- Display-specific showcase animated toggle
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_animated') THEN
+      ALTER TABLE shop_set_config ADD COLUMN display_showcase_animated BOOLEAN NOT NULL DEFAULT FALSE;
+    END IF;
+  END $$;
+
+  -- Quantity per card in a set (for starter/structure decks with duplicates)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_set_entries' AND column_name = 'quantity') THEN
+      ALTER TABLE card_set_entries ADD COLUMN quantity SMALLINT NOT NULL DEFAULT 1;
+    END IF;
+  END $$;
+
+  -- Game release date for scheduled auto-activation of sets
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'game_release_date') THEN
+      ALTER TABLE shop_set_config ADD COLUMN game_release_date DATE;
+    END IF;
+  END $$;
+
+  -- Auto-create missing shop_set_config for any card_sets without one
+  INSERT INTO shop_set_config (set_name, product_type, price_pack, pack_size)
+  SELECT
+    cs.name,
+    CASE WHEN cs.type = 'starter' OR cs.name ILIKE '%starter%' OR cs.name ILIKE '%structure%' THEN 'starter' ELSE 'booster' END,
+    CASE WHEN cs.type = 'starter' OR cs.name ILIKE '%starter%' OR cs.name ILIKE '%structure%' THEN 600 ELSE 120 END,
+    CASE WHEN cs.type = 'starter' OR cs.name ILIKE '%starter%' OR cs.name ILIKE '%structure%' THEN 40 ELSE 5 END
+  FROM card_sets cs
+  LEFT JOIN shop_set_config sc ON sc.set_name = cs.name
+  WHERE sc.set_name IS NULL;
 `;
 
 async function migrate() {

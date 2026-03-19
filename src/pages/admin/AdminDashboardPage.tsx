@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../store/AuthContext';
 import { Link } from 'react-router-dom';
-import { fetchAdminStats, type AdminStats } from '../../services/adminApi';
+import { fetchAdminStats, type AdminStats } from '../../services/admin';
 import styles from './AdminDashboard.module.css';
 
 export function AdminDashboardPage() {

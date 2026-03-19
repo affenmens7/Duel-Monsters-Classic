@@ -107,6 +107,8 @@ export interface Card {
 export interface OwnedCard extends Card {
   owned: number;
   used_in_decks: number;
+  unlockedArtworks: number[];
+  preferredArtworkId: number | null;
 }
 
 export interface CardApiResponse {

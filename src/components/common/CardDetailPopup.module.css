@@ -290,7 +290,7 @@
 .artworkLocked {
   opacity: 0.25;
   filter: grayscale(0.8);
-  cursor: default;
+  cursor: pointer;
 }
 
 .artworkLocked:hover {
@@ -349,6 +349,13 @@
   margin-top: 6px;
   padding-top: 6px;
   border-top: 1px solid var(--orichalcos-faint);
+}
+
+/* Greyed main card image — when previewing an unowned artwork */
+.imageGreyed img {
+  filter: grayscale(0.7);
+  opacity: 0.5;
+  transition: filter 0.2s ease, opacity 0.2s ease;
 }
 
 /* ---- Responsive ---- */

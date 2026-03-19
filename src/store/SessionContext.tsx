@@ -22,6 +22,8 @@ import { fetchDecks, type DeckSummary } from '../services/deckApi';
 export interface InventoryEntry {
   quantity: number;
   usedInDecks: number;
+  unlockedArtworks: number[];
+  preferredArtworkId: number | null;
 }
 
 interface SessionContextValue {
@@ -43,6 +45,7 @@ interface SessionContextValue {
   addCardsToInventory: (cardIds: number[]) => void;
   removeCardFromInventory: (cardId: number, count: number) => void;
   incrementDeckUsage: (cardId: number, delta: number) => void;
+  setPreferredArtwork: (cardId: number, artworkId: number) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -86,7 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .then((owned) => {
         const map = new Map<number, InventoryEntry>();
         for (const card of owned) {
-          map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks });
+          map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
         }
         setInventory(map);
       })
@@ -108,7 +111,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const owned = await fetchCollectionDetails(token, excludeDeckId);
       const map = new Map<number, InventoryEntry>();
       for (const card of owned) {
-        map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks });
+        map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
       }
       setInventory(map);
     } catch {
@@ -143,7 +146,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (entry) {
           next.set(cardId, { ...entry, quantity: entry.quantity + 1 });
         } else {
-          next.set(cardId, { quantity: 1, usedInDecks: 0 });
+          next.set(cardId, { quantity: 1, usedInDecks: 0, unlockedArtworks: [], preferredArtworkId: null });
         }
       }
       return next;
@@ -180,6 +183,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setPreferredArtwork = useCallback((cardId: number, artworkId: number) => {
+    setInventory((prev) => {
+      const next = new Map(prev);
+      const entry = next.get(cardId);
+      if (entry) {
+        next.set(cardId, { ...entry, preferredArtworkId: artworkId });
+      }
+      return next;
+    });
+  }, []);
+
   return (
     <SessionContext.Provider
       value={{
@@ -194,6 +208,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         addCardsToInventory,
         removeCardFromInventory,
         incrementDeckUsage,
+        setPreferredArtwork,
       }}
     >
       {children}

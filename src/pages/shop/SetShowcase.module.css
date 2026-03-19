@@ -1,0 +1,183 @@
+/* SetShowcase — card artwork compositions for set covers */
+
+.codeFallback {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+}
+
+.showcase {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* All showcase cards: same size, proper aspect ratio */
+.showcase img {
+  position: absolute;
+  border-radius: 3px;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.65);
+  width: 40%;
+  aspect-ratio: 59 / 86;
+  object-fit: cover;
+}
+
+/* ================================================== */
+/* BOOSTER STATIC: Cascade Stack (3 cards)            */
+/* ================================================== */
+.boosterCascade .c0 { left: 8%;  top: 8%;  z-index: 1; filter: brightness(0.35); }
+.boosterCascade .c1 { left: 22%; top: 16%; z-index: 2; filter: brightness(0.6); }
+.boosterCascade .c2 { left: 36%; top: 24%; z-index: 3; }
+
+/* ================================================== */
+/* BOOSTER ANIMATED: Deal Out (3 cards)               */
+/* ================================================== */
+/* Sequential deal: A slides in → B slides in → C slides in → hold → all fade → pause → repeat.
+   9s total, each card delayed by 1.5s. */
+.boosterDealAnim .c0,
+.boosterDealAnim .c1,
+.boosterDealAnim .c2 {
+  left: 22%; top: 16%; opacity: 0;
+}
+.boosterDealAnim .c0 { animation: deal3-0 9s ease-in-out infinite; }
+.boosterDealAnim .c1 { animation: deal3-1 9s ease-in-out 1.5s infinite; }
+.boosterDealAnim .c2 { animation: deal3-2 9s ease-in-out 3s infinite; }
+
+@keyframes deal3-0 {
+  0%   { left: 22%; top: 16%; opacity: 0; filter: brightness(0.35); z-index: 1; }
+  8%   { left: 8%;  top: 8%;  opacity: 1; filter: brightness(0.35); z-index: 1; }
+  60%  { left: 8%;  top: 8%;  opacity: 1; filter: brightness(0.35); z-index: 1; }
+  72%  { left: 22%; top: 16%; opacity: 0; filter: brightness(0.35); z-index: 1; }
+  100% { left: 22%; top: 16%; opacity: 0; filter: brightness(0.35); z-index: 1; }
+}
+@keyframes deal3-1 {
+  0%   { left: 22%; top: 16%; opacity: 0; filter: brightness(0.6); z-index: 2; }
+  8%   { left: 22%; top: 16%; opacity: 1; filter: brightness(0.6); z-index: 2; }
+  60%  { left: 22%; top: 16%; opacity: 1; filter: brightness(0.6); z-index: 2; }
+  72%  { left: 22%; top: 16%; opacity: 0; filter: brightness(0.6); z-index: 2; }
+  100% { left: 22%; top: 16%; opacity: 0; filter: brightness(0.6); z-index: 2; }
+}
+@keyframes deal3-2 {
+  0%   { left: 22%; top: 16%; opacity: 0; z-index: 3; }
+  8%   { left: 36%; top: 24%; opacity: 1; z-index: 3; }
+  60%  { left: 36%; top: 24%; opacity: 1; z-index: 3; }
+  72%  { left: 22%; top: 16%; opacity: 0; z-index: 3; }
+  100% { left: 22%; top: 16%; opacity: 0; z-index: 3; }
+}
+
+/* ================================================== */
+/* DISPLAY STATIC: Tight Stack (5 cards)              */
+/* ================================================== */
+.displayStack img { width: 35%; }
+.displayStack .c0 { left: 8%;  top: 6%;  z-index: 1; filter: brightness(0.25); }
+.displayStack .c1 { left: 15%; top: 12%; z-index: 2; filter: brightness(0.4); }
+.displayStack .c2 { left: 22%; top: 18%; z-index: 3; filter: brightness(0.6); }
+.displayStack .c3 { left: 29%; top: 24%; z-index: 4; filter: brightness(0.8); }
+.displayStack .c4 { left: 36%; top: 30%; z-index: 5; }
+
+/* ================================================== */
+/* DISPLAY ANIMATED: Deal Out (5 cards)               */
+/* ================================================== */
+/* Sequential deal: A → B → C → D → E, smooth, 15s cycle, 1.5s stagger */
+.displayDealAnim img { width: 35%; }
+.displayDealAnim .c0,
+.displayDealAnim .c1,
+.displayDealAnim .c2,
+.displayDealAnim .c3,
+.displayDealAnim .c4 {
+  left: 22%; top: 18%; opacity: 0;
+}
+.displayDealAnim .c0 { animation: deal5-0 15s ease-in-out infinite; }
+.displayDealAnim .c1 { animation: deal5-1 15s ease-in-out 1.5s infinite; }
+.displayDealAnim .c2 { animation: deal5-2 15s ease-in-out 3s infinite; }
+.displayDealAnim .c3 { animation: deal5-3 15s ease-in-out 4.5s infinite; }
+.displayDealAnim .c4 { animation: deal5-4 15s ease-in-out 6s infinite; }
+
+@keyframes deal5-0 {
+  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
+  5%   { left: 8%;  top: 6%;  opacity: 1; filter: brightness(0.25); z-index: 1; }
+  55%  { left: 8%;  top: 6%;  opacity: 1; filter: brightness(0.25); z-index: 1; }
+  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
+  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
+}
+@keyframes deal5-1 {
+  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
+  5%   { left: 15%; top: 12%; opacity: 1; filter: brightness(0.4); z-index: 2; }
+  55%  { left: 15%; top: 12%; opacity: 1; filter: brightness(0.4); z-index: 2; }
+  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
+  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
+}
+@keyframes deal5-2 {
+  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
+  5%   { left: 22%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 3; }
+  55%  { left: 22%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 3; }
+  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
+  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
+}
+@keyframes deal5-3 {
+  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
+  5%   { left: 29%; top: 24%; opacity: 1; filter: brightness(0.8); z-index: 4; }
+  55%  { left: 29%; top: 24%; opacity: 1; filter: brightness(0.8); z-index: 4; }
+  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
+  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
+}
+@keyframes deal5-4 {
+  0%   { left: 22%; top: 18%; opacity: 0; z-index: 5; }
+  5%   { left: 36%; top: 30%; opacity: 1; z-index: 5; }
+  55%  { left: 36%; top: 30%; opacity: 1; z-index: 5; }
+  65%  { left: 22%; top: 18%; opacity: 0; z-index: 5; }
+  100% { left: 22%; top: 18%; opacity: 0; z-index: 5; }
+}
+
+/* ================================================== */
+/* DECK STATIC: Pedestal (3 cards, 1 dominant center) */
+/* ================================================== */
+.deckPedestal .c0 { left: 6%;  top: 22%; z-index: 1; filter: brightness(0.5); transform: perspective(200px) rotateY(10deg) scale(0.85); }
+.deckPedestal .c1 { left: 30%; top: 12%; z-index: 3; }
+.deckPedestal .c2 { left: 54%; top: 22%; z-index: 1; filter: brightness(0.5); transform: perspective(200px) rotateY(-10deg) scale(0.85); }
+
+/* ================================================== */
+/* DECK ANIMATED: 3D Tilt (3 cards, 1 dominant)       */
+/* ================================================== */
+.deckTiltAnim .c0 {
+  left: 6%; top: 22%; z-index: 1;
+  filter: brightness(0.5);
+  transform: perspective(200px) rotateY(10deg);
+  animation: tilt-flank 4s ease-in-out infinite;
+  --ry: 10deg;
+}
+.deckTiltAnim .c1 {
+  left: 30%; top: 12%; z-index: 3;
+  animation: deck-pulse 4s ease-in-out infinite;
+}
+.deckTiltAnim .c2 {
+  left: 54%; top: 22%; z-index: 1;
+  filter: brightness(0.5);
+  transform: perspective(200px) rotateY(-10deg);
+  animation: tilt-flank 4s ease-in-out infinite reverse;
+  --ry: -10deg;
+}
+
+@keyframes tilt-flank {
+  0%, 100% {
+    transform: perspective(200px) rotateY(var(--ry, 10deg)) scale(0.85);
+    filter: brightness(0.5);
+  }
+  50% {
+    transform: perspective(200px) rotateY(calc(var(--ry, 10deg) * 0.3)) scale(0.78);
+    filter: brightness(0.35);
+  }
+}
+
+@keyframes deck-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.65);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 220, 168, 0.25);
+  }
+}

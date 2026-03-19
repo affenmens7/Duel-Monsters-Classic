@@ -7,8 +7,11 @@ import styles from './CardTile.module.css';
 interface CardTileProps {
   card: Card;
   onClick: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
   setFilter?: string;
   forceMaxed?: boolean;
+  forceGreyed?: boolean;
+  preferredArtworkId?: number;
 }
 
 function getFrameClass(frameType: string): string {
@@ -23,21 +26,23 @@ function getFrameClass(frameType: string): string {
   }
 }
 
-export function CardTile({ card, onClick, setFilter, forceMaxed }: CardTileProps) {
+export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, forceGreyed, preferredArtworkId }: CardTileProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { localize } = useCardLocale();
   const loc = localize(card);
 
-  // Use set-specific artwork when filtering by set, otherwise the default artwork
+  // Priority: set filter artwork > user preference > default
   const artworkId = setFilter && setFilter !== 'all'
     ? card.sets?.find((s) => s.name === setFilter)?.artworkId ?? card.artworkIds?.[0]
-    : card.artworkIds?.[0] ?? undefined;
+    : preferredArtworkId ?? card.artworkIds?.[0] ?? undefined;
   const imageUrl = getCardImageUrl(card.id, 'small', artworkId);
 
   return (
     <button
-      className={`${styles.tile} ${getFrameClass(card.frameType)} ${card.available === false || forceMaxed ? styles.locked : ''}`}
+      className={`${styles.tile} ${getFrameClass(card.frameType)} ${card.available === false || forceMaxed ? styles.locked : ''} ${forceGreyed ? styles.greyedArtwork : ''}`}
+      data-card-id={card.id}
       onClick={onClick}
+      onMouseDown={onMouseDown}
       title={loc.name}
     >
       <div className={styles.imageWrapper}>

@@ -82,3 +82,13 @@
   width: 100%;
   word-break: break-word;
 }
+
+.greyedArtwork {
+  opacity: 0.45;
+  filter: grayscale(0.5);
+}
+
+.greyedArtwork:hover {
+  opacity: 0.6;
+  filter: grayscale(0.3);
+}

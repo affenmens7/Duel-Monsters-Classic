@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { Card } from '../../types/card';
 import { getCardImageUrl } from '../../services/cardApi';
 import { useCardLocale } from '../../hooks/useCardLocale';
+import { getSortArrow } from '../../utils/sortArrow';
 import styles from './CardTable.module.css';
 
 const PAGE_SIZE = 50;
@@ -41,8 +42,7 @@ export function CardTable({ cards, onCardClick, setFilter, isCardMaxed }: CardTa
     }
   };
 
-  const sortArrow = (key: SortKey) =>
-    sortBy === key ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+  const sortArrow = (key: SortKey) => getSortArrow(sortBy, sortDir, key);
 
   const BAN_ORDER: Record<string, number> = {
     Forbidden: 0, Limited: 1, 'Semi-Limited': 2, Unlimited: 3,

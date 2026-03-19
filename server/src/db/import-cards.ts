@@ -13,64 +13,60 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IMAGE_DIR = resolve(__dirname, '../../../public/images/cards');
-const SET_IMAGE_DIR = resolve(__dirname, '../../../public/images/sets');
 
 const API_BASE = 'https://db.ygoprodeck.com/api/v7';
 
 // All sets with code, type, wave and image info
-// Wave 0 = initial release, higher waves = later releases
-// active = true means players can access these cards/packs
 interface SetDef {
   name: string;
   code: string;
   type: 'starter' | 'booster';
   wave: number;
   active: boolean;
-  image: string;
 }
 
 const TARGET_SETS: SetDef[] = [
   // Wave 0 — Starter Decks (initial)
-  { name: 'Starter Deck: Yugi', code: 'SDY', type: 'starter', wave: 0, active: true, image: 'SDY.png' },
-  { name: 'Starter Deck: Kaiba', code: 'SDK', type: 'starter', wave: 0, active: true, image: 'SDK.png' },
+  { name: 'Starter Deck: Yugi', code: 'SDY', type: 'starter', wave: 0, active: true },
+  { name: 'Starter Deck: Kaiba', code: 'SDK', type: 'starter', wave: 0, active: true },
 
   // Wave 1 — Early DM
-  { name: 'Legend of Blue Eyes White Dragon', code: 'LOB', type: 'booster', wave: 1, active: true, image: 'LOB.png' },
-  { name: 'Metal Raiders', code: 'MRD', type: 'booster', wave: 1, active: true, image: 'MRD.png' },
-  { name: 'Starter Deck: Joey', code: 'SDJ', type: 'starter', wave: 1, active: false, image: 'SDJ.png' },
+  { name: 'Legend of Blue Eyes White Dragon', code: 'LOB', type: 'booster', wave: 1, active: true },
+  { name: 'Metal Raiders', code: 'MRD', type: 'booster', wave: 1, active: true },
+  { name: 'Starter Deck: Joey', code: 'SDJ', type: 'starter', wave: 1, active: false },
 
   // Wave 2 — Duelist Kingdom
-  { name: 'Spell Ruler', code: 'SRL', type: 'booster', wave: 2, active: false, image: 'SRL.png' },
-  { name: 'Pharaoh\'s Servant', code: 'PSV', type: 'booster', wave: 2, active: false, image: 'PSV.png' },
-  { name: 'Starter Deck: Pegasus', code: 'SDP', type: 'starter', wave: 2, active: false, image: 'SDP.png' },
+  { name: 'Spell Ruler', code: 'SRL', type: 'booster', wave: 2, active: false },
+  { name: 'Pharaoh\'s Servant', code: 'PSV', type: 'booster', wave: 2, active: false },
+  { name: 'Starter Deck: Pegasus', code: 'SDP', type: 'starter', wave: 2, active: false },
 
   // Wave 3 — Battle City
-  { name: 'Labyrinth of Nightmare', code: 'LON', type: 'booster', wave: 3, active: false, image: 'LON.jpg' },
-  { name: 'Legacy of Darkness', code: 'LOD', type: 'booster', wave: 3, active: false, image: 'LOD.png' },
-  { name: 'Pharaonic Guardian', code: 'PGD', type: 'booster', wave: 3, active: false, image: 'PGD.png' },
-  { name: 'Starter Deck: Yugi Evolution', code: 'SYE', type: 'starter', wave: 3, active: false, image: 'SYE.png' },
-  { name: 'Starter Deck: Kaiba Evolution', code: 'SKE', type: 'starter', wave: 3, active: false, image: 'SKE.png' },
+  { name: 'Labyrinth of Nightmare', code: 'LON', type: 'booster', wave: 3, active: false },
+  { name: 'Legacy of Darkness', code: 'LOD', type: 'booster', wave: 3, active: false },
+  { name: 'Pharaonic Guardian', code: 'PGD', type: 'booster', wave: 3, active: false },
+  { name: 'Starter Deck: Yugi Evolution', code: 'SYE', type: 'starter', wave: 3, active: false },
+  { name: 'Starter Deck: Kaiba Evolution', code: 'SKE', type: 'starter', wave: 3, active: false },
 
   // Wave 4 — Battle City Finals
-  { name: 'Magician\'s Force', code: 'MFC', type: 'booster', wave: 4, active: false, image: 'MFC.png' },
-  { name: 'Dark Crisis', code: 'DCR', type: 'booster', wave: 4, active: false, image: 'DCR.png' },
+  { name: 'Magician\'s Force', code: 'MFC', type: 'booster', wave: 4, active: false },
+  { name: 'Dark Crisis', code: 'DCR', type: 'booster', wave: 4, active: false },
 
   // Wave 5 — Post-Battle City
-  { name: 'Invasion of Chaos', code: 'IOC', type: 'booster', wave: 5, active: false, image: 'IOC.png' },
-  { name: 'Ancient Sanctuary', code: 'AST', type: 'booster', wave: 5, active: false, image: 'AST.png' },
+  { name: 'Invasion of Chaos', code: 'IOC', type: 'booster', wave: 5, active: false },
+  { name: 'Ancient Sanctuary', code: 'AST', type: 'booster', wave: 5, active: false },
 
   // Wave 6 — Late DM
-  { name: 'Soul of the Duelist', code: 'SOD', type: 'booster', wave: 6, active: false, image: 'SOD.png' },
-  { name: 'Rise of Destiny', code: 'RDS', type: 'booster', wave: 6, active: false, image: 'RDS.png' },
-  { name: 'Flaming Eternity', code: 'FET', type: 'booster', wave: 6, active: false, image: 'FET.png' },
+  { name: 'Soul of the Duelist', code: 'SOD', type: 'booster', wave: 6, active: false },
+  { name: 'Rise of Destiny', code: 'RDS', type: 'booster', wave: 6, active: false },
+  { name: 'Flaming Eternity', code: 'FET', type: 'booster', wave: 6, active: false },
 
   // Wave 7 — Early GX
-  { name: 'The Lost Millennium', code: 'TLM', type: 'booster', wave: 7, active: false, image: 'TLM.png' },
-  { name: 'Cybernetic Revolution', code: 'CRV', type: 'booster', wave: 7, active: false, image: 'CRV.png' },
-  { name: 'Elemental Energy', code: 'EEN', type: 'booster', wave: 7, active: false, image: 'EEN.png' },
-  { name: 'Shadow of Infinity', code: 'SOI', type: 'booster', wave: 7, active: false, image: 'SOI.png' },
-  { name: 'Starter Deck: Jaden Yuki', code: 'YSDJ', type: 'starter', wave: 7, active: false, image: 'YSDJ.png' },
-  { name: 'Starter Deck: Syrus Truesdale', code: 'YSDS', type: 'starter', wave: 7, active: false, image: 'YSDS.png' },
+  { name: 'The Lost Millennium', code: 'TLM', type: 'booster', wave: 7, active: false },
+  { name: 'Cybernetic Revolution', code: 'CRV', type: 'booster', wave: 7, active: false },
+  { name: 'Elemental Energy', code: 'EEN', type: 'booster', wave: 7, active: false },
+  { name: 'Shadow of Infinity', code: 'SOI', type: 'booster', wave: 7, active: false },
+  { name: 'Starter Deck: Jaden Yuki', code: 'YSDJ', type: 'starter', wave: 7, active: false },
+  { name: 'Starter Deck: Syrus Truesdale', code: 'YSDS', type: 'starter', wave: 7, active: false },
 ];
 
 const ALLOWED_FRAMES = new Set(['normal', 'effect', 'ritual', 'fusion', 'spell', 'trap']);
@@ -112,18 +108,17 @@ async function sleep(ms: number) {
 async function main() {
   console.log('Creating image directories...');
   await mkdir(IMAGE_DIR, { recursive: true });
-  await mkdir(SET_IMAGE_DIR, { recursive: true });
 
   // 1. Register all target sets in DB
   console.log('Registering sets...');
   for (const set of TARGET_SETS) {
     await pool.query(
-      `INSERT INTO card_sets (name, code, type, wave, active, image_path)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO card_sets (name, code, type, wave, active)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (name) DO UPDATE SET
          code = EXCLUDED.code, type = EXCLUDED.type, wave = EXCLUDED.wave,
-         active = EXCLUDED.active, image_path = EXCLUDED.image_path`,
-      [set.name, set.code, set.type, set.wave, set.active, `/images/sets/${set.image}`]
+         active = EXCLUDED.active`,
+      [set.name, set.code, set.type, set.wave, set.active]
     );
   }
 

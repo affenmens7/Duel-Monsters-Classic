@@ -16,6 +16,38 @@ const transporter = nodemailer.createTransport({
 
 type Lang = 'de' | 'en';
 
+/** Escape user-controlled strings before inserting into HTML email templates. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/** Generates an action button for email templates. */
+function actionLink(url: string, label: string): string {
+  const safeUrl = encodeURI(url);
+  const safeLabel = escapeHtml(label);
+  return `
+    <br><br>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:16px;">
+          <a href="${safeUrl}"
+             style="background:#00dca8; color:#030508; padding:12px 24px;
+                    font-family:Georgia,serif; font-size:14px; font-weight:bold;
+                    text-decoration:none; display:inline-block;">
+            ${safeLabel}
+          </a>
+        </td>
+      </tr>
+    </table>
+    <br>
+  `;
+}
+
 interface SendMailOptions {
   to: string;
   subject: string;
@@ -110,7 +142,7 @@ export async function sendVerificationEmail(to: string, username: string, code: 
   const content = lang === 'de' ? `
     <span style="font-size:18px; color:#00dca8; font-weight:bold;">E-Mail best&auml;tigen</span>
     <br><br>
-    Hallo ${username}, bitte best&auml;tige deine E-Mail-Adresse &uuml;ber den folgenden Link:
+    Hallo ${escapeHtml(username)}, bitte best&auml;tige deine E-Mail-Adresse &uuml;ber den folgenden Link:
     <br><br>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
@@ -132,7 +164,7 @@ export async function sendVerificationEmail(to: string, username: string, code: 
   ` : `
     <span style="font-size:18px; color:#00dca8; font-weight:bold;">Verify Email</span>
     <br><br>
-    Hello ${username}, please verify your email address using the following link:
+    Hello ${escapeHtml(username)}, please verify your email address using the following link:
     <br><br>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
@@ -166,7 +198,7 @@ export async function sendPasswordResetEmail(to: string, username: string, code:
   const content = lang === 'de' ? `
     <span style="font-size:18px; color:#00dca8; font-weight:bold;">Passwort zur&uuml;cksetzen</span>
     <br><br>
-    Hallo ${username}, du hast angefordert dein Passwort zur&uuml;ckzusetzen.
+    Hallo ${escapeHtml(username)}, du hast angefordert dein Passwort zur&uuml;ckzusetzen.
     Klicke auf den Button um ein neues Passwort zu w&auml;hlen:
     ${actionLink(resetUrl, lang === 'de' ? 'Passwort zur\u00fccksetzen' : 'Reset Password')}
     <span style="font-size:13px; color:#80a090;">
@@ -184,9 +216,9 @@ export async function sendPasswordResetEmail(to: string, username: string, code:
   ` : `
     <span style="font-size:18px; color:#00dca8; font-weight:bold;">Reset Password</span>
     <br><br>
-    Hello ${username}, you requested to reset your password.
+    Hello ${escapeHtml(username)}, you requested to reset your password.
     Click the button below to choose a new password:
-    ${actionLink(resetUrl, lang === 'de' ? 'Passwort zur\u00fccksetzen' : 'Reset Password')}
+    ${actionLink(resetUrl, 'Reset Password')}
     <span style="font-size:13px; color:#80a090;">
       This link is valid for <strong style="color:#b8c8b8;">15 minutes</strong>.
     </span>
@@ -212,13 +244,13 @@ export async function sendWelcomeEmail(to: string, username: string, displayName
   const content = lang === 'de' ? `
     <span style="font-size:18px; color:#00dca8; font-weight:bold;">Willkommen bei Duel Monsters Classic!</span>
     <br><br>
-    Hallo ${username}, dein Account wurde erfolgreich erstellt.
+    Hallo ${escapeHtml(username)}, dein Account wurde erfolgreich erstellt.
     <br><br>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td bgcolor="#040608" style="background-color:#040608; padding:16px; border:1px solid #0d1a15; text-align:center;">
           <span style="font-size:10px; color:#2a4038; letter-spacing:1px;">DEIN SPIELERNAME</span><br>
-          <span style="font-size:20px; font-weight:bold; color:#00dca8;">${displayName}</span>
+          <span style="font-size:20px; font-weight:bold; color:#00dca8;">${escapeHtml(displayName)}</span>
         </td>
       </tr>
     </table>
@@ -235,13 +267,13 @@ export async function sendWelcomeEmail(to: string, username: string, displayName
   ` : `
     <span style="font-size:18px; color:#00dca8; font-weight:bold;">Welcome to Duel Monsters Classic!</span>
     <br><br>
-    Hello ${username}, your account has been created successfully.
+    Hello ${escapeHtml(username)}, your account has been created successfully.
     <br><br>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td bgcolor="#040608" style="background-color:#040608; padding:16px; border:1px solid #0d1a15; text-align:center;">
           <span style="font-size:10px; color:#2a4038; letter-spacing:1px;">YOUR PLAYER NAME</span><br>
-          <span style="font-size:20px; font-weight:bold; color:#00dca8;">${displayName}</span>
+          <span style="font-size:20px; font-weight:bold; color:#00dca8;">${escapeHtml(displayName)}</span>
         </td>
       </tr>
     </table>

@@ -13,12 +13,13 @@ interface InventoryContextValue {
   loading: boolean;
   error: string | null;
   refresh: (excludeDeckId?: number) => Promise<void>;
+  setPreferredArtwork: (cardId: number, artworkId: number) => void;
 }
 
 const InventoryContext = createContext<InventoryContextValue | null>(null);
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const { inventory, inventoryLoading, refreshInventory } = useSession();
+  const { inventory, inventoryLoading, refreshInventory, setPreferredArtwork } = useSession();
   const { cards } = useAppData();
 
   // Build OwnedCard[] by combining inventory Map with card data from AppDataContext
@@ -31,6 +32,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           ...card,
           owned: entry.quantity,
           used_in_decks: entry.usedInDecks,
+          unlockedArtworks: entry.unlockedArtworks,
+          preferredArtworkId: entry.preferredArtworkId,
         });
       }
     }
@@ -42,7 +45,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [refreshInventory]);
 
   return (
-    <InventoryContext.Provider value={{ collection, loading: inventoryLoading, error: null, refresh }}>
+    <InventoryContext.Provider value={{ collection, loading: inventoryLoading, error: null, refresh, setPreferredArtwork }}>
       {children}
     </InventoryContext.Provider>
   );

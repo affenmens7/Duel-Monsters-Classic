@@ -20,37 +20,30 @@ import {
   type AdminSetRow,
   type SetCardRow,
   type AdminCardRow,
-} from '../../services/adminApi';
+} from '../../services/admin';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
 import styles from './AdminSetDetail.module.css';
 
 const RARITIES = ['Common', 'Rare', 'Super Rare', 'Ultra Rare', 'Secret Rare'];
+const BAN_STATUSES = ['Unlimited', 'Semi-Limited', 'Limited', 'Forbidden'];
 
-const RARITY_CODE_MAP: Record<string, string> = {
-  Common: 'C',
-  Rare: 'R',
-  'Super Rare': 'SR',
-  'Ultra Rare': 'UR',
-  'Secret Rare': 'ScR',
-};
+import { getRarityTier, RARITY_ORDER, RARITY_SHORT } from '../../utils/rarity';
+import { getSortArrow } from '../../utils/sortArrow';
 
-const RARITY_ORDER: Record<string, number> = {
-  'Secret Rare': 0,
-  'Ultra Rare': 1,
-  'Super Rare': 2,
-  'Rare': 3,
-  'Short Print': 4,
-  'Common': 5,
+const RARITY_CODE_MAP = RARITY_SHORT;
+
+// Maps rarity tier to CSS module class
+const RARITY_STYLE: Record<string, string> = {
+  SecretRare: styles.raritySecretRare,
+  UltraRare: styles.rarityUltraRare,
+  SuperRare: styles.raritySuperRare,
+  Rare: styles.rarityRare,
+  ShortPrint: styles.rarityShortPrint,
+  Common: styles.rarityCommon,
 };
 
 function rarityBadgeClass(rarity: string): string {
-  const lower = rarity.toLowerCase();
-  if (lower.includes('secret')) return styles.raritySecretRare;
-  if (lower.includes('ultra')) return styles.rarityUltraRare;
-  if (lower.includes('super')) return styles.raritySuperRare;
-  if (lower.includes('rare')) return styles.rarityRare;
-  if (lower.includes('short')) return styles.rarityShortPrint;
-  return styles.rarityCommon;
+  return RARITY_STYLE[getRarityTier(rarity)] ?? styles.rarityCommon;
 }
 
 const SET_CARDS_LIMIT = 200;
@@ -74,9 +67,6 @@ function SetInfoBar({
       <span className={styles.badge}>{set.code}</span>
       <span className={styles.badge}>{set.product_type}</span>
       <span className={styles.badge}>Wave {set.wave}</span>
-      <span className={styles.badge}>
-        {set.card_count} {t('admin.cards')}
-      </span>
       <span
         className={`${styles.badge} ${set.active ? styles.badgeActive : styles.badgeInactive}`}
         onClick={onToggleActive}
@@ -151,8 +141,7 @@ function SetCardsTable({
     }
   };
 
-  const sortArrow = (key: SortKey) =>
-    sortBy === key ? (sortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
+  const sortArrow = (key: SortKey) => getSortArrow(sortBy, sortDir, key);
 
   return (
     <>
@@ -169,6 +158,7 @@ function SetCardsTable({
       ) : (
         <>
           <table className={styles.cardTable}>
+            <colgroup><col /><col /><col /><col /><col /><col /><col /><col /></colgroup>
             <thead>
               <tr>
                 <th className={styles.cardTh}>{t('admin.image')}</th>
@@ -196,6 +186,7 @@ function SetCardsTable({
                 >
                   {t('admin.rarity')}{sortArrow('rarity')}
                 </th>
+                <th className={styles.cardTh}>{t('admin.qty')}</th>
                 <th className={styles.cardTh}>{t('admin.banStatus')}</th>
                 <th className={styles.cardTh}>{t('admin.action')}</th>
               </tr>
@@ -219,6 +210,7 @@ function SetCardsTable({
                       {card.rarity}
                     </span>
                   </td>
+                  <td className={styles.cardTdQty}>{card.quantity}x</td>
                   <td className={styles.cardTd}>
                     <span className={`${styles.banBadge} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}>
                       {t(`banStatus.${card.ban_status ?? 'Unlimited'}`)}
@@ -276,8 +268,8 @@ interface AddCardsPanelProps {
   readonly apiResults: any[];
   readonly loading: boolean;
   readonly setCardIds: ReadonlySet<number>;
-  readonly onAdd: (card: AdminCardRow, rarity: string) => void;
-  readonly onAddApi: (apiCard: any, rarity: string) => void;
+  readonly onAdd: (card: AdminCardRow, rarity: string, quantity: number) => void;
+  readonly onAddApi: (apiCard: any, rarity: string, quantity: number, banStatus: string) => void;
   readonly importingCard: number | null;
   readonly t: (key: string) => string;
 }
@@ -295,12 +287,28 @@ function AddCardsPanel({
   t,
 }: AddCardsPanelProps) {
   const [selectedRarities, setSelectedRarities] = useState<Record<number, string>>({});
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<number, number>>({});
+  const [selectedBanStatus, setSelectedBanStatus] = useState<Record<number, string>>({});
 
   const getRarity = (cardId: number): string =>
     selectedRarities[cardId] ?? 'Common';
 
+  const getQuantity = (cardId: number): number =>
+    selectedQuantities[cardId] ?? 1;
+
+  const getBanStatus = (cardId: number, defaultStatus?: string | null): string =>
+    selectedBanStatus[cardId] ?? defaultStatus ?? 'Unlimited';
+
   const handleRarityChange = (cardId: number, rarity: string) => {
     setSelectedRarities((prev) => ({ ...prev, [cardId]: rarity }));
+  };
+
+  const handleQuantityChange = (cardId: number, qty: number) => {
+    setSelectedQuantities((prev) => ({ ...prev, [cardId]: qty }));
+  };
+
+  const handleBanStatusChange = (cardId: number, status: string) => {
+    setSelectedBanStatus((prev) => ({ ...prev, [cardId]: status }));
   };
 
   return (
@@ -321,6 +329,7 @@ function AddCardsPanel({
 
       {!loading && results.length > 0 && (
         <table className={styles.cardTable}>
+          <colgroup><col /><col /><col /><col /><col /><col /><col /><col /></colgroup>
           <thead>
             <tr>
               <th className={styles.cardTh}>{t('admin.image')}</th>
@@ -328,6 +337,8 @@ function AddCardsPanel({
               <th className={styles.cardTh}>{t('admin.nameEn')}</th>
               <th className={styles.cardTh}>{t('admin.type')}</th>
               <th className={styles.cardTh}>{t('admin.rarity')}</th>
+              <th className={styles.cardTh}>{t('admin.qty')}</th>
+              <th className={styles.cardTh}>{t('admin.banStatus')}</th>
               <th className={styles.cardTh}>{t('admin.action')}</th>
             </tr>
           </thead>
@@ -360,21 +371,43 @@ function AddCardsPanel({
                         onChange={(e) => handleRarityChange(card.id, e.target.value)}
                       >
                         {RARITIES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
+                          <option key={r} value={r}>{r}</option>
                         ))}
                       </select>
                     )}
                   </td>
                   <td className={styles.cardTd}>
                     {alreadyInSet ? (
-                      <span className={styles.inSetMark}>--</span>
+                      <span className={styles.inSetMark}>{t('admin.inSet')}</span>
+                    ) : (
+                      <select
+                        className={styles.raritySelect}
+                        value={getQuantity(card.id)}
+                        onChange={(e) => handleQuantityChange(card.id, Number(e.target.value))}
+                      >
+                        <option value={1}>1x</option>
+                        <option value={2}>2x</option>
+                        <option value={3}>3x</option>
+                      </select>
+                    )}
+                  </td>
+                  <td className={styles.cardTd}>
+                    {alreadyInSet ? (
+                      <span className={styles.inSetMark}>{t('admin.inSet')}</span>
+                    ) : (
+                      <span className={`${styles.banBadge} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`] ?? ''}`}>
+                        {t(`banStatus.${card.ban_status ?? 'Unlimited'}`)}
+                      </span>
+                    )}
+                  </td>
+                  <td className={styles.cardTd}>
+                    {alreadyInSet ? (
+                      <span className={styles.inSetMark}>{t('admin.inSet')}</span>
                     ) : (
                       <button
                         type="button"
                         className={styles.addBtn}
-                        onClick={() => onAdd(card, getRarity(card.id))}
+                        onClick={() => onAdd(card, getRarity(card.id), getQuantity(card.id))}
                       >
                         {t('admin.add')}
                       </button>
@@ -387,13 +420,14 @@ function AddCardsPanel({
         </table>
       )}
 
-      {/* API results — cards not yet in our DB */}
+      {/* API results — cards not yet in our DB (same layout as DB table) */}
       {!loading && apiResults.length > 0 && (
         <>
           <h4 className={styles.sectionTitle} style={{ marginTop: '16px', fontSize: '0.65rem' }}>
             {t('admin.importFromYgopro')} ({apiResults.length})
           </h4>
           <table className={styles.cardTable}>
+            <colgroup><col /><col /><col /><col /><col /><col /><col /><col /></colgroup>
             <thead>
               <tr>
                 <th className={styles.cardTh}>{t('admin.image')}</th>
@@ -401,6 +435,8 @@ function AddCardsPanel({
                 <th className={styles.cardTh}>{t('admin.nameEn')}</th>
                 <th className={styles.cardTh}>{t('admin.type')}</th>
                 <th className={styles.cardTh}>{t('admin.rarity')}</th>
+                <th className={styles.cardTh}>{t('admin.qty')}</th>
+                <th className={styles.cardTh}>{t('admin.banStatus')}</th>
                 <th className={styles.cardTh}>{t('admin.action')}</th>
               </tr>
             </thead>
@@ -427,13 +463,35 @@ function AddCardsPanel({
                     </select>
                   </td>
                   <td className={styles.cardTd}>
+                    <select
+                      className={styles.raritySelect}
+                      value={getQuantity(card.id)}
+                      onChange={(e) => handleQuantityChange(card.id, Number(e.target.value))}
+                    >
+                      <option value={1}>1x</option>
+                      <option value={2}>2x</option>
+                      <option value={3}>3x</option>
+                    </select>
+                  </td>
+                  <td className={styles.cardTd}>
+                    <select
+                      className={styles.raritySelect}
+                      value={getBanStatus(card.id)}
+                      onChange={(e) => handleBanStatusChange(card.id, e.target.value)}
+                    >
+                      {BAN_STATUSES.map((s) => (
+                        <option key={s} value={s}>{t(`banStatus.${s}`)}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className={styles.cardTd}>
                     <button
                       type="button"
                       className={styles.addBtn}
-                      onClick={() => onAddApi(card, getRarity(card.id))}
+                      onClick={() => onAddApi(card, getRarity(card.id), getQuantity(card.id), getBanStatus(card.id))}
                       disabled={importingCard === card.id}
                     >
-                      {importingCard === card.id ? '...' : t('admin.importAndAdd')}
+                      {importingCard === card.id ? '...' : t('admin.add')}
                     </button>
                   </td>
                 </tr>
@@ -740,6 +798,27 @@ export function AdminSetDetailPage() {
     setPopupLoading(false);
   }, [token]);
 
+  // Change quantity for a card in this set
+  const handleQuantityChange = useCallback(async (cardId: number, newQty: number) => {
+    if (!token || !decodedName) return;
+    const card = setCards.find((c) => c.id === cardId);
+    if (!card) return;
+    const clamped = Math.max(1, Math.min(3, newQty));
+    // Optimistic update
+    setSetCards((prev) => prev.map((c) => c.id === cardId ? { ...c, quantity: clamped } : c));
+    try {
+      await assignCardToSet(token, decodedName, {
+        cardId,
+        rarity: card.rarity,
+        rarityCode: card.rarity_code,
+        quantity: clamped,
+      });
+      await loadSetInfo();
+    } catch {
+      setSetCards((prev) => prev.map((c) => c.id === cardId ? { ...c, quantity: card.quantity } : c));
+    }
+  }, [token, decodedName, setCards, loadSetInfo]);
+
   // Change artwork for a card in this set
   const handleArtworkChange = useCallback(async (cardId: number, artworkId: number) => {
     if (!token || !decodedName) return;
@@ -751,13 +830,14 @@ export function AdminSetDetailPage() {
         rarity: card.rarity,
         rarityCode: card.rarity_code,
         artworkId,
+        quantity: card.quantity,
       });
       await loadSetCards();
     } catch { /* ignore */ }
   }, [token, decodedName, setCards, loadSetCards]);
 
   const handleAddCard = useCallback(
-    async (card: AdminCardRow, rarity: string) => {
+    async (card: AdminCardRow, rarity: string, quantity: number = 1) => {
       if (!token || !decodedName) return;
       const rarityCode = RARITY_CODE_MAP[rarity] ?? 'C';
 
@@ -766,12 +846,12 @@ export function AdminSetDetailPage() {
           cardId: card.id,
           rarity,
           rarityCode,
+          quantity,
         });
-        // Refresh set cards and set info
         await loadSetCards();
         await loadSetInfo();
       } catch {
-        // Silently fail — the card was not added
+        // Silently fail
       }
     },
     [token, decodedName, loadSetCards, loadSetInfo],
@@ -779,7 +859,7 @@ export function AdminSetDetailPage() {
 
   // Import from API + assign to set in one step
   const handleAddApiCard = useCallback(
-    async (apiCard: any, rarity: string) => {
+    async (apiCard: any, rarity: string, quantity: number = 1, banStatus: string = 'Unlimited') => {
       if (!token || !decodedName) return;
       setImportingCard(apiCard.id);
       try {
@@ -790,9 +870,18 @@ export function AdminSetDetailPage() {
           body: JSON.stringify({ cardId: apiCard.id }),
         });
 
-        // Step 2: Assign to set
+        // Step 2: Update ban status if not Unlimited
+        if (banStatus !== 'Unlimited') {
+          await fetch(`${env.api.baseUrl}/admin/cards/${apiCard.id}/ban`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ banStatus }),
+          });
+        }
+
+        // Step 3: Assign to set with quantity
         const rarityCode = RARITY_CODE_MAP[rarity] ?? 'C';
-        await assignCardToSet(token, decodedName, { cardId: apiCard.id, rarity, rarityCode });
+        await assignCardToSet(token, decodedName, { cardId: apiCard.id, rarity, rarityCode, quantity });
 
         // Refresh everything
         await loadSetCards();
@@ -874,7 +963,7 @@ export function AdminSetDetailPage() {
 
       {/* Cards in this Set — full width table */}
       <div className={styles.section}>
-        <h2 className={styles.sectionTitle}>{t('admin.cardsInSet')}</h2>
+        <h2 className={styles.sectionTitle}>{t('admin.cardsInSet')} ({setInfo?.card_count ?? 0})</h2>
         <SetCardsTable
           cards={setCards}
           total={setCardsTotal}
@@ -925,7 +1014,29 @@ export function AdminSetDetailPage() {
             onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
             currentArtworkId={card.artwork_id}
             onArtworkChange={(artworkId) => handleArtworkChange(card.id, artworkId)}
-          />
+          >
+            {/* Quantity controls */}
+            <div className={styles.quantityRow}>
+              <span className={styles.quantityLabel}>{t('admin.quantity')}</span>
+              <div className={styles.quantityControls}>
+                <button
+                  className={styles.quantityBtn}
+                  disabled={card.quantity <= 1}
+                  onClick={() => handleQuantityChange(card.id, card.quantity - 1)}
+                >
+                  −
+                </button>
+                <span className={styles.quantityValue}>{card.quantity}</span>
+                <button
+                  className={styles.quantityBtn}
+                  disabled={card.quantity >= 3}
+                  onClick={() => handleQuantityChange(card.id, card.quantity + 1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </CardDetailPopup>
         );
       })()}
     </div>

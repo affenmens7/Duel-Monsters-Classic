@@ -1,0 +1,295 @@
+/* ============================================================
+   ProductRow — paginated horizontal product row with arrows.
+   Cards fill exactly 5-per-page, no partial cards visible.
+   ============================================================ */
+
+.wrapper {
+  position: relative;
+  padding: 0 48px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+}
+
+/* === Arrow Buttons === */
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 14, 0.95);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  color: var(--text-muted, #6a6050);
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 5;
+  transition: border-color 0.25s, color 0.25s, opacity 0.3s;
+  border-radius: 4px;
+}
+
+.arrow:hover {
+  border-color: var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.arrowHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.arrowPrev { left: 0; }
+.arrowNext { right: 0; }
+
+/* === Product Card (replaces old .productCard) === */
+
+.card {
+  flex-shrink: 0;
+  /* 5 cards per page: (100% - 4 * 16px gaps) / 5 */
+  width: calc((100% - 64px) / 5);
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card, rgba(12, 18, 20, 0.85));
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.15, 1),
+              border-color 0.25s,
+              box-shadow 0.25s;
+  position: relative;
+}
+
+.cardActive:hover {
+  border-color: var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  box-shadow: 0 6px 24px rgba(0, 220, 168, 0.08);
+}
+
+/* Shimmer on active cards */
+.cardActive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 220, 168, 0.04), transparent);
+  animation: shimmer 6s ease-in-out infinite;
+  z-index: 3;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% { left: -150%; }
+  40% { left: 150%; }
+  100% { left: 150%; }
+}
+
+.cardActive:nth-child(2)::before { animation-delay: 1s; }
+.cardActive:nth-child(3)::before { animation-delay: 2s; }
+.cardActive:nth-child(4)::before { animation-delay: 0.5s; }
+.cardActive:nth-child(5)::before { animation-delay: 1.5s; }
+
+.cardInactive {
+  border-style: dashed;
+  border-color: rgba(0, 220, 168, 0.06);
+  filter: saturate(0.2) brightness(0.65);
+}
+
+.cardInactive:hover {
+  filter: saturate(0.3) brightness(0.72);
+}
+
+.cardInactive::before {
+  display: none;
+}
+
+/* === Card Image Area === */
+
+.cardImage {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardImageActive {
+  background: linear-gradient(160deg, #082a22 0%, #0d3c30 50%, #0a2e24 100%);
+}
+
+.cardImageInactive {
+  background: linear-gradient(160deg, #0e1216 0%, #141a20 50%, #101418 100%);
+}
+
+.cardImage::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(transparent, rgba(12, 18, 20, 0.85));
+  pointer-events: none;
+}
+
+/* Set image in the card */
+.setImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1;
+}
+
+/* Code fallback when no image */
+.setCode {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 2rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  letter-spacing: 4px;
+  z-index: 1;
+}
+
+/* Wave badge */
+.waveBadge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  z-index: 2;
+}
+
+.waveBadgeActive {
+  background: rgba(0, 220, 168, 0.2);
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.waveBadgeInactive {
+  background: rgba(200, 168, 48, 0.08);
+  color: var(--text-muted, #6a6050);
+}
+
+/* Coming Soon overlay */
+.inactiveTag {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-secondary, #8a8070);
+  background: rgba(8, 12, 14, 0.8);
+  padding: 6px 14px;
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  border-radius: 3px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* === Card Body === */
+
+.cardBody {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.cardName {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary, #d0c8b8);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardDesc {
+  font-family: var(--font-body, 'Cormorant Garamond', serif);
+  font-size: 0.82rem;
+  color: var(--text-secondary, #8a8070);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+}
+
+.cardPrice {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold, #c8a830);
+}
+
+.cardCount {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.5rem;
+  color: var(--text-muted, #6a6050);
+  letter-spacing: 1px;
+}
+
+/* === Responsive === */
+
+@media (max-width: 900px) {
+  .wrapper {
+    padding: 0 40px;
+  }
+
+  .card {
+    width: calc((100% - 32px) / 3);
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 600px) {
+  .wrapper {
+    padding: 0 36px;
+  }
+
+  .card {
+    width: calc((100% - 16px) / 2);
+    min-width: 140px;
+  }
+
+  .cardImage {
+    height: 180px;
+  }
+}

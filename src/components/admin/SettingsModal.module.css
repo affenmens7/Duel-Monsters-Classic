@@ -1,0 +1,248 @@
+/* ============================================================
+   SettingsModal — reusable admin settings popup.
+   Dark overlay + centered panel with field rows and actions.
+   ============================================================ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  position: relative;
+  background: rgba(8, 12, 14, 0.95);
+  border: 1px solid var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  max-width: 480px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideIn 0.15s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+}
+
+.title {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--orichalcos-light, #00dca8);
+  letter-spacing: 0.5px;
+}
+
+.close {
+  background: none;
+  border: none;
+  color: var(--text-muted, #6a6050);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.15s;
+}
+
+.close:hover {
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* === Field Row === */
+
+.fieldRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fieldLabel {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--text-muted, #6a6050);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.fieldInput {
+  flex: 1;
+  font-family: var(--font-body, 'Cormorant Garamond', serif);
+  font-size: 0.85rem;
+  color: var(--text-primary, #d0c8b8);
+  background: var(--bg-deep, #060a0c);
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  padding: 8px 12px;
+  transition: border-color 0.2s;
+}
+
+.fieldInput:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+}
+
+.fieldTextarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.5;
+}
+
+/* === Status Buttons === */
+
+.statusRow {
+  display: flex;
+  gap: 8px;
+}
+
+.statusBtn {
+  flex: 1;
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 0;
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  background: transparent;
+  color: var(--text-muted, #6a6050);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.statusBtnActive {
+  border-color: rgba(0, 220, 168, 0.3);
+  background: rgba(0, 220, 168, 0.08);
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.statusBtnInactive {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+}
+
+/* === Actions === */
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+}
+
+.saveBtn {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 10px 24px;
+  background: rgba(0, 220, 168, 0.1);
+  border: 1px solid var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  color: var(--orichalcos-light, #00dca8);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.saveBtn:hover {
+  background: rgba(0, 220, 168, 0.15);
+  border-color: var(--orichalcos-light, #00dca8);
+}
+
+.saveBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  background: none;
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  color: var(--text-muted, #6a6050);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.cancelBtn:hover {
+  border-color: var(--orichalcos-subtle);
+  color: var(--text-secondary, #8a8070);
+}
+
+.resultMsg {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.5rem;
+  letter-spacing: 1px;
+  align-self: center;
+}
+
+.resultOk { color: var(--orichalcos-light, #00dca8); }
+.resultErr { color: #ef4444; }
+
+/* === Danger Zone === */
+
+.dangerZone {
+  display: flex;
+  justify-content: center;
+  padding: 12px 24px 16px;
+  border-top: 1px solid rgba(239, 68, 68, 0.1);
+}
+
+.deleteBtn {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  background: none;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: rgba(239, 68, 68, 0.6);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

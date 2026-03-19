@@ -33,14 +33,18 @@ function generateTag(): string {
 }
 
 export async function registerUser({ username, email, password }: RegisterInput) {
-  if (!username || username.length < 3 || username.length > 32) {
-    throw new Error('Username muss zwischen 3 und 32 Zeichen lang sein');
+  // Username: 3-32 chars, letters (incl. umlauts), numbers, underscore, hyphen, dot
+  const usernamePattern = /^[a-zA-Z0-9_\-.\u00C0-\u024F]{3,32}$/;
+  if (!username || !usernamePattern.test(username)) {
+    throw new Error('Username: 3-32 Zeichen, nur Buchstaben, Zahlen, _ - .');
   }
-  if (!email || !email.includes('@')) {
-    throw new Error('Ungueltige E-Mail');
+  // Email: basic format check
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!email || !emailPattern.test(email)) {
+    throw new Error('Ungueltige E-Mail-Adresse');
   }
-  if (!password || password.length < 6) {
-    throw new Error('Passwort muss mindestens 6 Zeichen lang sein');
+  if (!password || password.length < 8) {
+    throw new Error('Passwort muss mindestens 8 Zeichen lang sein');
   }
 
   // Check if email already exists

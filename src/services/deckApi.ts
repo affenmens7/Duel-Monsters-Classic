@@ -25,7 +25,8 @@ export interface DeckSummary {
 
 export interface DeckCard {
   card_id: number;
-  quantity: number;
+  copy_index: number;
+  artwork_id: number | null;
   name_de: string;
   name_en: string;
   frame_type: string;
@@ -35,6 +36,12 @@ export interface DeckCard {
   attribute: string | null;
   race_en: string;
   image_path: string;
+}
+
+/** One copy in a deck with its artwork. */
+export interface DeckCopy {
+  cardId: number;
+  artworkId: number | null;
 }
 
 export interface DeckDetail {
@@ -87,7 +94,11 @@ export async function deleteDeck(id: number): Promise<void> {
   if (!res.ok) throw new Error('Deck konnte nicht geloescht werden');
 }
 
-export async function saveDeckCards(id: number, mainDeck: number[], extraDeck: number[]): Promise<void> {
+export async function saveDeckCards(
+  id: number,
+  mainDeck: DeckCopy[],
+  extraDeck: DeckCopy[],
+): Promise<void> {
   const res = await fetch(`${env.api.baseUrl}/decks/${id}/cards`, {
     method: 'PUT',
     headers: headers(),

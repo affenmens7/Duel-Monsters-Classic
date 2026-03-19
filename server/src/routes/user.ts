@@ -59,12 +59,18 @@ userRouter.get('/collection/details', requireAuth, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT c.*, uc.quantity as owned,
-        COALESCE(usage.used, 0) as used_in_decks
+      `SELECT c.*, uc.quantity as owned, uc.preferred_artwork_id,
+        COALESCE(usage.used, 0) as used_in_decks,
+        COALESCE(
+          (SELECT JSON_AGG(uca.artwork_id ORDER BY uca.artwork_id)
+           FROM user_card_artworks uca
+           WHERE uca.user_id = $1 AND uca.card_id = c.id),
+          '[]'::json
+        ) as unlocked_artworks
        FROM user_cards uc
        JOIN cards c ON c.id = uc.card_id
        LEFT JOIN (
-         SELECT dc.card_id, SUM(dc.quantity)::int as used
+         SELECT dc.card_id, COUNT(*)::int as used
          FROM deck_cards dc
          JOIN decks d ON d.id = dc.deck_id
          WHERE d.user_id = $1
@@ -79,5 +85,54 @@ userRouter.get('/collection/details', requireAuth, async (req, res) => {
     res.json(result.rows);
   } catch {
     res.status(500).json({ error: 'Kartendetails konnten nicht geladen werden' });
+  }
+});
+
+/**
+ * PATCH /api/user/collection/:cardId/artwork
+ * Set preferred artwork for a card in the user's collection.
+ * Body: { artworkId: number }
+ * The artwork must be unlocked (in user_card_artworks).
+ */
+userRouter.patch('/collection/:cardId/artwork', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const cardId = parseInt(req.params.cardId as string, 10);
+    const { artworkId } = req.body;
+
+    if (isNaN(cardId) || !artworkId) {
+      res.status(400).json({ error: 'cardId und artworkId erforderlich' });
+      return;
+    }
+
+    // Verify user owns this card
+    const owned = await pool.query(
+      'SELECT id FROM user_cards WHERE user_id = $1 AND card_id = $2',
+      [userId, cardId]
+    );
+    if (owned.rows.length === 0) {
+      res.status(404).json({ error: 'Karte nicht im Besitz' });
+      return;
+    }
+
+    // Verify artwork is unlocked
+    const unlocked = await pool.query(
+      'SELECT id FROM user_card_artworks WHERE user_id = $1 AND artwork_id = $2',
+      [userId, artworkId]
+    );
+    if (unlocked.rows.length === 0) {
+      res.status(400).json({ error: 'Artwork nicht freigeschaltet' });
+      return;
+    }
+
+    // Set preferred artwork
+    await pool.query(
+      'UPDATE user_cards SET preferred_artwork_id = $1 WHERE user_id = $2 AND card_id = $3',
+      [artworkId, userId, cardId]
+    );
+
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: 'Artwork konnte nicht gesetzt werden' });
   }
 });

@@ -18,6 +18,7 @@ export function CardBrowserPage() {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [attributeFilter, setAttributeFilter] = useState('all');
   const [setFilter, setSetFilter] = useState(() => searchParams.get('set') ?? 'all');
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [banFilter, setBanFilter] = useState('all');
@@ -30,7 +31,7 @@ export function CardBrowserPage() {
     if (urlSet) setSetFilter(urlSet);
   }, [searchParams]);
 
-  const { filteredCards } = useCardSearch(cards, { query, typeFilter, availabilityFilter, setFilter, banFilter });
+  const { filteredCards } = useCardSearch(cards, { query, typeFilter, attributeFilter, availabilityFilter, setFilter, banFilter });
 
   if (error) {
     return (
@@ -50,7 +51,9 @@ export function CardBrowserPage() {
         query={query}
         onQueryChange={setQuery}
         typeFilter={typeFilter}
-        onTypeFilterChange={setTypeFilter}
+        onTypeFilterChange={(v) => { setTypeFilter(v); setAttributeFilter('all'); }}
+        attributeFilter={attributeFilter}
+        onAttributeFilterChange={setAttributeFilter}
         setFilter={setFilter}
         onSetFilterChange={setSetFilter}
         sets={sets}
@@ -85,6 +88,7 @@ export function CardBrowserPage() {
       {selectedCard && (
         <CardDetail
           card={selectedCard}
+          setFilter={setFilter}
           onClose={() => setSelectedCard(null)}
         />
       )}

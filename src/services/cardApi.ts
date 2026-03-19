@@ -25,7 +25,7 @@ interface DbCard {
   image_path: string;
   available?: boolean;
   artwork_ids?: number[];
-  sets?: { name: string; code: string }[];
+  sets?: { name: string; code: string; active?: boolean; artworkId?: number | null }[];
   ban_status?: string | null;
 }
 

@@ -12,7 +12,7 @@ import { userRouter } from './routes/user.js';
 import { shopRouter } from './routes/shop.js';
 import { cardsRouter } from './routes/cards.js';
 import { decksRouter } from './routes/decks.js';
-import { adminRouter } from './routes/admin.js';
+import { adminRouter } from './routes/admin/index.js';
 import { contentRouter } from './routes/content.js';
 import { versionRouter } from './routes/version.js';
 
@@ -22,7 +22,7 @@ const app = express();
 app.use(helmet());
 
 // CORS — only allow our frontend
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: env.frontendUrl, credentials: true }));
 
 // Body parser with size limit (prevent oversized requests)
 app.use(express.json({ limit: '1mb' }));
@@ -46,9 +46,19 @@ const authLimiter = rateLimit({
   message: { error: 'Zu viele Login-Versuche, bitte warte eine Minute.' },
 });
 
+// Shop rate limiter — max 10 purchases per minute per IP
+const shopLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Zu viele Kaufanfragen, bitte warte einen Moment.' },
+});
+
 // Routes
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/user', userRouter);
+app.use('/api/shop/buy', shopLimiter);
 app.use('/api/shop', shopRouter);
 app.use('/api/cards', cardsRouter);
 app.use('/api/decks', decksRouter);
@@ -58,7 +68,7 @@ app.use('/api/data-version', versionRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', version: '0.0.1' });
+  res.json({ status: 'ok' });
 });
 
 app.listen(env.port, () => {

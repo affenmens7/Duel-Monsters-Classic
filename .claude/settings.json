@@ -9,7 +9,18 @@
       "Bash(xdg-open \"http://localhost:8888/shop-demo-3.html\")",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_click"
+      "mcp__playwright__browser_click",
+      "Bash(wc -l src/services/*.ts server/src/routes/*.ts)",
+      "WebFetch(domain:yugipedia.com)",
+      "WebFetch(domain:www.yugiohcardguide.com)",
+      "WebFetch(domain:db.ygoprodeck.com)",
+      "WebFetch(domain:ygoprodeck.com)",
+      "WebFetch(domain:tradingcardsets.com)",
+      "WebFetch(domain:public.com)",
+      "Bash(docker exec dmc-postgres psql -U dmc_user -d dmc -c \":*)",
+      "Bash(npx tsx:*)",
+      "Bash(docker exec:*)",
+      "WebFetch(domain:yugioh.fandom.com)"
     ]
   }
 }

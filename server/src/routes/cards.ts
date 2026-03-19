@@ -5,7 +5,6 @@
 
 import { Router } from 'express';
 import { pool } from '../config/db.js';
-
 export const cardsRouter = Router();
 
 /**
@@ -18,57 +17,6 @@ cardsRouter.get('/count', async (_req, res) => {
     res.json({ count: result.rows[0].count });
   } catch {
     res.status(500).json({ count: 0 });
-  }
-});
-
-/**
- * GET /api/cards
- * Returns cards from active sets only (unless ?all=true for admin).
- * Optional: ?set=SetName&type=normal
- */
-cardsRouter.get('/', async (req, res) => {
-  try {
-    const { set, type, all } = req.query;
-
-    // Subquery to check if a card belongs to any active set
-    let query = `SELECT DISTINCT c.*,
-      EXISTS(
-        SELECT 1 FROM card_set_entries cse2
-        JOIN card_sets cs2 ON cs2.name = cse2.set_name
-        WHERE cse2.card_id = c.id AND cs2.active = TRUE
-      ) as available
-      FROM cards c
-      JOIN card_set_entries cse ON cse.card_id = c.id
-      JOIN card_sets cs ON cs.name = cse.set_name`;
-
-    const params: string[] = [];
-    const conditions: string[] = [];
-
-    // Only active sets unless ?all=true
-    if (all !== 'true') {
-      conditions.push('cs.active = TRUE');
-    }
-
-    if (type && typeof type === 'string') {
-      conditions.push(`c.frame_type = $${params.length + 1}`);
-      params.push(type);
-    }
-
-    if (set && typeof set === 'string') {
-      conditions.push(`cse.set_name = $${params.length + 1}`);
-      params.push(set);
-    }
-
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    query += ' ORDER BY c.name_en';
-
-    const result = await pool.query(query, params);
-    res.json(result.rows);
-  } catch {
-    res.status(500).json({ error: 'Kartendaten konnten nicht geladen werden' });
   }
 });
 
@@ -114,7 +62,7 @@ cardsRouter.get('/browse', async (_req, res) => {
 cardsRouter.get('/sets/all', async (_req, res) => {
   try {
     const result = await pool.query(`
-      SELECT cs.name, cs.code, cs.type, cs.wave, cs.active, cs.image_path,
+      SELECT cs.name, cs.code, cs.type, cs.wave, cs.active,
              COUNT(cse.card_id) as card_count
       FROM card_sets cs
       LEFT JOIN card_set_entries cse ON cse.set_name = cs.name

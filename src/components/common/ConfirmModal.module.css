@@ -1,0 +1,108 @@
+/* ConfirmModal — matches global Modal glassmorphism style */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: var(--spacing-lg);
+  transition: background 0.3s ease;
+}
+
+.overlayVisible {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal {
+  background: rgba(8, 12, 14, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 200, 160, 0.08);
+  max-width: 400px;
+  width: 100%;
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.modalVisible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.header {
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid rgba(0, 200, 160, 0.06);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.body {
+  padding: 20px 24px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-secondary, #8a8070);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 12px 24px 20px;
+  border-top: 1px solid rgba(0, 200, 160, 0.06);
+}
+
+.btn {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn_primary {
+  background: rgba(0, 220, 168, 0.1);
+  border: 1px solid rgba(0, 220, 168, 0.15);
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.btn_primary:hover {
+  background: rgba(0, 220, 168, 0.18);
+  border-color: var(--orichalcos-light);
+}
+
+.btn_danger {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.btn_danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.btn_muted {
+  background: none;
+  border: 1px solid rgba(0, 200, 160, 0.08);
+  color: var(--text-muted, #6a6050);
+}
+
+.btn_muted:hover {
+  border-color: rgba(0, 200, 160, 0.15);
+  color: var(--text-secondary, #8a8070);
+}

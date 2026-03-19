@@ -65,25 +65,19 @@ export function HomePage() {
                 </p>
                 <div className={styles.productsGrid}>
                   <div className={styles.productItem}>
-                    <img className={styles.productImg} src="/images/sets/SYE.png" alt="" />
+                    <div className={styles.productImgPlaceholder}>SDY</div>
                     <span className={styles.productName}>{t('home.shopStarterDeck')}</span>
                     <span className={styles.productInfo}>{t('home.shopCardCount', { count: 40 })}</span>
                     <span className={styles.productPrice}>600 DP</span>
                   </div>
                   <div className={styles.productItem}>
-                    <img className={styles.productImg} src="/images/sets/LOB.png" alt="" />
+                    <div className={styles.productImgPlaceholder}>LOB</div>
                     <span className={styles.productName}>{t('home.shopBoosterPack')}</span>
                     <span className={styles.productInfo}>{t('home.shopCardCount', { count: 5 })}</span>
                     <span className={styles.productPrice}>120 DP</span>
                   </div>
                   <div className={styles.productItem}>
-                    <div className={styles.displayStack}>
-                      <img src="/images/sets/LOB.png" alt="" />
-                      <img src="/images/sets/LOB.png" alt="" />
-                      <img src="/images/sets/LOB.png" alt="" />
-                      <img src="/images/sets/LOB.png" alt="" />
-                      <img src="/images/sets/LOB.png" alt="" />
-                    </div>
+                    <div className={styles.productImgPlaceholder}>24x</div>
                     <span className={styles.productName}>{t('home.shopDisplay')}</span>
                     <span className={styles.productInfo}>{t('home.shopCardCount', { count: 120 })}</span>
                     <span className={styles.productPrice}>2.400 DP</span>
@@ -93,11 +87,11 @@ export function HomePage() {
               </div>
               <div className={styles.bannerVisual}>
                 <div className={styles.boosterRow}>
-                  <div className={styles.boosterItem}><img src="/images/sets/LOB.png" alt="" /><span>Blue Eyes</span></div>
-                  <div className={styles.boosterItem}><img src="/images/sets/MRD.png" alt="" /><span>Metal Raiders</span></div>
-                  <div className={styles.boosterItem}><img src="/images/sets/SRL.png" alt="" /><span>Spell Ruler</span></div>
-                  <div className={styles.boosterItem}><img src="/images/sets/PSV.png" alt="" /><span>Pharaoh's</span></div>
-                  <div className={styles.boosterItem}><img src="/images/sets/DCR.png" alt="" /><span>Dark Crisis</span></div>
+                  <div className={styles.boosterItem}><div className={styles.boosterCode}>LOB</div><span>Blue Eyes</span></div>
+                  <div className={styles.boosterItem}><div className={styles.boosterCode}>MRD</div><span>Metal Raiders</span></div>
+                  <div className={styles.boosterItem}><div className={styles.boosterCode}>SRL</div><span>Spell Ruler</span></div>
+                  <div className={styles.boosterItem}><div className={styles.boosterCode}>PSV</div><span>Pharaoh's</span></div>
+                  <div className={styles.boosterItem}><div className={styles.boosterCode}>DCR</div><span>Dark Crisis</span></div>
                 </div>
               </div>
             </div>

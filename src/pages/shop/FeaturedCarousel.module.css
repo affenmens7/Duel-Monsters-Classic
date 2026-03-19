@@ -1,0 +1,289 @@
+/* ============================================================
+   FeaturedCarousel — rotating hero section for shop storefront.
+   Based on shop-featured-6-carousel-refined demo.
+   ============================================================ */
+
+.carousel {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 32px;
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  background: var(--bg-card, rgba(12, 18, 20, 0.85));
+}
+
+.track {
+  display: flex;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.15, 1);
+}
+
+.slide {
+  min-width: 100%;
+  display: flex;
+  align-items: stretch;
+  cursor: pointer;
+}
+
+/* === Slide Visual (left image area) === */
+
+.visual {
+  width: 440px;
+  min-height: 340px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+}
+
+/* Ambient glow */
+.visual::before {
+  content: '';
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  filter: blur(65px);
+  opacity: 0.4;
+  pointer-events: none;
+  background: rgba(0, 220, 168, 0.15);
+}
+
+.visualDefault {
+  background: linear-gradient(160deg, #0a1a2a 0%, #0c1210 30%, #081810 70%, #0a1a14 100%);
+}
+
+.visualDefault::before {
+  background: rgba(0, 220, 168, 0.15);
+}
+
+/* Set image displayed in the visual area */
+.setImage {
+  width: 170px;
+  height: 242px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 2px solid rgba(0, 220, 168, 0.08);
+  position: relative;
+  z-index: 1;
+  transition: transform 0.4s ease;
+  box-shadow: 0 8px 40px rgba(0, 220, 168, 0.06);
+}
+
+.slide:hover .setImage {
+  transform: scale(1.04);
+}
+
+/* Fallback: code text when no image */
+.codeFallback {
+  width: 170px;
+  height: 242px;
+  border-radius: 4px;
+  border: 2px solid rgba(0, 220, 168, 0.08);
+  background: linear-gradient(180deg, rgba(0, 220, 168, 0.04) 0%, rgba(0, 220, 168, 0.01) 100%);
+  box-shadow: 0 8px 40px rgba(0, 220, 168, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.4s ease;
+}
+
+.slide:hover .codeFallback {
+  transform: scale(1.04);
+}
+
+.codeText {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: rgba(0, 220, 168, 0.14);
+}
+
+/* === Slide Body (right content area) === */
+
+.body {
+  flex: 1;
+  padding: 44px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.badge {
+  display: inline-block;
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 3px 14px;
+  margin-bottom: 14px;
+  align-self: flex-start;
+  background: var(--orichalcos-light, #00dca8);
+  color: var(--bg-primary, #080c0e);
+}
+
+.category {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.46rem;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--orichalcos-light, #00dca8);
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.slideTitle {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.5px;
+  color: var(--text-primary, #d0c8b8);
+  margin-bottom: 14px;
+}
+
+.subtitle {
+  font-family: var(--font-body, 'Cormorant Garamond', serif);
+  font-size: 1.05rem;
+  color: var(--text-secondary, #8a8070);
+  line-height: 1.7;
+  margin-bottom: 24px;
+  max-width: 500px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cta {
+  font-family: var(--font-heading, 'Cinzel', serif);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orichalcos-light, #00dca8);
+  background: none;
+  border: 1px solid var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cta:hover {
+  background: rgba(0, 220, 168, 0.06);
+  border-color: var(--orichalcos-light, #00dca8);
+}
+
+/* === Navigation Arrows === */
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 14, 0.85);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  color: var(--text-muted, #6a6050);
+  font-size: 1.3rem;
+  cursor: pointer;
+  z-index: 5;
+  transition: border-color 0.25s, color 0.25s;
+  font-family: var(--font-heading, 'Cinzel', serif);
+  line-height: 1;
+}
+
+.arrow:hover {
+  border-color: var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  color: var(--orichalcos-light, #00dca8);
+}
+
+.arrowPrev { left: 12px; }
+.arrowNext { right: 12px; }
+
+/* === Dot Indicators === */
+
+.dots {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 0;
+  background: linear-gradient(transparent, rgba(8, 12, 14, 0.5));
+  z-index: 4;
+}
+
+.dot {
+  width: 24px;
+  height: 3px;
+  border-radius: 1px;
+  background: rgba(106, 96, 80, 0.25);
+  border: none;
+  cursor: pointer;
+  transition: background 0.3s, width 0.3s;
+}
+
+.dotActive {
+  background: var(--orichalcos-light, #00dca8);
+  width: 36px;
+}
+
+/* === Progress bar === */
+
+.progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--orichalcos-light, #00dca8);
+  z-index: 5;
+  opacity: 0.4;
+}
+
+/* === Responsive === */
+
+@media (max-width: 700px) {
+  .slide {
+    flex-direction: column;
+  }
+
+  .visual {
+    width: 100%;
+    min-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  }
+
+  .body {
+    padding: 20px 24px;
+  }
+
+  .slideTitle {
+    font-size: 1.05rem;
+  }
+
+  .arrow {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .arrowPrev { left: 6px; }
+  .arrowNext { right: 6px; }
+}

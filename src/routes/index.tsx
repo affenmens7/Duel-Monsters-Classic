@@ -22,8 +22,8 @@ import { AdminCardsPage } from '../pages/admin/AdminCardsPage';
 import { AdminNewsPage } from '../pages/admin/AdminNewsPage';
 import { AdminRoadmapPage } from '../pages/admin/AdminRoadmapPage';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
-import { AdminCosmeticsPage } from '../pages/admin/AdminCosmeticsPage';
 import { AdminSetDetailPage } from '../pages/admin/AdminSetDetailPage';
+import { AdminShopPage } from '../pages/admin/AdminShopPage';
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +41,8 @@ export const router = createBrowserRouter([
       { path: 'roadmap/:id', element: <RoadmapDetailPage /> },
       { path: 'deckbuilder', element: <DeckbuilderPage /> },
       { path: 'shop', element: <ShopPage /> },
+      { path: 'shop/booster/:setName', element: <ShopPage /> },
+      { path: 'shop/display/:setName', element: <ShopPage /> },
       // { path: 'duel', element: <DuelPage /> },
       // { path: 'story', element: <StoryPage /> },
       // { path: 'quests', element: <QuestsPage /> },
@@ -58,11 +60,12 @@ export const router = createBrowserRouter([
               { path: 'sets/booster', element: <AdminSetsPage /> },
               { path: 'sets/starter', element: <AdminSetsPage /> },
               { path: 'sets/:name', element: <AdminSetDetailPage /> },
-              { path: 'shop-config', element: <AdminSetsPage /> },
+              { path: 'shop/featured-sektion', element: <AdminShopPage /> },
+              { path: 'shop/booster-sets', element: <AdminSetsPage /> },
+              { path: 'shop/starter-decks', element: <AdminSetsPage /> },
               { path: 'news', element: <AdminNewsPage /> },
               { path: 'roadmap', element: <AdminRoadmapPage /> },
               { path: 'users', element: <AdminUsersPage /> },
-              { path: 'cosmetics', element: <AdminCosmeticsPage /> },
             ],
           },
         ],

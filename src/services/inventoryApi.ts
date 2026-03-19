@@ -24,6 +24,8 @@ interface DbOwnedCard {
   image_path: string;
   owned: number;
   used_in_decks: number;
+  unlocked_artworks: number[];
+  preferred_artwork_id: number | null;
 }
 
 function dbToOwnedCard(db: DbOwnedCard): OwnedCard {
@@ -51,6 +53,8 @@ function dbToOwnedCard(db: DbOwnedCard): OwnedCard {
     }],
     owned: db.owned,
     used_in_decks: db.used_in_decks,
+    unlockedArtworks: db.unlocked_artworks ?? [],
+    preferredArtworkId: db.preferred_artwork_id ?? null,
   };
 }
 

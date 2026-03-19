@@ -15,7 +15,14 @@
       "WebFetch(domain:warcraft.wiki.gg)",
       "WebFetch(domain:toucharcade.com)",
       "WebFetch(domain:blizzardwatch.com)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx vite:*)",
+      "Bash(curl -s http://localhost:3001/api/shop/featured)",
+      "Bash(curl -s http://localhost:3001/api/data-version)",
+      "Bash(curl -s \"https://db.ygoprodeck.com/api/v7/cardinfo.php?id=74677422\")",
+      "Bash(python3:*)",
+      "Bash(curl -s \"https://db.ygoprodeck.com/api/v7/cardinfo.php?id=74677422\" -o /tmp/rebd.json)"
     ]
   }
 }

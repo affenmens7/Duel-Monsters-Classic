@@ -131,7 +131,18 @@
 .cardTable {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
+
+/* Fixed column widths: Bild | Name DE | Name EN | Typ | Seltenheit | Aktion */
+.cardTable col:nth-child(1) { width: 60px; }
+.cardTable col:nth-child(2) { width: 22%; }
+.cardTable col:nth-child(3) { width: 22%; }
+.cardTable col:nth-child(4) { width: 10%; }
+.cardTable col:nth-child(5) { width: 14%; }
+.cardTable col:nth-child(6) { width: 14%; }
+/* 7th col (ban status) only in set cards table */
+.cardTable col:nth-child(7) { width: 10%; }
 
 .cardTh {
   font-family: var(--font-heading);
@@ -187,8 +198,7 @@
 .cardThumb {
   width: 40px;
   height: 58px;
-  object-fit: cover;
-  border: 1px solid var(--orichalcos-faint);
+  object-fit: contain;
   display: block;
 }
 
@@ -477,4 +487,76 @@
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
+}
+
+/* === Quantity (table cell) === */
+
+.cardTdQty {
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 8px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+/* === Quantity (popup controls) === */
+
+.quantityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 4px;
+  border-top: 1px solid rgba(0, 220, 168, 0.08);
+}
+
+.quantityLabel {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.quantityControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quantityBtn {
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 1px solid rgba(0, 220, 168, 0.15);
+  background: rgba(0, 200, 160, 0.05);
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quantityBtn:hover:not(:disabled) {
+  background: rgba(0, 220, 168, 0.12);
+  border-color: var(--orichalcos-light);
+}
+
+.quantityBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.quantityValue {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #c8a830;
+  min-width: 20px;
+  text-align: center;
 }

@@ -23,7 +23,7 @@ export function AppLayout() {
       <FloatingCards cards={cards} count={60} />
       <Header />
       <NavBar />
-      <main className={styles.content}>
+      <main className={styles.content} key={location.key}>
         <Outlet />
       </main>
       <Footer />

@@ -9,6 +9,8 @@ interface SearchBarProps {
   onQueryChange: (value: string) => void;
   typeFilter: string;
   onTypeFilterChange: (value: string) => void;
+  attributeFilter?: string;
+  onAttributeFilterChange?: (value: string) => void;
   availabilityFilter: string;
   onAvailabilityFilterChange: (value: string) => void;
   setFilter: string;
@@ -27,6 +29,8 @@ export function SearchBar({
   onQueryChange,
   typeFilter,
   onTypeFilterChange,
+  attributeFilter,
+  onAttributeFilterChange,
   availabilityFilter,
   onAvailabilityFilterChange,
   setFilter,
@@ -72,6 +76,46 @@ export function SearchBar({
           <option value="spell">{t('cards.spellCards')}</option>
           <option value="trap">{t('cards.trapCards')}</option>
         </select>
+
+        {onAttributeFilterChange && (
+          <select
+            className={styles.typeSelect}
+            value={attributeFilter ?? 'all'}
+            onChange={(e) => onAttributeFilterChange(e.target.value)}
+          >
+            <option value="all">
+              {typeFilter === 'spell' || typeFilter === 'trap'
+                ? t('cards.allTypes')
+                : t('admin.allAttributes', 'Alle Attribute')}
+            </option>
+            {(typeFilter === 'spell') ? (
+              <>
+                <option value="race:Normal">{t('spellTrapType.Normal')}</option>
+                <option value="race:Quick-Play">{t('spellTrapType.Quick-Play')}</option>
+                <option value="race:Field">{t('spellTrapType.Field')}</option>
+                <option value="race:Continuous">{t('spellTrapType.Continuous')}</option>
+                <option value="race:Equip">{t('spellTrapType.Equip')}</option>
+                <option value="race:Ritual">{t('spellTrapType.Ritual')}</option>
+              </>
+            ) : (typeFilter === 'trap') ? (
+              <>
+                <option value="race:Normal">{t('spellTrapType.Normal')}</option>
+                <option value="race:Counter">{t('spellTrapType.Counter')}</option>
+                <option value="race:Continuous">{t('spellTrapType.Continuous')}</option>
+              </>
+            ) : (
+              <>
+                <option value="attr:DARK">{t('attributes.DARK')}</option>
+                <option value="attr:LIGHT">{t('attributes.LIGHT')}</option>
+                <option value="attr:EARTH">{t('attributes.EARTH')}</option>
+                <option value="attr:WATER">{t('attributes.WATER')}</option>
+                <option value="attr:FIRE">{t('attributes.FIRE')}</option>
+                <option value="attr:WIND">{t('attributes.WIND')}</option>
+                <option value="attr:DIVINE">{t('attributes.DIVINE')}</option>
+              </>
+            )}
+          </select>
+        )}
 
         <select
           className={styles.typeSelect}

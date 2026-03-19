@@ -16,14 +16,14 @@
 
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
 }
 
 .title {
   font-family: var(--font-heading);
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--orichalcos-light);
   letter-spacing: 1.5px;
@@ -129,6 +129,15 @@
   margin-bottom: 32px;
 }
 
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
 .sectionTitle {
   font-family: var(--font-heading);
   font-size: 0.68rem;
@@ -136,9 +145,41 @@
   color: var(--text-muted);
   letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 12px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--orichalcos-faint);
+}
+
+.sectionToggle {
+  display: flex;
+  gap: 0;
+  margin-left: auto;
+}
+
+.sectionToggleBtn {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border: 1px solid var(--orichalcos-faint);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.sectionToggleBtn:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.sectionToggleBtn:last-child {
+  border-radius: 0 3px 3px 0;
+  border-left: none;
+}
+
+.sectionToggleBtnActive {
+  color: var(--orichalcos-light);
+  border-color: var(--orichalcos-subtle);
+  background: rgba(0, 200, 160, 0.08);
 }
 
 /* === Horizontal Scroll Row === */
@@ -276,67 +317,6 @@
   font-style: italic;
 }
 
-/* === Cosmetic Grid === */
-
-.cosmeticGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.cosmeticCard {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-card);
-  border: 1px solid var(--orichalcos-faint);
-  padding: 16px;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-
-.cosmeticCard:hover {
-  border-color: var(--orichalcos-subtle);
-}
-
-.cosmeticCardLocked {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.cosmeticType {
-  font-family: var(--font-heading);
-  font-size: 0.5rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-.cosmeticName {
-  font-family: var(--font-heading);
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--orichalcos-light);
-  margin-bottom: 4px;
-}
-
-.cosmeticDesc {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-  margin-bottom: 8px;
-  flex: 1;
-}
-
-.cosmeticPrice {
-  font-family: var(--font-heading);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--gold);
-}
-
 /* === Error === */
 
 .error {
@@ -409,19 +389,28 @@
 }
 
 .heroImagePlaceholder {
-  width: 220px;
-  height: 308px;
+  width: 200px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-deep);
-  border: 1px solid var(--orichalcos-faint);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #082a22 0%, #0d3c30 50%, #0a2e24 100%);
   flex-shrink: 0;
   font-family: var(--font-heading);
   font-size: 0.6rem;
   color: var(--text-muted);
   letter-spacing: 1.5px;
   text-transform: uppercase;
+}
+
+/* === Detail Product Card (reuses ProductRow card, only size override) === */
+
+.detailCard {
+  width: 320px;
+  flex-shrink: 0;
+  cursor: default;
 }
 
 .heroInfo {
@@ -454,6 +443,7 @@
   color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 16px;
+  white-space: pre-line;
 }
 
 /* === Stats Row === */
@@ -561,6 +551,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .buyBtn {
@@ -818,6 +809,11 @@
     height: 224px;
   }
 
+  .detailCard {
+    width: 100%;
+    max-width: 320px;
+  }
+
   .statsRow {
     gap: 6px;
   }
@@ -856,5 +852,58 @@
     width: 100%;
     text-align: center;
   }
+}
+
+/* Popup ownership info in detail view */
+.popupOwnership {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #c8a830;
+  padding: 8px 0;
+  border-top: 1px solid rgba(0, 220, 168, 0.08);
+}
+
+/* === Showcase Editor (Admin) === */
+
+.showcaseAdminRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.showcaseSlotInfo {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #c8a830;
+}
+
+/* Card selection indicator */
+.cardCellSelected {
+  outline: 2px solid var(--orichalcos-light) !important;
+  outline-offset: -2px;
+}
+
+.cardCellSlot {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--orichalcos-light);
+  color: #060a0c;
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
 }
 

@@ -76,7 +76,7 @@ async function main() {
 
   for (let i = 0; i < apiCards.length; i++) {
     const c = apiCards[i];
-    const cardId = c.id;
+    let cardId = c.id;
     const de = deMap.get(cardId);
     const nameEn = c.name;
     const nameDe = de?.name ?? c.misc_info?.[0]?.translated_name ?? nameEn;
@@ -87,21 +87,31 @@ async function main() {
     const raceEn = c.race;
     const raceDe = de?.race ?? raceEn;
 
-    // 1. Insert card (skip if exists)
+    // 1. Check if this card ID is actually an artwork variant of an existing card
     const banStatus = c.banlist_info?.ban_tcg ?? null;
-    const existing = await pool.query('SELECT id FROM cards WHERE id = $1', [cardId]);
-    if (existing.rows.length === 0) {
-      await pool.query(
-        `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-        [cardId, nameDe, nameEn, descDe, descEn, typeDe, typeEn, c.frameType,
-         c.atk ?? null, c.def ?? null, c.level ?? null,
-         raceDe, raceEn, c.attribute ?? null, c.archetype ?? null,
-         `/images/cards/${cardId}.jpg`, banStatus]
-      );
-      cardsInserted++;
-    } else {
+    const artworkCheck = await pool.query(
+      'SELECT card_id FROM card_artworks WHERE artwork_id = $1 AND card_id != $1',
+      [cardId]
+    );
+    if (artworkCheck.rows.length > 0) {
+      // This "card" is an alternate artwork — use the parent card
+      cardId = artworkCheck.rows[0].card_id;
       cardsSkipped++;
+    } else {
+      const existing = await pool.query('SELECT id FROM cards WHERE id = $1', [cardId]);
+      if (existing.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+          [cardId, nameDe, nameEn, descDe, descEn, typeDe, typeEn, c.frameType,
+           c.atk ?? null, c.def ?? null, c.level ?? null,
+           raceDe, raceEn, c.attribute ?? null, c.archetype ?? null,
+           `/images/cards/${cardId}.jpg`, banStatus]
+        );
+        cardsInserted++;
+      } else {
+        cardsSkipped++;
+      }
     }
 
     // 2. Download ALL artworks
@@ -136,7 +146,7 @@ async function main() {
       }
     }
 
-    // 3. Create set entry with rarity from API
+    // 3. Create set entry with rarity from API (quantity defaults to 1)
     const cardSets = c.card_sets ?? [];
     const setEntry = cardSets.find((s: any) => s.set_name === setName);
     const rarity = setEntry?.set_rarity ?? 'Common';

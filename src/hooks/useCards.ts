@@ -14,6 +14,7 @@ interface UseCardSearchResult {
 interface CardFilters {
   query: string;
   typeFilter: string;
+  attributeFilter?: string;
   availabilityFilter: string;
   setFilter?: string;
   banFilter?: string;
@@ -38,6 +39,16 @@ export function useCardSearch(cards: Card[], filters: CardFilters): UseCardSearc
     // Type filter
     if (filters.typeFilter && filters.typeFilter !== 'all') {
       result = result.filter((card) => card.frameType === filters.typeFilter);
+    }
+
+    // Attribute / race filter (format: "attr:DARK" or "race:Quick-Play")
+    if (filters.attributeFilter && filters.attributeFilter !== 'all') {
+      const [kind, value] = filters.attributeFilter.split(':');
+      if (kind === 'attr') {
+        result = result.filter((card) => card.attribute === value);
+      } else if (kind === 'race') {
+        result = result.filter((card) => card.race === value || card.race_en === value);
+      }
     }
 
     // Set filter
@@ -70,7 +81,7 @@ export function useCardSearch(cards: Card[], filters: CardFilters): UseCardSearc
     });
 
     return result;
-  }, [cards, filters.query, filters.typeFilter, filters.availabilityFilter, filters.setFilter, filters.banFilter]);
+  }, [cards, filters.query, filters.typeFilter, filters.attributeFilter, filters.availabilityFilter, filters.setFilter, filters.banFilter]);
 
   return { filteredCards };
 }

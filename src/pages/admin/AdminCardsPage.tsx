@@ -11,8 +11,9 @@ import { useAppData } from '../../store/AppDataContext';
 import {
   fetchAdminCards,
   type AdminCardRow,
-} from '../../services/adminApi';
+} from '../../services/admin';
 import { env } from '../../config/env';
+import { getSortArrow } from '../../utils/sortArrow';
 import { getCardImageUrl } from '../../services/cardApi';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
 import { Modal } from '../../components/common/Modal';
@@ -142,7 +143,7 @@ export function AdminCardsPage() {
     setPage(1);
   }, [sortBy]);
 
-  const sortArrow = (col: string) => sortBy === col ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  const sortArrow = (col: string) => getSortArrow(sortBy, sortDir, col);
 
   // Cleanup debounce on unmount
   useEffect(() => {

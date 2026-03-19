@@ -8,5 +8,11 @@
   flex: 1;
   padding: var(--spacing-lg);
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }

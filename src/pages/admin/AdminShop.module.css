@@ -1,0 +1,267 @@
+/* AdminShopPage — Featured carousel management */
+
+.page { padding: 20px 0; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 1.5px;
+}
+
+.addBtn {
+  font-family: var(--font-heading);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border: 1px solid var(--orichalcos-subtle);
+  background: rgba(0, 200, 160, 0.05);
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.addBtn:hover { border-color: var(--orichalcos-dim); }
+
+.loading {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 40px 0;
+}
+
+.error {
+  font-size: 0.85rem;
+  color: var(--color-error);
+  padding: 8px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  background: rgba(239, 68, 68, 0.04);
+  margin-bottom: 12px;
+}
+
+/* Table */
+.table {
+  border: 1px solid var(--orichalcos-faint);
+  background: var(--bg-card);
+}
+
+.tableHeader, .tableRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.tableHeader {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--orichalcos-faint);
+  background: rgba(8, 12, 14, 0.5);
+}
+
+.tableRow {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(0, 220, 168, 0.02);
+  transition: background 0.1s;
+}
+
+.tableRow:hover { background: rgba(0, 200, 160, 0.02); }
+.rowInactive { opacity: 0.4; }
+
+.colOrder { width: 30px; text-align: center; flex-shrink: 0; }
+.colProduct { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.colTitle { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.colType { width: 70px; flex-shrink: 0; text-align: center; font-size: 0.7rem; }
+.colActive { width: 50px; flex-shrink: 0; text-align: center; }
+.colActions { width: 120px; flex-shrink: 0; display: flex; gap: 4px; justify-content: flex-end; }
+
+.emptyRow {
+  padding: 24px 16px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Toggle */
+.toggleBtn {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.toggleOn {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(74, 222, 128, 0.06);
+}
+
+.toggleOff {
+  color: var(--text-muted);
+  border-color: var(--orichalcos-faint);
+  background: none;
+}
+
+/* Action buttons */
+.editBtn, .deleteBtn {
+  font-family: var(--font-heading);
+  font-size: 0.45rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: none;
+}
+
+.editBtn {
+  color: var(--orichalcos-light);
+  border-color: var(--orichalcos-faint);
+}
+
+.editBtn:hover { border-color: var(--orichalcos-subtle); }
+
+.deleteBtn {
+  color: rgba(239, 68, 68, 0.6);
+  border-color: rgba(239, 68, 68, 0.1);
+}
+
+.deleteBtn:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Form Overlay */
+.formOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.formPanel {
+  background: var(--bg-primary);
+  border: 1px solid var(--orichalcos-subtle);
+  padding: 24px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.formTitle {
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+
+.label {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.input, .select, .textarea {
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.input:focus, .select:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+}
+
+.select option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.textarea { resize: vertical; }
+.inputSmall { width: 80px; }
+
+.formRow {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cancelBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border: 1px solid var(--orichalcos-faint);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cancelBtn:hover { color: var(--text-primary); border-color: var(--orichalcos-subtle); }
+
+.saveBtn {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  border: 1px solid var(--orichalcos-subtle);
+  background: rgba(0, 200, 160, 0.08);
+  color: var(--orichalcos-light);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.saveBtn:hover { border-color: var(--orichalcos-dim); background: rgba(0, 200, 160, 0.15); }
+.saveBtn:disabled { opacity: 0.4; cursor: not-allowed; }

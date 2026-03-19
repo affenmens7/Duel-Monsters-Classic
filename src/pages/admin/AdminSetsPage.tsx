@@ -1,26 +1,37 @@
 /**
- * AdminSetsPage — table of all card sets with inline active toggles
- * and expandable detail panels for editing set fields, shop config,
- * and rarity rates.
+ * AdminSetsPage — table of card sets with a gear icon per row
+ * that opens a SettingsModal for editing.
+ * Context-aware: "sets" shows set settings, "shop" shows shop config + rarity rates.
  */
 
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../store/AuthContext';
+import { env } from '../../config/env';
 import {
   fetchAdminSets,
   fetchSetRates,
+  fetchSetRarities,
+  fetchSetCards,
   updateSet,
   updateSetConfig,
   updateSetRates,
+  createSet,
+  importSetCards,
+  deleteSet,
+  searchApiSets,
   type AdminSetRow,
   type RarityRate,
-} from '../../services/adminApi';
+  type ApiSetResult,
+} from '../../services/admin';
+import { getCardImageUrl } from '../../services/cardApi';
+import { SettingsModal, settingsModalStyles as ms } from '../../components/admin/SettingsModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
 import styles from './AdminSets.module.css';
 
 // ============================================================
-// Local form state types (camelCase for convenience)
+// Local form state types
 // ============================================================
 
 interface SetForm {
@@ -36,40 +47,10 @@ interface ConfigForm {
   displaySize: number | null;
   descDe: string;
   descEn: string;
-  featured: boolean;
   sortOrder: number;
-}
-
-interface SaveResult {
-  ok: boolean;
-  msg: string;
-}
-
-// ============================================================
-// ToggleSwitch
-// ============================================================
-
-function ToggleSwitch({
-  checked,
-  onChange,
-  labelOn,
-  labelOff,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  labelOn?: string;
-  labelOff?: string;
-}) {
-  return (
-    <button
-      type="button"
-      className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`}
-      onClick={onChange}
-      aria-label={checked ? (labelOn ?? 'Deactivate') : (labelOff ?? 'Activate')}
-    >
-      <span className={styles.toggleThumb} />
-    </button>
-  );
+  shopVisible: boolean;
+  showcaseAnimated: boolean;
+  gameReleaseDate: string;
 }
 
 // ============================================================
@@ -82,12 +63,13 @@ export function AdminSetsPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Determine filter based on route
-  const routeFilter = location.pathname.endsWith('/booster')
+  const routeFilter = location.pathname.includes('booster')
     ? 'booster'
-    : location.pathname.endsWith('/starter')
+    : location.pathname.includes('starter')
       ? 'starter'
       : null;
+
+  const context = location.pathname.includes('/shop/') ? 'shop' : 'sets';
 
   const pageTitle = routeFilter === 'booster'
     ? t('admin.boosterPacks')
@@ -100,21 +82,32 @@ export function AdminSetsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Detail panel
-  const [selectedSet, setSelectedSet] = useState<string | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
+  // Modal state
+  const [modalRow, setModalRow] = useState<AdminSetRow | null>(null);
   const [setForm, setSetForm] = useState<SetForm | null>(null);
   const [configForm, setConfigForm] = useState<ConfigForm | null>(null);
   const [ratesForm, setRatesForm] = useState<RarityRate[]>([]);
-
-  // Save
+  const [availableRarities, setAvailableRarities] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [saveResult, setSaveResult] = useState<SaveResult | null>(null);
+  const [saveResult, setSaveResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  // ----------------------------------------------------------
+  // Showcase card picker state (shop context)
+  const [showcaseCards, setShowcaseCards] = useState<number[]>([]);
+  const [setCardOptions, setSetCardOptions] = useState<{ id: number; name_de: string; name_en: string }[]>([]);
+
+  // Create modal state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createMode, setCreateMode] = useState<'api' | 'custom'>('api');
+  const [createForm, setCreateForm] = useState({ name: '', code: '', type: routeFilter ?? 'booster', wave: 0, releaseDate: '', active: false });
+  const [apiSearch, setApiSearch] = useState('');
+  const [apiDebouncedSearch, setApiDebouncedSearch] = useState('');
+  const [apiResults, setApiResults] = useState<ApiSetResult[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createResult, setCreateResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const apiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Load sets
-  // ----------------------------------------------------------
-
   const loadSets = useCallback(async () => {
     if (!token) return;
     try {
@@ -128,211 +121,295 @@ export function AdminSetsPage() {
     }
   }, [token, t]);
 
+  useEffect(() => { loadSets(); }, [loadSets]);
+
+  // API search debounce
+  const handleApiSearchChange = useCallback((value: string) => {
+    setApiSearch(value);
+    if (apiDebounceRef.current) clearTimeout(apiDebounceRef.current);
+    apiDebounceRef.current = setTimeout(() => setApiDebouncedSearch(value), 300);
+  }, []);
+
   useEffect(() => {
-    loadSets();
-  }, [loadSets]);
+    return () => { if (apiDebounceRef.current) clearTimeout(apiDebounceRef.current); };
+  }, []);
 
-  // ----------------------------------------------------------
-  // Inline active toggle (optimistic)
-  // ----------------------------------------------------------
+  useEffect(() => {
+    if (!token || apiDebouncedSearch.length < 2) { setApiResults([]); return; }
+    let cancelled = false;
+    setApiLoading(true);
+    searchApiSets(token, apiDebouncedSearch, routeFilter ?? undefined)
+      .then((results) => { if (!cancelled) setApiResults(results); })
+      .catch(() => { if (!cancelled) setApiResults([]); })
+      .finally(() => { if (!cancelled) setApiLoading(false); });
+    return () => { cancelled = true; };
+  }, [token, apiDebouncedSearch, routeFilter]);
 
-  const handleToggleActive = useCallback(
-    async (e: React.MouseEvent, row: AdminSetRow) => {
-      e.stopPropagation();
-      if (!token) return;
+  const openCreateModal = () => {
+    setCreateOpen(true);
+    setCreateMode('api');
+    setCreateForm({ name: '', code: '', type: routeFilter ?? 'booster', wave: 0, releaseDate: '', active: false });
+    setApiSearch('');
+    setApiDebouncedSearch('');
+    setApiResults([]);
+    setCreateResult(null);
+  };
 
-      const prev = row.active;
-      const next = !prev;
+  const handleSelectApiSet = (result: ApiSetResult) => {
+    if (result.already_exists) return;
+    setCreateForm({
+      name: result.set_name,
+      code: result.set_code,
+      type: routeFilter ?? 'booster',
+      wave: 0,
+      releaseDate: result.tcg_date ?? '',
+      active: false,
+    });
+  };
 
-      // Optimistic update
-      setSets((current) =>
-        current.map((s) => (s.name === row.name ? { ...s, active: next } : s)),
-      );
+  // Import progress message (shown in modal during card import)
+  const [importStatus, setImportStatus] = useState('');
 
-      try {
-        await updateSet(token, row.name, { active: next } as never);
-      } catch {
-        // Revert on failure
-        setSets((current) =>
-          current.map((s) =>
-            s.name === row.name ? { ...s, active: prev } : s,
-          ),
-        );
+  const handleCreateSet = useCallback(async () => {
+    if (!token || !createForm.name || !createForm.code) {
+      setCreateResult({ ok: false, msg: t('admin.requiredFields') });
+      return;
+    }
+
+    // Check if set already exists — if so and API mode, just run the import
+    const existingSet = sets.find((s) => s.name === createForm.name);
+    const needsCreate = !existingSet;
+
+    setCreating(true);
+    setCreateResult(null);
+    setImportStatus('');
+    try {
+      if (needsCreate) {
+        await createSet(token, {
+          name: createForm.name,
+          code: createForm.code,
+          type: createForm.type,
+          wave: createForm.wave,
+          active: createForm.active,
+          release_date: createForm.releaseDate || undefined,
+        });
       }
-    },
-    [token],
-  );
 
-  // ----------------------------------------------------------
-  // Row click — expand / collapse detail panel
-  // ----------------------------------------------------------
-
-  const handleRowClick = useCallback(
-    async (row: AdminSetRow) => {
-      setSaveResult(null);
-
-      if (selectedSet === row.name) {
-        setSelectedSet(null);
+      // Auto-import cards when using API mode (works for new sets and re-imports)
+      if (createMode === 'api') {
+        setImportStatus(t('admin.importingCards'));
+        const result = await importSetCards(token, createForm.name);
+        setImportStatus('');
+        setCreateResult({
+          ok: true,
+          msg: t('admin.importComplete', {
+            inserted: result.cardsInserted,
+            skipped: result.cardsSkipped,
+            artworks: result.artworksInserted,
+            images: result.imagesDownloaded,
+          }),
+        });
+        // User reviews the result — navigation happens when modal is closed
         return;
       }
 
-      setSelectedSet(row.name);
-      setDetailLoading(true);
+      setCreateOpen(false);
+      await loadSets();
+      navigate(`/app/admin/sets/${encodeURIComponent(createForm.name)}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('admin.createFailed');
+      setCreateResult({ ok: false, msg });
+    } finally {
+      setCreating(false);
+      setImportStatus('');
+    }
+  }, [token, createForm, createMode, sets, loadSets, navigate, t]);
 
-      // Populate set form
-      setSetForm({
-        active: row.active,
-        wave: row.wave,
-        releaseDate: row.release_date ?? '',
-      });
+  // After successful import: navigate to detail page
+  const handlePostImportNavigate = useCallback(async () => {
+    setCreateOpen(false);
+    await loadSets();
+    navigate(`/app/admin/sets/${encodeURIComponent(createForm.name)}`);
+  }, [createForm.name, loadSets, navigate]);
 
-      // Populate config form
-      setConfigForm({
-        pricePack: row.price_pack,
-        priceDisplay: row.price_display,
-        packSize: row.pack_size,
-        displaySize: row.display_size,
-        descDe: row.desc_de,
-        descEn: row.desc_en,
-        featured: row.featured,
-        sortOrder: row.sort_order,
-      });
+  // Close create modal — just close, no navigation
+  const handleCloseCreateModal = useCallback(() => {
+    if (creating) return;
+    setCreateOpen(false);
+    setCreateResult(null);
+    loadSets();
+  }, [creating, loadSets]);
 
-      // Fetch rarity rates
-      if (token) {
-        try {
-          const rates = await fetchSetRates(token, row.name);
+  // Filtered + sorted sets based on route (wave asc, release date asc)
+  const filteredSets = useMemo(() => {
+    const list = routeFilter ? sets.filter((s) => s.product_type === routeFilter) : [...sets];
+    return list.sort((a, b) => {
+      if (a.wave !== b.wave) return a.wave - b.wave;
+      const dateA = a.release_date ?? '';
+      const dateB = b.release_date ?? '';
+      return dateA.localeCompare(dateB);
+    });
+  }, [sets, routeFilter]);
+
+  // Open modal for a row
+  const openModal = useCallback(async (row: AdminSetRow) => {
+    setSaveResult(null);
+    setModalRow(row);
+    setSetForm({ active: row.active, wave: row.wave, releaseDate: row.release_date ?? '' });
+    setConfigForm({
+      pricePack: row.price_pack,
+      priceDisplay: row.price_display,
+      packSize: row.pack_size,
+      displaySize: row.display_size,
+      descDe: row.desc_de,
+      descEn: row.desc_en,
+      sortOrder: row.sort_order,
+      shopVisible: row.shop_visible ?? true,
+      showcaseAnimated: row.showcase_animated ?? false,
+      gameReleaseDate: row.game_release_date ? row.game_release_date.split('T')[0] : '',
+    });
+    if (token && context === 'sets') {
+      try {
+        const [rates, rarities] = await Promise.all([
+          fetchSetRates(token, row.name),
+          fetchSetRarities(token, row.name),
+        ]);
+        setAvailableRarities(rarities);
+        if (rates.length === 0 && rarities.length > 0) {
+          setRatesForm(rarities.map((r) => ({ rarity: r, ratePct: 0 })));
+        } else {
           setRatesForm(rates);
-        } catch {
-          setRatesForm([]);
         }
+      } catch {
+        setRatesForm([]);
+        setAvailableRarities([]);
       }
+    }
+    // Load set cards for showcase picker (shop context)
+    if (token && context === 'shop') {
+      setShowcaseCards(row.showcase_card_ids ?? []);
+      try {
+        const result = await fetchSetCards(token, row.name, { limit: 200 });
+        setSetCardOptions(result.cards.map((c) => ({ id: c.id, name_de: c.name_de, name_en: c.name_en })));
+      } catch {
+        setSetCardOptions([]);
+      }
+    }
+  }, [token, context]);
 
-      setDetailLoading(false);
-    },
-    [selectedSet, token],
-  );
-
-  // ----------------------------------------------------------
-  // Rarity rates helpers
-  // ----------------------------------------------------------
-
-  const ratesSum = ratesForm.reduce((sum, r) => sum + Number(r.ratePct), 0);
-
-  const handleAddRate = () => {
-    setRatesForm((prev) => [...prev, { rarity: '', ratePct: 0 }]);
+  const closeModal = () => {
+    setModalRow(null);
+    setSaveResult(null);
   };
 
-  const handleRemoveRate = (index: number) => {
-    setRatesForm((prev) => prev.filter((_, i) => i !== index));
-  };
+  // Delete flow: null → 'confirm' → 'deleteCards' → execute
+  const [deleteStep, setDeleteStep] = useState<null | 'confirm' | 'deleteCards'>(null);
+  const [exclusiveCards, setExclusiveCards] = useState<{ id: number; name_de: string; name_en: string; frame_type: string }[]>([]);
+  const [exclusiveLoading, setExclusiveLoading] = useState(false);
 
-  const handleRateChange = (
-    index: number,
-    field: keyof RarityRate,
-    value: string | number,
-  ) => {
-    setRatesForm((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)),
-    );
-  };
+  const handleDeleteSet = useCallback(() => {
+    if (!modalRow) return;
+    setDeleteStep('confirm');
+  }, [modalRow]);
 
-  // ----------------------------------------------------------
-  // Save all
-  // ----------------------------------------------------------
+  // Transition to step 2: fetch exclusive cards preview
+  const handleShowDeleteCards = useCallback(async () => {
+    if (!token || !modalRow) return;
+    setExclusiveLoading(true);
+    setDeleteStep('deleteCards');
+    try {
+      const res = await fetch(
+        `${env.api.baseUrl}/admin/sets/${encodeURIComponent(modalRow.name)}/exclusive-cards`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const data = res.ok ? await res.json() : { cards: [] };
+      setExclusiveCards(data.cards);
+    } catch {
+      setExclusiveCards([]);
+    } finally {
+      setExclusiveLoading(false);
+    }
+  }, [token, modalRow]);
 
+  const executeDelete = useCallback(async (alsoDeleteCards: boolean) => {
+    if (!token || !modalRow) return;
+    setDeleteStep(null);
+    setSaving(true);
+    setSaveResult(null);
+    try {
+      const result = await deleteSet(token, modalRow.name, alsoDeleteCards);
+      closeModal();
+      setExclusiveCards([]);
+      await loadSets();
+    } catch (err) {
+      setSaveResult({ ok: false, msg: err instanceof Error ? err.message : t('admin.deleteFailed') });
+    } finally {
+      setSaving(false);
+    }
+  }, [token, modalRow, loadSets, t]);
+
+  // Save
   const handleSave = useCallback(async () => {
-    if (!token || !selectedSet || !setForm || !configForm) return;
-
+    if (!token || !modalRow) return;
     setSaving(true);
     setSaveResult(null);
 
-    const results = await Promise.allSettled([
-      updateSet(token, selectedSet, {
+    const promises: Promise<unknown>[] = [];
+    if (context === 'sets' && setForm) {
+      promises.push(updateSet(token, modalRow.name, {
         active: setForm.active,
         wave: setForm.wave,
         release_date: setForm.releaseDate || undefined,
-      } as never),
-      updateSetConfig(token, selectedSet, {
-        price_pack: configForm.pricePack,
-        price_display: configForm.priceDisplay,
-        pack_size: configForm.packSize,
-        display_size: configForm.displaySize,
-        desc_de: configForm.descDe,
-        desc_en: configForm.descEn,
-        featured: configForm.featured,
-        sort_order: configForm.sortOrder,
-      }),
-      updateSetRates(token, selectedSet, ratesForm),
-    ]);
+      } as never));
+      promises.push(updateSetRates(token, modalRow.name, ratesForm));
+    }
+    if (context === 'shop' && configForm) {
+      promises.push(
+        updateSetConfig(token, modalRow.name, {
+          price_pack: configForm.pricePack,
+          price_display: configForm.priceDisplay,
+          pack_size: configForm.packSize,
+          display_size: configForm.displaySize,
+          desc_de: configForm.descDe,
+          desc_en: configForm.descEn,
+          sort_order: configForm.sortOrder,
+          shop_visible: configForm.shopVisible,
+          showcase_animated: configForm.showcaseAnimated,
+          showcase_card_ids: showcaseCards.length > 0 ? showcaseCards : null,
+          game_release_date: configForm.gameReleaseDate || null,
+        }),
+      );
+    }
 
+    const results = await Promise.allSettled(promises);
     const failed = results.filter((r) => r.status === 'rejected');
-
     if (failed.length === 0) {
       setSaveResult({ ok: true, msg: t('admin.saved') });
       await loadSets();
     } else {
-      const reason =
-        failed[0].status === 'rejected'
-          ? (failed[0].reason as Error).message
-          : t('admin.unknownError');
+      const reason = failed[0].status === 'rejected' ? (failed[0].reason as Error).message : t('admin.unknownError');
       setSaveResult({ ok: false, msg: reason });
     }
-
     setSaving(false);
-  }, [token, selectedSet, setForm, configForm, ratesForm, loadSets, t]);
+  }, [token, modalRow, setForm, configForm, ratesForm, context, loadSets, t]);
 
-  // ----------------------------------------------------------
-  // Cancel
-  // ----------------------------------------------------------
+  // Rarity rates helpers
+  const ratesSum = ratesForm.reduce((sum, r) => sum + Number(r.ratePct), 0);
 
-  const handleCancel = () => {
-    setSelectedSet(null);
-    setSaveResult(null);
-  };
-
-  // ----------------------------------------------------------
-  // Badge helper
-  // ----------------------------------------------------------
-
-  const typeBadge = (type: string | null) => {
-    if (!type) return <span className={`${styles.badge} ${styles.badgeBooster}`}>—</span>;
-    const lower = type.toLowerCase();
-    if (lower.includes('starter') || lower.includes('deck')) {
-      return <span className={`${styles.badge} ${styles.badgeStarter}`}>{type}</span>;
-    }
-    return <span className={`${styles.badge} ${styles.badgeBooster}`}>{type}</span>;
-  };
-
-  // Filtered sets based on route
-  const filteredSets = useMemo(() => {
-    if (!routeFilter) return sets;
-    return sets.filter((s) => s.product_type === routeFilter);
-  }, [sets, routeFilter]);
-
-  // ----------------------------------------------------------
   // Render
-  // ----------------------------------------------------------
-
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.loading}>{t('admin.loading')}</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.error}>{error}</p>
-      </div>
-    );
-  }
+  if (loading) return <div className={styles.page}><p className={styles.loading}>{t('admin.loading')}</p></div>;
+  if (error) return <div className={styles.page}><p className={styles.error}>{error}</p></div>;
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>{pageTitle}</h1>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{pageTitle}</h1>
+        {context === 'sets' && (
+          <button className={styles.createBtn} onClick={openCreateModal}>
+            {routeFilter === 'starter' ? t('admin.createStarter') : t('admin.createSet')}
+          </button>
+        )}
+      </div>
 
       <table className={styles.table}>
         <thead className={styles.tableHead}>
@@ -340,351 +417,461 @@ export function AdminSetsPage() {
             <th className={styles.th}>{t('admin.name')}</th>
             <th className={styles.th}>{t('admin.code')}</th>
             <th className={styles.th}>{t('admin.wave')}</th>
-            {!routeFilter && <th className={styles.th}>{t('admin.type')}</th>}
-            <th className={styles.th}>{t('admin.active')}</th>
+            <th className={styles.th}>{t('admin.release')}</th>
+            <th className={styles.th}>{t('admin.status')}</th>
             <th className={styles.th}>{t('admin.cards')}</th>
+            {context === 'shop' && routeFilter === 'booster' && (
+              <>
+                <th className={styles.th}>{t('admin.packDisplayPrice')}</th>
+                <th className={styles.th}>{t('admin.packDisplaySize')}</th>
+              </>
+            )}
+            {context === 'shop' && routeFilter === 'starter' && (
+              <th className={styles.th}>{t('admin.deckPrice')}</th>
+            )}
+            {context === 'shop' && (
+              <th className={styles.th}>{t('admin.shopVisibility')}</th>
+            )}
+            <th className={styles.th} />
           </tr>
         </thead>
         <tbody>
           {filteredSets.map((row) => (
-            <Fragment key={row.name}>
-              <tr
-                className={`${styles.tr} ${selectedSet === row.name ? styles.trSelected : ''}`}
-                onClick={() => handleRowClick(row)}
+            <tr key={row.name} className={styles.tr}>
+              <td
+                className={styles.td}
+                style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }}
+                onClick={() => navigate(`/app/admin/sets/${encodeURIComponent(row.name)}`)}
               >
-                <td
-                  className={styles.td}
-                  style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/app/admin/sets/${encodeURIComponent(row.name)}`);
-                  }}
-                >
-                  {row.name}
-                </td>
-                <td className={styles.tdCode}>{row.code}</td>
-                <td className={styles.td}>{row.wave}</td>
-                {!routeFilter && <td className={styles.td}>{typeBadge(row.product_type)}</td>}
-                <td
-                  className={styles.td}
-                  onClick={(e) => handleToggleActive(e, row)}
-                >
-                  <span className={row.active ? styles.statusActive : styles.statusInactive}>
-                    {row.active ? t('admin.statusActive') : t('admin.statusInactive')}
+                {row.name}
+              </td>
+              <td className={styles.tdCode}>{row.code}</td>
+              <td className={styles.td}>{row.wave}</td>
+              <td className={styles.td}>{row.release_date ? row.release_date.split('-').reverse().join('.') : '—'}</td>
+              <td className={styles.td}>
+                <span className={row.active ? styles.statusActive : styles.statusInactive}>
+                  {row.active ? t('admin.statusActive') : t('admin.statusInactive')}
+                </span>
+              </td>
+              <td className={styles.td}>{row.card_count}</td>
+              {context === 'shop' && routeFilter === 'booster' && (
+                <>
+                  <td className={styles.td}>{row.price_pack} DP / {row.price_display ? `${row.price_display} DP` : '—'}</td>
+                  <td className={styles.td}>{row.pack_size} {t('admin.cardsPerPack')} / {row.display_size ?? '—'} {t('admin.boostersPerDisplay')}</td>
+                </>
+              )}
+              {context === 'shop' && routeFilter === 'starter' && (
+                <td className={styles.td}>{row.price_pack} DP</td>
+              )}
+              {context === 'shop' && (
+                <td className={styles.td}>
+                  <span className={row.shop_visible ? styles.statusActive : styles.statusInactive}>
+                    {row.shop_visible ? t('admin.shopVisible') : t('admin.shopHidden')}
                   </span>
                 </td>
-                <td className={styles.td}>{row.card_count}</td>
-              </tr>
-
-              {selectedSet === row.name && (
-                <tr className={styles.detailRow}>
-                  <td className={styles.detailCell} colSpan={routeFilter ? 5 : 6}>
-                    {detailLoading ? (
-                      <p className={styles.loading}>{t('admin.loading')}</p>
-                    ) : (
-                      <>
-                        <div className={styles.detailGrid}>
-                          {/* Left column: Set Fields + Shop Config */}
-                          <div>
-                            <div className={styles.detailSection}>
-                              <h3 className={styles.detailSectionTitle}>
-                                {t('admin.setSettings')}
-                              </h3>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.active')}</span>
-                                <ToggleSwitch
-                                  checked={setForm?.active ?? false}
-                                  onChange={() =>
-                                    setSetForm((prev) =>
-                                      prev ? { ...prev, active: !prev.active } : prev,
-                                    )
-                                  }
-                                  labelOn={t('admin.deactivate')}
-                                  labelOff={t('admin.activate')}
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.wave')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="number"
-                                  min={0}
-                                  value={setForm?.wave ?? 0}
-                                  onChange={(e) =>
-                                    setSetForm((prev) =>
-                                      prev
-                                        ? { ...prev, wave: Number(e.target.value) }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.release')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="date"
-                                  value={setForm?.releaseDate ?? ''}
-                                  onChange={(e) =>
-                                    setSetForm((prev) =>
-                                      prev
-                                        ? { ...prev, releaseDate: e.target.value }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                            </div>
-
-                            <div className={styles.detailSection} style={{ marginTop: 20 }}>
-                              <h3 className={styles.detailSectionTitle}>
-                                {t('admin.shopConfig')}
-                              </h3>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.packPrice')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="number"
-                                  min={0}
-                                  value={configForm?.pricePack ?? 0}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? { ...prev, pricePack: Number(e.target.value) }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.displayPrice')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="number"
-                                  min={0}
-                                  value={configForm?.priceDisplay ?? ''}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            priceDisplay: e.target.value
-                                              ? Number(e.target.value)
-                                              : null,
-                                          }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.packSize')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="number"
-                                  min={1}
-                                  value={configForm?.packSize ?? 0}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? { ...prev, packSize: Number(e.target.value) }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.displaySize')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="number"
-                                  min={0}
-                                  value={configForm?.displaySize ?? ''}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? {
-                                            ...prev,
-                                            displaySize: e.target.value
-                                              ? Number(e.target.value)
-                                              : null,
-                                          }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.descDe')}</span>
-                                <textarea
-                                  className={styles.fieldTextarea}
-                                  value={configForm?.descDe ?? ''}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? { ...prev, descDe: e.target.value }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.descEn')}</span>
-                                <textarea
-                                  className={styles.fieldTextarea}
-                                  value={configForm?.descEn ?? ''}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? { ...prev, descEn: e.target.value }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.featured')}</span>
-                                <ToggleSwitch
-                                  checked={configForm?.featured ?? false}
-                                  onChange={() =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? { ...prev, featured: !prev.featured }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                              <div className={styles.fieldRow}>
-                                <span className={styles.fieldLabel}>{t('admin.sortOrder')}</span>
-                                <input
-                                  className={styles.fieldInput}
-                                  type="number"
-                                  min={0}
-                                  value={configForm?.sortOrder ?? 0}
-                                  onChange={(e) =>
-                                    setConfigForm((prev) =>
-                                      prev
-                                        ? { ...prev, sortOrder: Number(e.target.value) }
-                                        : prev,
-                                    )
-                                  }
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Right column: Rarity Rates */}
-                          <div className={styles.detailSection}>
-                            <h3 className={styles.detailSectionTitle}>
-                              {t('admin.rarityRates')}
-                            </h3>
-
-                            <table className={styles.ratesTable}>
-                              <thead>
-                                <tr>
-                                  <th>{t('admin.rarityLabel')}</th>
-                                  <th>{t('admin.ratePercent')}</th>
-                                  <th />
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {ratesForm.map((rate, idx) => (
-                                  <tr key={idx}>
-                                    <td>
-                                      <input
-                                        className={styles.ratesInput}
-                                        type="text"
-                                        value={rate.rarity}
-                                        placeholder={t('admin.rarityPlaceholder')}
-                                        onChange={(e) =>
-                                          handleRateChange(idx, 'rarity', e.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <input
-                                        className={styles.ratesInput}
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        step={0.1}
-                                        value={rate.ratePct}
-                                        onChange={(e) =>
-                                          handleRateChange(
-                                            idx,
-                                            'ratePct',
-                                            Number(e.target.value),
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                    <td>
-                                      <button
-                                        type="button"
-                                        className={styles.ratesRemoveBtn}
-                                        onClick={() => handleRemoveRate(idx)}
-                                      >
-                                        {t('admin.remove')}
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-
-                            <button
-                              type="button"
-                              className={styles.ratesAddBtn}
-                              onClick={handleAddRate}
-                            >
-                              {t('admin.addRate')}
-                            </button>
-
-                            {ratesForm.length > 0 && Math.abs(ratesSum - 100) > 0.01 && (
-                              <p className={styles.rateWarning}>
-                                {t('admin.rateSum', { sum: ratesSum.toFixed(1) })}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className={styles.actions}>
-                          <button
-                            type="button"
-                            className={styles.saveBtn}
-                            disabled={saving}
-                            onClick={handleSave}
-                          >
-                            {saving ? t('admin.saving') : t('admin.save')}
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.cancelBtn}
-                            onClick={handleCancel}
-                          >
-                            {t('admin.cancel')}
-                          </button>
-                          {saveResult && (
-                            <span
-                              className={
-                                saveResult.ok ? styles.successMsg : styles.errorMsg
-                              }
-                            >
-                              {saveResult.msg}
-                            </span>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </td>
-                </tr>
               )}
-            </Fragment>
+              <td className={styles.tdGear}>
+                <button
+                  className={styles.gearBtn}
+                  onClick={(e) => { e.stopPropagation(); openModal(row); }}
+                  title={t('admin.settings')}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        open={modalRow !== null}
+        title={modalRow?.name ?? ''}
+        saving={saving}
+        saveLabel={t('common.save')}
+        cancelLabel={t('common.cancel')}
+        deleteLabel={t('admin.deleteSet')}
+        resultMsg={saveResult?.msg}
+        resultOk={saveResult?.ok}
+        onSave={handleSave}
+        onClose={closeModal}
+        onDelete={handleDeleteSet}
+      >
+        {/* Set Settings — Cards & Sets context */}
+        {context === 'sets' && setForm && (
+          <>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.active')}</span>
+              <div className={ms.statusRow}>
+                <button
+                  className={`${ms.statusBtn} ${setForm.active ? ms.statusBtnActive : ''}`}
+                  onClick={() => setSetForm((p) => p ? { ...p, active: true } : p)}
+                >{t('admin.statusActive')}</button>
+                <button
+                  className={`${ms.statusBtn} ${!setForm.active ? ms.statusBtnInactive : ''}`}
+                  onClick={() => setSetForm((p) => p ? { ...p, active: false } : p)}
+                >{t('admin.statusInactive')}</button>
+              </div>
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.wave')}</span>
+              <input
+                className={ms.fieldInput}
+                type="number"
+                min={0}
+                value={setForm.wave}
+                onChange={(e) => setSetForm((p) => p ? { ...p, wave: Number(e.target.value) } : p)}
+              />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.release')}</span>
+              <input
+                className={ms.fieldInput}
+                type="date"
+                value={setForm.releaseDate}
+                onChange={(e) => setSetForm((p) => p ? { ...p, releaseDate: e.target.value } : p)}
+              />
+            </div>
+
+            {/* Rarity Rates — only for boosters */}
+            {routeFilter === 'booster' && <div style={{ marginTop: 8, borderTop: '1px solid var(--orichalcos-faint)', paddingTop: 14 }}>
+              <span className={ms.fieldLabel} style={{ display: 'block', marginBottom: 8 }}>{t('admin.rarityRates')}</span>
+              {ratesForm.map((rate, idx) => (
+                <div key={idx} className={ms.fieldRow} style={{ marginBottom: 6 }}>
+                  <span className={ms.fieldInput} style={{ flex: 2, opacity: 0.8 }}>{rate.rarity}</span>
+                  <input className={ms.fieldInput} style={{ flex: 1 }} type="number" min={0} max={100} step={0.1} value={rate.ratePct}
+                    onChange={(e) => setRatesForm((p) => p.map((r, i) => i === idx ? { ...r, ratePct: Number(e.target.value) } : r))} />
+                  <button className={ms.cancelBtn} style={{ padding: '6px 10px' }}
+                    onClick={() => setRatesForm((p) => p.filter((_, i) => i !== idx))}>x</button>
+                </div>
+              ))}
+              {/* Add button — only show rarities not yet in the list */}
+              {(() => {
+                const used = new Set(ratesForm.map((r) => r.rarity));
+                const missing = availableRarities.filter((r) => !used.has(r));
+                if (missing.length === 0) return null;
+                return (
+                  <select
+                    className={ms.fieldInput}
+                    style={{ marginTop: 4, fontSize: '0.75rem' }}
+                    value=""
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      setRatesForm((p) => [...p, { rarity: e.target.value, ratePct: 0 }]);
+                    }}
+                  >
+                    <option value="">{t('admin.addRate')}</option>
+                    {missing.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                );
+              })()}
+              {ratesForm.length > 0 && Math.abs(ratesSum - 100) > 0.01 && (
+                <span className={ms.resultErr} style={{ display: 'block', marginTop: 6, fontSize: '0.5rem' }}>
+                  {t('admin.rateSum', { sum: ratesSum.toFixed(1) })}
+                </span>
+              )}
+            </div>}
+          </>
+        )}
+
+        {/* Shop Config — Shop context */}
+        {context === 'shop' && configForm && (
+          <>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{routeFilter === 'starter' ? t('admin.deckPrice') : t('admin.packPrice')}</span>
+              <input className={ms.fieldInput} type="number" min={0} value={configForm.pricePack}
+                onChange={(e) => setConfigForm((p) => p ? { ...p, pricePack: Number(e.target.value) } : p)} />
+            </div>
+            {routeFilter === 'booster' && (
+              <>
+                <div className={ms.fieldRow}>
+                  <span className={ms.fieldLabel}>{t('admin.displayPrice')}</span>
+                  <input className={ms.fieldInput} type="number" min={0} value={configForm.priceDisplay ?? ''}
+                    onChange={(e) => setConfigForm((p) => p ? { ...p, priceDisplay: e.target.value ? Number(e.target.value) : null } : p)} />
+                </div>
+                <div className={ms.fieldRow}>
+                  <span className={ms.fieldLabel}>{t('admin.packSize')}</span>
+                  <input className={ms.fieldInput} type="number" min={1} value={configForm.packSize}
+                    onChange={(e) => setConfigForm((p) => p ? { ...p, packSize: Number(e.target.value) } : p)} />
+                </div>
+                <div className={ms.fieldRow}>
+                  <span className={ms.fieldLabel}>{t('admin.displaySize')}</span>
+                  <input className={ms.fieldInput} type="number" min={0} value={configForm.displaySize ?? ''}
+                    onChange={(e) => setConfigForm((p) => p ? { ...p, displaySize: e.target.value ? Number(e.target.value) : null } : p)} />
+                </div>
+              </>
+            )}
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.descDe')}</span>
+              <textarea className={`${ms.fieldInput} ${ms.fieldTextarea}`} rows={3} value={configForm.descDe}
+                onChange={(e) => setConfigForm((p) => p ? { ...p, descDe: e.target.value } : p)} />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.descEn')}</span>
+              <textarea className={`${ms.fieldInput} ${ms.fieldTextarea}`} rows={3} value={configForm.descEn}
+                onChange={(e) => setConfigForm((p) => p ? { ...p, descEn: e.target.value } : p)} />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.sortOrder')}</span>
+              <input className={ms.fieldInput} type="number" min={0} value={configForm.sortOrder}
+                onChange={(e) => setConfigForm((p) => p ? { ...p, sortOrder: Number(e.target.value) } : p)} />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.gameReleaseDate')}</span>
+              <input className={ms.fieldInput} type="date" value={configForm.gameReleaseDate}
+                onChange={(e) => setConfigForm((p) => p ? { ...p, gameReleaseDate: e.target.value } : p)} />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.shopVisibility')}</span>
+              <div className={ms.statusRow}>
+                <button
+                  className={`${ms.statusBtn} ${configForm.shopVisible ? ms.statusBtnActive : ''}`}
+                  onClick={() => setConfigForm((p) => p ? { ...p, shopVisible: true } : p)}
+                >{t('admin.shopVisible')}</button>
+                <button
+                  className={`${ms.statusBtn} ${!configForm.shopVisible ? ms.statusBtnInactive : ''}`}
+                  onClick={() => setConfigForm((p) => p ? { ...p, shopVisible: false } : p)}
+                >{t('admin.shopHidden')}</button>
+              </div>
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.showcaseStyle')}</span>
+              <div className={ms.statusRow}>
+                <button
+                  className={`${ms.statusBtn} ${!configForm.showcaseAnimated ? ms.statusBtnActive : ''}`}
+                  onClick={() => setConfigForm((p) => p ? { ...p, showcaseAnimated: false } : p)}
+                >{t('admin.showcaseStatic')}</button>
+                <button
+                  className={`${ms.statusBtn} ${configForm.showcaseAnimated ? ms.statusBtnActive : ''}`}
+                  onClick={() => setConfigForm((p) => p ? { ...p, showcaseAnimated: true } : p)}
+                >{t('admin.showcaseAnimated')}</button>
+              </div>
+            </div>
+
+            {/* Showcase Card Picker */}
+            {setCardOptions.length > 0 && (() => {
+              const maxSlots = routeFilter === 'starter' ? 3 : routeFilter === 'booster' ? 3 : 5;
+              const slotLabel = (i: number) =>
+                routeFilter === 'starter' && maxSlots === 3
+                  ? (i === 1 ? t('admin.showcaseBoss') : t('admin.showcaseFlank'))
+                  : `Slot ${i + 1}`;
+
+              return (
+                <div style={{ marginTop: 8, borderTop: '1px solid var(--orichalcos-faint)', paddingTop: 14 }}>
+                  <span className={ms.fieldLabel} style={{ display: 'block', marginBottom: 8 }}>
+                    {t('admin.showcaseCards')} ({showcaseCards.length}/{maxSlots})
+                  </span>
+
+                  {/* Selected slots */}
+                  <div className={styles.showcaseSlots}>
+                    {Array.from({ length: maxSlots }).map((_, i) => {
+                      const cardId = showcaseCards[i];
+                      const card = cardId ? setCardOptions.find((c) => c.id === cardId) : null;
+                      return (
+                        <div key={i} className={styles.showcaseSlot}>
+                          {cardId ? (
+                            <>
+                              <img
+                                className={styles.showcaseSlotImg}
+                                src={getCardImageUrl(cardId, 'small')}
+                                alt=""
+                              />
+                              <button
+                                className={styles.showcaseSlotRemove}
+                                onClick={() => setShowcaseCards((prev) => prev.filter((_, j) => j !== i))}
+                              >x</button>
+                            </>
+                          ) : (
+                            <span className={styles.showcaseSlotEmpty}>{slotLabel(i)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Card grid to pick from */}
+                  {showcaseCards.length < maxSlots && (
+                    <div className={styles.showcaseGrid}>
+                      {setCardOptions
+                        .filter((c) => !showcaseCards.includes(c.id))
+                        .map((card) => (
+                          <img
+                            key={card.id}
+                            className={styles.showcaseGridImg}
+                            src={getCardImageUrl(card.id, 'small')}
+                            alt={card.name_de}
+                            title={card.name_de}
+                            onClick={() => setShowcaseCards((prev) => [...prev, card.id].slice(0, maxSlots))}
+                          />
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+          </>
+        )}
+      </SettingsModal>
+
+      {/* Create Set Modal */}
+      <SettingsModal
+        open={createOpen}
+        title={routeFilter === 'starter' ? t('admin.createStarter') : t('admin.createSet')}
+        saving={creating}
+        saveLabel={createResult?.ok ? t('admin.goToDetail') : (importStatus || (creating ? t('admin.creating') : (routeFilter === 'starter' ? t('admin.createStarter') : t('admin.createSet'))))}
+        cancelLabel={t('common.cancel')}
+        resultMsg={createResult?.msg}
+        resultOk={createResult?.ok}
+        onSave={createResult?.ok ? handlePostImportNavigate : handleCreateSet}
+        onClose={creating ? () => undefined : handleCloseCreateModal}
+      >
+        {/* Tabs: API / Custom */}
+        <div className={styles.tabRow}>
+          <button
+            className={`${styles.tab} ${createMode === 'api' ? styles.tabActive : ''}`}
+            onClick={() => setCreateMode('api')}
+          >{t('admin.createSetFromApi')}</button>
+          <button
+            className={`${styles.tab} ${createMode === 'custom' ? styles.tabActive : ''}`}
+            onClick={() => setCreateMode('custom')}
+          >{t('admin.createSetCustom')}</button>
+        </div>
+
+        {/* API Search */}
+        {createMode === 'api' && (
+          <>
+            <input
+              className={ms.fieldInput}
+              type="text"
+              placeholder={t('admin.searchApiSets')}
+              value={apiSearch}
+              onChange={(e) => handleApiSearchChange(e.target.value)}
+            />
+            {apiLoading && <span className={ms.fieldLabel}>{t('admin.loading')}</span>}
+            {!apiLoading && apiDebouncedSearch.length >= 2 && apiResults.length === 0 && (
+              <span className={ms.fieldLabel}>{t('admin.noApiResults')}</span>
+            )}
+            {apiResults.length > 0 && (
+              <div className={styles.apiResultsList}>
+                {apiResults.map((r) => (
+                  <div
+                    key={r.set_name}
+                    className={`${styles.apiResultItem} ${r.already_exists ? styles.apiResultDisabled : ''} ${createForm.name === r.set_name ? styles.apiResultSelected : ''}`}
+                    onClick={() => handleSelectApiSet(r)}
+                  >
+                    <span>{r.set_name}</span>
+                    <span className={styles.apiResultCode}>{r.set_code}</span>
+                    {r.already_exists ? (
+                      <span className={styles.apiResultExists}>{t('admin.setAlreadyExists')}</span>
+                    ) : (
+                      <span className={styles.apiResultMeta}>
+                        {r.num_of_cards} {t('admin.cards')} {r.tcg_date ? `| ${r.tcg_date}` : ''}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Custom mode: Name + Code fields */}
+        {createMode === 'custom' && (
+          <>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.setName')}</span>
+              <input className={ms.fieldInput} value={createForm.name}
+                onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.setCode')}</span>
+              <input className={ms.fieldInput} value={createForm.code}
+                onChange={(e) => setCreateForm((p) => ({ ...p, code: e.target.value }))} />
+            </div>
+          </>
+        )}
+
+        {/* API mode: show selected set name as read-only info */}
+        {createMode === 'api' && createForm.name && (
+          <div className={ms.fieldRow}>
+            <span className={ms.fieldLabel}>{t('admin.setName')}</span>
+            <span className={ms.fieldInput} style={{ opacity: 0.7 }}>{createForm.name} ({createForm.code})</span>
+          </div>
+        )}
+
+        {/* Shared fields: Wave, Release, Status */}
+        <div className={ms.fieldRow}>
+          <span className={ms.fieldLabel}>{t('admin.wave')}</span>
+          <input className={ms.fieldInput} type="number" min={0} value={createForm.wave}
+            onChange={(e) => setCreateForm((p) => ({ ...p, wave: Number(e.target.value) }))} />
+        </div>
+        <div className={ms.fieldRow}>
+          <span className={ms.fieldLabel}>{t('admin.release')}</span>
+          <input className={ms.fieldInput} type="date" value={createForm.releaseDate}
+            onChange={(e) => setCreateForm((p) => ({ ...p, releaseDate: e.target.value }))} />
+        </div>
+        <div className={ms.fieldRow}>
+          <span className={ms.fieldLabel}>{t('admin.status')}</span>
+          <div className={ms.statusRow}>
+            <button className={`${ms.statusBtn} ${createForm.active ? ms.statusBtnActive : ''}`}
+              onClick={() => setCreateForm((p) => ({ ...p, active: true }))}>{t('admin.statusActive')}</button>
+            <button className={`${ms.statusBtn} ${!createForm.active ? ms.statusBtnInactive : ''}`}
+              onClick={() => setCreateForm((p) => ({ ...p, active: false }))}>{t('admin.statusInactive')}</button>
+          </div>
+        </div>
+      </SettingsModal>
+
+      {/* Delete Confirmation — Step 1: confirm delete */}
+      <ConfirmModal
+        open={deleteStep === 'confirm'}
+        title={t('admin.deleteSet')}
+        onClose={() => setDeleteStep(null)}
+        actions={[
+          { label: t('admin.confirmDelete'), variant: 'danger', onClick: handleShowDeleteCards },
+          { label: t('common.cancel'), variant: 'muted', onClick: () => setDeleteStep(null) },
+        ]}
+      >
+        <p>
+          <strong>{modalRow?.name}</strong> {t('admin.deleteSetConfirmMsg')}
+        </p>
+      </ConfirmModal>
+
+      {/* Delete Confirmation — Step 2: also delete cards? */}
+      <ConfirmModal
+        open={deleteStep === 'deleteCards'}
+        title={t('admin.deleteCardsQuestion')}
+        onClose={() => { setDeleteStep(null); setExclusiveCards([]); }}
+        actions={[
+          { label: t('admin.deleteCardsYes', { count: exclusiveCards.length }), variant: 'danger', onClick: () => executeDelete(true) },
+          { label: t('admin.deleteCardsNo'), variant: 'primary', onClick: () => executeDelete(false) },
+          { label: t('common.cancel'), variant: 'muted', onClick: () => { setDeleteStep(null); setExclusiveCards([]); } },
+        ]}
+      >
+        <p>{t('admin.deleteCardsExplain')}</p>
+        {exclusiveLoading && <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>...</p>}
+        {!exclusiveLoading && exclusiveCards.length === 0 && (
+          <p style={{ color: 'var(--orichalcos-light)', fontSize: '0.8rem', marginTop: 8 }}>
+            {t('admin.noExclusiveCards')}
+          </p>
+        )}
+        {!exclusiveLoading && exclusiveCards.length > 0 && (
+          <div style={{ marginTop: 10, maxHeight: 200, overflowY: 'auto', fontSize: '0.8rem' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: 6 }}>
+              {t('admin.exclusiveCardsCount', { count: exclusiveCards.length })}
+            </p>
+            {exclusiveCards.map((c) => (
+              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid rgba(0,220,168,0.05)' }}>
+                <span style={{ color: 'var(--text-primary)' }}>{c.name_de}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{c.frame_type}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </ConfirmModal>
     </div>
   );
 }

@@ -14,10 +14,38 @@ type PgClient = pg.PoolClient;
 export const shopRouter = Router();
 
 // ---------------------------------------------------------------------------
+// Auto-activation: activate sets whose game_release_date has been reached.
+// Runs at most once per hour (checked on every GET /products request).
+// ---------------------------------------------------------------------------
+let lastAutoActivateCheck = 0;
+async function checkAutoActivation() {
+  const now = Date.now();
+  if (now - lastAutoActivateCheck < 3600000) return; // once per hour
+  lastAutoActivateCheck = now;
+  try {
+    const result = await pool.query(`
+      UPDATE card_sets cs SET active = TRUE
+      FROM shop_set_config sc
+      WHERE sc.set_name = cs.name
+        AND sc.game_release_date IS NOT NULL
+        AND sc.game_release_date <= CURRENT_DATE
+        AND cs.active = FALSE
+    `);
+    if (result.rowCount && result.rowCount > 0) {
+      console.log(`[AUTO-RELEASE] Activated ${result.rowCount} set(s)`);
+      await pool.query('UPDATE data_version SET version = version + 1, updated_at = NOW() WHERE id = 1');
+    }
+  } catch (err) {
+    console.error('[AUTO-RELEASE] Check failed:', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // GET /api/shop/products — public, no auth required
 // Returns all shop products grouped by type (boosters, starters, cosmetics).
 // ---------------------------------------------------------------------------
 shopRouter.get('/products', async (_req, res) => {
+  await checkAutoActivation();
   try {
     // Boosters: join card_sets + shop_set_config, count cards per set
     const boostersResult = await pool.query(`
@@ -26,6 +54,7 @@ shopRouter.get('/products', async (_req, res) => {
         cs.code,
         cs.wave,
         cs.active,
+        sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
         sc.price_display AS "priceDisplay",
         sc.pack_size   AS "packSize",
@@ -33,16 +62,20 @@ shopRouter.get('/products', async (_req, res) => {
         sc.desc_de     AS "descDe",
         sc.desc_en     AS "descEn",
         sc.featured,
-        cs.image_path  AS "imagePath",
+        sc.showcase_card_ids AS "showcaseCardIds",
+        COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
+        sc.display_showcase_card_ids AS "displayShowcaseCardIds",
+        COALESCE(sc.display_showcase_animated, FALSE) AS "displayShowcaseAnimated",
+        sc.game_release_date AS "gameReleaseDate",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
       LEFT JOIN (
-        SELECT set_name, COUNT(DISTINCT card_id)::int AS card_count
+        SELECT set_name, COALESCE(SUM(quantity), COUNT(DISTINCT card_id))::int AS card_count
         FROM card_set_entries
         GROUP BY set_name
       ) cnt ON cnt.set_name = cs.name
-      WHERE sc.product_type = 'booster'
+      WHERE sc.product_type = 'booster' AND sc.shop_visible = TRUE
       ORDER BY sc.sort_order
     `);
 
@@ -53,6 +86,7 @@ shopRouter.get('/products', async (_req, res) => {
         cs.code,
         cs.wave,
         cs.active,
+        sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
         sc.price_display AS "priceDisplay",
         sc.pack_size   AS "packSize",
@@ -60,16 +94,20 @@ shopRouter.get('/products', async (_req, res) => {
         sc.desc_de     AS "descDe",
         sc.desc_en     AS "descEn",
         sc.featured,
-        cs.image_path  AS "imagePath",
+        sc.showcase_card_ids AS "showcaseCardIds",
+        COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
+        sc.display_showcase_card_ids AS "displayShowcaseCardIds",
+        COALESCE(sc.display_showcase_animated, FALSE) AS "displayShowcaseAnimated",
+        sc.game_release_date AS "gameReleaseDate",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
       LEFT JOIN (
-        SELECT set_name, COUNT(DISTINCT card_id)::int AS card_count
+        SELECT set_name, COALESCE(SUM(quantity), COUNT(DISTINCT card_id))::int AS card_count
         FROM card_set_entries
         GROUP BY set_name
       ) cnt ON cnt.set_name = cs.name
-      WHERE sc.product_type = 'starter'
+      WHERE sc.product_type = 'starter' AND sc.shop_visible = TRUE
       ORDER BY sc.sort_order
     `);
 
@@ -89,6 +127,45 @@ shopRouter.get('/products', async (_req, res) => {
       ORDER BY item_type, sort_order
     `);
 
+    // Auto-pick showcase cards for all sets (used as fallback for displays)
+    const allProducts = [...boostersResult.rows, ...startersResult.rows];
+    const allSetNames = allProducts.map((p: any) => p.setName);
+
+    if (allSetNames.length > 0) {
+      const autoResult = await pool.query(
+        `SELECT DISTINCT ON (cse.set_name, rarity_rank)
+           cse.set_name, cse.card_id
+         FROM card_set_entries cse
+         JOIN cards c ON c.id = cse.card_id
+         CROSS JOIN LATERAL (
+           SELECT CASE cse.rarity
+             WHEN 'Secret Rare' THEN 1 WHEN 'Ultra Rare' THEN 2
+             WHEN 'Super Rare' THEN 3 WHEN 'Rare' THEN 4
+             ELSE 5 END AS rarity_rank
+         ) rr
+         WHERE cse.set_name = ANY($1) AND c.frame_type IN ('normal', 'effect', 'fusion', 'ritual')
+         ORDER BY cse.set_name, rarity_rank, RANDOM()
+         `,
+        [allSetNames]
+      );
+
+      const autoMap = new Map<string, number[]>();
+      for (const row of autoResult.rows as any[]) {
+        const list = autoMap.get(row.set_name) ?? [];
+        if (list.length < 5) list.push(row.card_id);
+        autoMap.set(row.set_name, list);
+      }
+
+      for (const product of allProducts as any[]) {
+        // Fill showcaseCardIds if empty
+        if (!product.showcaseCardIds || product.showcaseCardIds.length === 0) {
+          product.showcaseCardIds = autoMap.get(product.setName) ?? [];
+        }
+        // Always provide auto-picked 5 cards for display mode
+        product.autoShowcaseCardIds = autoMap.get(product.setName) ?? [];
+      }
+    }
+
     res.json({
       boosters: boostersResult.rows,
       starters: startersResult.rows,
@@ -97,6 +174,28 @@ shopRouter.get('/products', async (_req, res) => {
   } catch (err) {
     console.error('Failed to load shop products:', err);
     res.status(500).json({ error: 'Shop-Produkte konnten nicht geladen werden' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/shop/featured — public, returns active featured carousel items
+// ---------------------------------------------------------------------------
+shopRouter.get('/featured', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT sf.id, sf.product_type, sf.product_id,
+              sf.title_de, sf.title_en, sf.subtitle_de, sf.subtitle_en,
+              sf.image_path, sf.sort_order,
+              cs.code AS set_code
+       FROM shop_featured sf
+       LEFT JOIN card_sets cs ON cs.name = sf.product_id
+       WHERE sf.active = TRUE
+       ORDER BY sf.sort_order, sf.id`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Failed to load featured items:', err);
+    res.status(500).json({ error: 'Featured-Produkte konnten nicht geladen werden' });
   }
 });
 
@@ -124,12 +223,16 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
         sc.desc_de     AS "descDe",
         sc.desc_en     AS "descEn",
         sc.featured,
-        cs.image_path  AS "imagePath",
+        sc.showcase_card_ids AS "showcaseCardIds",
+        COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
+        sc.display_showcase_card_ids AS "displayShowcaseCardIds",
+        COALESCE(sc.display_showcase_animated, FALSE) AS "displayShowcaseAnimated",
+        sc.game_release_date AS "gameReleaseDate",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
       LEFT JOIN (
-        SELECT set_name, COUNT(DISTINCT card_id)::int AS card_count
+        SELECT set_name, COALESCE(SUM(quantity), COUNT(DISTINCT card_id))::int AS card_count
         FROM card_set_entries
         GROUP BY set_name
       ) cnt ON cnt.set_name = cs.name
@@ -155,6 +258,7 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
         cse.card_id     AS "cardId",
         cse.rarity,
         cse.rarity_code AS "rarityCode",
+        cse.artwork_id  AS "artworkId",
         COALESCE(uc.quantity, 0)::int AS "owned"
       FROM card_set_entries cse
       LEFT JOIN user_cards uc ON uc.card_id = cse.card_id AND uc.user_id = $2
@@ -317,35 +421,36 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
       [price, userId]
     );
 
-    let pulledCardIds: number[];
+    let pulledCards: PulledCard[];
 
     if (productType === 'starter') {
       // Starter deck: give ALL cards in the set
-      pulledCardIds = await getStarterDeckCards(client, productId);
+      pulledCards = await getStarterDeckCards(client, productId);
     } else if (productType === 'display') {
       // Display: open displaySize packs
       const packCount = config.display_size ?? 24;
       const packSize = config.pack_size ?? 5;
-      pulledCardIds = [];
+      pulledCards = [];
       for (let i = 0; i < packCount; i++) {
         const packCards = await openBoosterPack(client, productId, packSize);
-        pulledCardIds.push(...packCards);
+        pulledCards.push(...packCards);
       }
     } else {
       // Single booster pack
       const packSize = config.pack_size ?? 5;
-      pulledCardIds = await openBoosterPack(client, productId, packSize);
+      pulledCards = await openBoosterPack(client, productId, packSize);
     }
 
-    // Add cards to user collection
-    await addCardsToCollection(client, userId, pulledCardIds);
+    // Add cards to user collection + unlock artworks
+    await addCardsToCollection(client, userId, pulledCards);
 
     await client.query('COMMIT');
 
     res.json({
       success: true,
       type: productType,
-      cards: pulledCardIds,
+      cards: pulledCards.map((c) => c.cardId),
+      pulledCards,
       dpRemaining: currentDp - price,
     });
   } catch (err) {
@@ -360,20 +465,25 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 // Helper: open a booster pack using weighted rarity selection
 // ---------------------------------------------------------------------------
+interface PulledCard {
+  cardId: number;
+  artworkId: number;
+}
+
 async function openBoosterPack(
   client: PgClient,
   setName: string,
   packSize: number,
-): Promise<number[]> {
+): Promise<PulledCard[]> {
   // Load rarity rates for this set
   const ratesResult = await client.query(
     `SELECT rarity, rate_pct FROM shop_rarity_rates WHERE set_name = $1`,
     [setName]
   );
 
-  // Load all cards grouped by rarity
+  // Load all cards grouped by rarity (include artwork_id from set entry)
   const cardsResult = await client.query(
-    `SELECT card_id, rarity FROM card_set_entries WHERE set_name = $1`,
+    `SELECT card_id, rarity, artwork_id FROM card_set_entries WHERE set_name = $1`,
     [setName]
   );
 
@@ -381,14 +491,14 @@ async function openBoosterPack(
     throw new Error(`No cards found in set: ${setName}`);
   }
 
-  // Group cards by rarity
-  const cardsByRarity: Record<string, number[]> = {};
+  // Group cards by rarity (store card_id + artwork_id)
+  const cardsByRarity: Record<string, Array<{ cardId: number; artworkId: number }>> = {};
   for (const row of cardsResult.rows) {
     const rarity = row.rarity ?? 'Common';
     if (!cardsByRarity[rarity]) {
       cardsByRarity[rarity] = [];
     }
-    cardsByRarity[rarity].push(row.card_id);
+    cardsByRarity[rarity].push({ cardId: row.card_id, artworkId: row.artwork_id ?? row.card_id });
   }
 
   // Build weighted rarity tiers from DB rates
@@ -399,13 +509,13 @@ async function openBoosterPack(
 
   // If no rarity rates configured, fall back to uniform random
   if (rarityTiers.length === 0) {
-    const allCardIds = cardsResult.rows.map((r: { card_id: number }) => r.card_id);
-    return pickRandom(allCardIds, packSize);
+    const allCards = cardsResult.rows.map((r: any) => ({ cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id }));
+    return pickRandomCards(allCards, packSize);
   }
 
   const totalWeight = rarityTiers.reduce((sum, t) => sum + t.weight, 0);
 
-  const pulled: number[] = [];
+  const pulled: PulledCard[] = [];
   for (let i = 0; i < packSize; i++) {
     // Pick a rarity tier via weighted random
     const roll = Math.random() * totalWeight;
@@ -426,9 +536,9 @@ async function openBoosterPack(
       pulled.push(pool[idx]);
     } else {
       // Fallback: pick from any rarity if the chosen rarity has no cards
-      const allCardIds = cardsResult.rows.map((r: { card_id: number }) => r.card_id);
-      const idx = Math.floor(Math.random() * allCardIds.length);
-      pulled.push(allCardIds[idx]);
+      const allCards = cardsResult.rows.map((r: any) => ({ cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id }));
+      const idx = Math.floor(Math.random() * allCards.length);
+      pulled.push(allCards[idx]);
     }
   }
 
@@ -441,12 +551,17 @@ async function openBoosterPack(
 async function getStarterDeckCards(
   client: PgClient,
   setName: string,
-): Promise<number[]> {
+): Promise<PulledCard[]> {
   const result = await client.query(
-    'SELECT card_id FROM card_set_entries WHERE set_name = $1',
+    'SELECT card_id, artwork_id, COALESCE(quantity, 1) AS quantity FROM card_set_entries WHERE set_name = $1',
     [setName]
   );
-  return result.rows.map((r: { card_id: number }) => r.card_id);
+  const cards: PulledCard[] = [];
+  for (const r of result.rows as any[]) {
+    const entry = { cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id };
+    for (let i = 0; i < r.quantity; i++) cards.push(entry);
+  }
+  return cards;
 }
 
 // ---------------------------------------------------------------------------
@@ -455,14 +570,23 @@ async function getStarterDeckCards(
 async function addCardsToCollection(
   client: PgClient,
   userId: number,
-  cardIds: number[],
+  cards: PulledCard[],
 ) {
-  for (const cardId of cardIds) {
+  for (const { cardId, artworkId } of cards) {
+    // Add card to collection — set preferred_artwork_id on first acquisition
     await client.query(
-      `INSERT INTO user_cards (user_id, card_id, quantity)
-       VALUES ($1, $2, 1)
+      `INSERT INTO user_cards (user_id, card_id, quantity, preferred_artwork_id)
+       VALUES ($1, $2, 1, $3)
        ON CONFLICT (user_id, card_id) DO UPDATE SET quantity = user_cards.quantity + 1`,
-      [userId, cardId]
+      [userId, cardId, artworkId]
+    );
+
+    // Unlock the artwork for this user (idempotent)
+    await client.query(
+      `INSERT INTO user_card_artworks (user_id, card_id, artwork_id, source)
+       VALUES ($1, $2, $3, 'shop')
+       ON CONFLICT (user_id, artwork_id) DO NOTHING`,
+      [userId, cardId, artworkId]
     );
   }
 }
@@ -470,8 +594,8 @@ async function addCardsToCollection(
 // ---------------------------------------------------------------------------
 // Helper: pick N random elements from an array (with replacement)
 // ---------------------------------------------------------------------------
-function pickRandom(items: number[], count: number): number[] {
-  const result: number[] = [];
+function pickRandomCards(items: PulledCard[], count: number): PulledCard[] {
+  const result: PulledCard[] = [];
   for (let i = 0; i < count; i++) {
     const idx = Math.floor(Math.random() * items.length);
     result.push(items[idx]);

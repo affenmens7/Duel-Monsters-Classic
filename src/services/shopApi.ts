@@ -22,26 +22,18 @@ export interface ShopSetProduct {
   descDe: string;
   descEn: string;
   featured: boolean;
-  imagePath: string | null;
   cardCount: number;
-}
-
-export interface ShopCosmetic {
-  itemType: string;
-  itemId: string;
-  nameDe: string;
-  nameEn: string;
-  descDe: string;
-  descEn: string;
-  price: number;
-  previewData: string | null;
-  available: boolean;
+  showcaseCardIds: number[];
+  showcaseAnimated: boolean;
+  displayShowcaseCardIds?: number[] | null;
+  displayShowcaseAnimated?: boolean;
+  autoShowcaseCardIds?: number[];
+  gameReleaseDate?: string | null;
 }
 
 export interface ShopData {
   boosters: ShopSetProduct[];
   starters: ShopSetProduct[];
-  cosmetics: ShopCosmetic[];
 }
 
 export interface RarityRate {
@@ -53,6 +45,7 @@ export interface SetCardEntry {
   cardId: number;
   rarity: string;
   rarityCode: string;
+  artworkId: number | null;
   owned: number;
 }
 
@@ -62,18 +55,44 @@ export interface SetDetail {
   cards: SetCardEntry[];
 }
 
+export interface PulledCard {
+  cardId: number;
+  artworkId: number;
+}
+
 export interface BuyResult {
   success: boolean;
   type: string;
   cards?: number[];
+  pulledCards?: PulledCard[];
   productId?: string;
   itemId?: string;
   dpRemaining: number;
 }
 
+export interface ShopFeaturedItem {
+  id: number;
+  product_type: string;
+  product_id: string;
+  title_de: string;
+  title_en: string | null;
+  subtitle_de: string | null;
+  subtitle_en: string | null;
+  image_path: string | null;
+  sort_order: number;
+  set_code: string | null;
+}
+
 // ============================================================
 // API Functions
 // ============================================================
+
+/** Fetches active featured carousel items. Public endpoint. */
+export async function fetchShopFeatured(): Promise<ShopFeaturedItem[]> {
+  const response = await fetch(`${env.api.baseUrl}/shop/featured`);
+  if (!response.ok) return [];
+  return response.json();
+}
 
 /**
  * Fetches all shop products (boosters, starters, cosmetics).
@@ -102,7 +121,8 @@ export async function fetchSetDetail(setName: string, token: string): Promise<Se
   );
 
   if (!response.ok) {
-    throw new Error('Set-Details konnten nicht geladen werden');
+    const errData = await response.json().catch(() => null);
+    throw new Error(errData?.error ?? 'Set-Details konnten nicht geladen werden');
   }
 
   return response.json();
@@ -174,24 +194,3 @@ export async function buyStarter(setName: string, token: string): Promise<BuyRes
   return data;
 }
 
-/**
- * Buys a cosmetic item (theme, sleeve, playmat).
- */
-export async function buyCosmetic(itemId: string, token: string): Promise<BuyResult> {
-  const response = await fetch(`${env.api.baseUrl}/shop/buy`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ productId: itemId, productType: 'cosmetic' }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error ?? 'Kauf fehlgeschlagen');
-  }
-
-  return data;
-}
