@@ -63,6 +63,7 @@ export function ReleaseModal({
   const [planStart, setPlanStart] = useState('');
   const [planEnd, setPlanEnd] = useState('');
   const [saving, setSaving] = useState(false);
+  const [localActive, setLocalActive] = useState(active);
 
   const loadWindows = useCallback(async () => {
     setLoading(true);
@@ -79,8 +80,11 @@ export function ReleaseModal({
     }
   }, [token, productType, productId]);
 
+  useEffect(() => { setLocalActive(active); }, [active]);
+
   useEffect(() => {
     if (open) {
+      setLocalActive(active);
       loadWindows();
       setShowPlanForm(false);
       setPlanStart('');
@@ -107,6 +111,7 @@ export function ReleaseModal({
     setSaving(true);
     try {
       await reactivateProduct(token, productType, productId);
+      setLocalActive(true);
       await loadWindows();
       onChanged();
     } catch { /* ignore */ }
@@ -118,6 +123,7 @@ export function ReleaseModal({
     setSaving(true);
     try {
       await deactivateProduct(token, productType, productId);
+      setLocalActive(false);
       await loadWindows();
       onChanged();
     } catch { /* ignore */ }
@@ -161,7 +167,7 @@ export function ReleaseModal({
   // Normal product states
   const hasBeenReleased = !!igReleaseDate;
   const isNormalUnreleased = !isEvent && !hasBeenReleased;
-  const isNormalInactiveAfterRelease = !isEvent && hasBeenReleased && !active;
+  const isNormalInactiveAfterRelease = !isEvent && hasBeenReleased && !localActive;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -194,29 +200,29 @@ export function ReleaseModal({
           {/* Current Status + Actions */}
           <div className={styles.statusRow}>
             <span className={styles.infoLabel}>{t('admin.status')}</span>
-            <span className={active ? styles.badgeActive : styles.badgeInactive}>
-              {active ? t('admin.releaseActive') : t('admin.inactive')}
+            <span className={localActive ? styles.badgeActive : styles.badgeInactive}>
+              {localActive ? t('admin.releaseActive') : t('admin.inactive')}
             </span>
 
-            {/* Active product: deactivate button */}
-            {active && (
+            {/* Active → click to set Inactive */}
+            {localActive && (
               <button
                 className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                 disabled={saving}
                 onClick={handleDeactivate}
               >
-                {t('admin.deactivateNow')}
+                {t('admin.inactive')}
               </button>
             )}
 
-            {/* Normal product, inactive after release: reactivate */}
+            {/* Inactive (has been released before) → click to set Active */}
             {isNormalInactiveAfterRelease && (
               <button
                 className={styles.actionBtn}
                 disabled={saving}
                 onClick={handleReactivate}
               >
-                {t('admin.reactivate')}
+                {t('admin.releaseActive')}
               </button>
             )}
           </div>

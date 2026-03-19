@@ -27,9 +27,12 @@ function rarityClass(rarity: string): string {
   return RARITY_STYLE[getRarityTier(rarity)] ?? styles.rarityCommon;
 }
 
+
 export interface CardSetBadgeData {
   name: string;
   code: string;
+  active?: boolean;
+  productType?: string;
 }
 
 export interface CardDetailData {
@@ -126,15 +129,19 @@ export function CardDetailPopup({
             {activeArtwork && artworks && artworks.length > 1 ? (
               <div className={styles.availabilityBadge}>
                 {activeArtwork.availableIn ? (
-                  activeArtwork.availableIn.split(', ').map((setName) => (
-                    <span
-                      key={setName}
-                      className={`${styles.badgeAvailable} ${onSetClick ? styles.badgeClickable : ''}`}
-                      onClick={onSetClick ? () => { onClose(); onSetClick(setName.trim()); } : undefined}
-                    >
-                      {setName.trim()}
-                    </span>
-                  ))
+                  activeArtwork.availableIn.split(', ').map((setName) => {
+                    const setInfo = card.sets?.find((s) => s.name === setName.trim());
+                    const isActive = setInfo ? setInfo.active !== false : false;
+                    return (
+                      <span
+                        key={setName}
+                        className={`${isActive ? styles.badgeAvailable : styles.badgeUnavailable} ${onSetClick ? styles.badgeClickable : ''}`}
+                        onClick={onSetClick ? () => { onClose(); onSetClick(setName.trim()); } : undefined}
+                      >
+                        {setName.trim()}
+                      </span>
+                    );
+                  })
                 ) : (
                   <span className={styles.badgeUnavailable}>{t('cardDetail.notAvailable')}</span>
                 )}

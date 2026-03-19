@@ -28,24 +28,35 @@ cardsRouter.get('/count', async (_req, res) => {
 cardsRouter.get('/browse', async (_req, res) => {
   try {
     const result = await pool.query(`
+      WITH sets_in_active_displays AS (
+        SELECT DISTINCT sdc.booster_set_name
+        FROM shop_display_contents sdc
+        JOIN shop_displays sd ON sd.id = sdc.display_id
+        WHERE sd.active = TRUE
+      )
       SELECT c.*,
         EXISTS(
           SELECT 1 FROM card_set_entries cse
           JOIN card_sets cs ON cs.name = cse.set_name
-          WHERE cse.card_id = c.id AND cs.active = TRUE
-        ) as available,
+          WHERE cse.card_id = c.id
+            AND (cs.active = TRUE OR cs.name IN (SELECT booster_set_name FROM sets_in_active_displays))
+        ) AS available,
         COALESCE(
           (SELECT ARRAY_AGG(ca.artwork_id ORDER BY ca.is_default DESC, ca.artwork_id)
            FROM card_artworks ca WHERE ca.card_id = c.id),
           ARRAY[]::int[]
-        ) as artwork_ids,
+        ) AS artwork_ids,
         COALESCE(
-          (SELECT JSON_AGG(JSON_BUILD_OBJECT('name', cs.name, 'code', cs.code, 'active', cs.active, 'artworkId', cse.artwork_id) ORDER BY cs.active DESC, cs.wave, cs.name)
+          (SELECT JSON_AGG(JSON_BUILD_OBJECT(
+             'name', cs.name, 'code', cs.code,
+             'active', (cs.active OR cs.name IN (SELECT booster_set_name FROM sets_in_active_displays)),
+             'artworkId', cse.artwork_id
+           ) ORDER BY cs.active DESC, cs.wave, cs.name)
            FROM card_set_entries cse
            JOIN card_sets cs ON cs.name = cse.set_name
            WHERE cse.card_id = c.id),
           '[]'::json
-        ) as sets
+        ) AS sets
       FROM cards c
       ORDER BY c.name_en
     `);
@@ -63,7 +74,12 @@ cardsRouter.get('/sets/all', async (_req, res) => {
   try {
     const result = await pool.query(`
       SELECT cs.name, cs.code, cs.type, cs.wave, cs.active,
-             COUNT(cse.card_id) as card_count
+             COUNT(cse.card_id) as card_count,
+             EXISTS(
+               SELECT 1 FROM shop_display_contents sdc
+               JOIN shop_displays sd ON sd.id = sdc.display_id
+               WHERE sdc.booster_set_name = cs.name AND sd.active = TRUE
+             ) AS available_via_display
       FROM card_sets cs
       LEFT JOIN card_set_entries cse ON cse.set_name = cs.name
       GROUP BY cs.id

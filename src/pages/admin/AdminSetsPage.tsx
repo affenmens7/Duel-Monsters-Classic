@@ -446,22 +446,9 @@ export function AdminSetsPage() {
                 style={{ cursor: 'pointer' }}
                 onClick={(e) => { e.stopPropagation(); setReleaseRow(row); }}
               >
-                {row.active && !row.active_window_end && (
-                  <span className={styles.statusActive}>{t('admin.releaseActive')}</span>
-                )}
-                {row.active && row.active_window_end && (
-                  <span className={styles.statusActive}>
-                    {t('admin.releaseActiveUntil', { date: row.active_window_end.split('T')[0].split('-').reverse().join('.') })}
-                  </span>
-                )}
-                {!row.active && row.next_release_start && (
-                  <span style={{ color: 'var(--gold)' }}>
-                    {t('admin.releasePlanned', { date: row.next_release_start.split('T')[0].split('-').reverse().join('.') })}
-                  </span>
-                )}
-                {!row.active && !row.next_release_start && (
-                  <span style={{ color: 'var(--text-muted)' }}>{t('admin.releaseNotPlanned')}</span>
-                )}
+                <span className={row.active ? styles.statusActive : styles.statusInactive}>
+                  {row.active ? t('admin.releaseActive') : t('admin.inactive')}
+                </span>
               </td>
               <td className={styles.td}>{row.card_count}</td>
               {context === 'shop' && routeFilter === 'booster' && (

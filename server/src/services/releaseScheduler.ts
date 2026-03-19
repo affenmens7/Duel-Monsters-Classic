@@ -79,7 +79,7 @@ async function processOverdueEvents(): Promise<void> {
       WHERE rw.product_type = $1
         AND ${idCast} = t.${mapping.idColumn}
         AND rw.start_date <= CURRENT_DATE
-        AND (rw.end_date IS NULL OR rw.end_date >= CURRENT_DATE)
+        AND (rw.end_date IS NULL OR rw.end_date > CURRENT_DATE)
         AND t.active = FALSE
     `, [productType]);
 

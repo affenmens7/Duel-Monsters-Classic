@@ -77,6 +77,7 @@ export interface CardSetBadge {
   code: string;
   active?: boolean;
   artworkId?: number | null;
+  productType?: string;
 }
 
 export interface Card {
