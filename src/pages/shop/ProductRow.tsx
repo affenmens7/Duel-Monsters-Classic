@@ -13,7 +13,7 @@ import styles from './ProductRow.module.css';
 interface ProductRowProps {
   products: ShopSetProduct[];
   isEn: boolean;
-  onProductClick: (setName: string) => void;
+  onProductClick: (setName: string, index: number) => void;
 }
 
 export function ProductRow({ products, isEn, onProductClick }: ProductRowProps) {
@@ -55,7 +55,7 @@ export function ProductRow({ products, isEn, onProductClick }: ProductRowProps) 
       </button>
 
       <div className={styles.row} ref={rowRef}>
-        {products.map((product) => {
+        {products.map((product, idx) => {
           const isActive = product.active;
           const desc = localizeBilingual(product.descDe, product.descEn, isEn);
 
@@ -64,7 +64,7 @@ export function ProductRow({ products, isEn, onProductClick }: ProductRowProps) 
               key={product.setName}
               className={`${styles.card} ${isActive ? styles.cardActive : styles.cardInactive}`}
               style={{ transform: `translateX(-${offset}px)` }}
-              onClick={() => onProductClick(product.setName)}
+              onClick={() => onProductClick(product.setName, idx)}
             >
               <div className={`${styles.cardImage} ${isActive ? styles.cardImageActive : styles.cardImageInactive}`}>
                 <SetShowcase cardIds={product.showcaseCardIds} code={product.code} productType={product.productType} animated={product.showcaseAnimated} />
@@ -73,9 +73,9 @@ export function ProductRow({ products, isEn, onProductClick }: ProductRowProps) 
                 </span>
                 {!isActive && (
                   <span className={styles.inactiveTag}>
-                    {product.gameReleaseDate
+                    {product.igReleaseDate
                       ? t('shop.availableFrom', {
-                          date: new Date(product.gameReleaseDate).toLocaleDateString(isEn ? 'en-US' : 'de-DE'),
+                          date: new Date(product.igReleaseDate).toLocaleDateString(isEn ? 'en-US' : 'de-DE'),
                         })
                       : t('shop.notAvailable')}
                   </span>

@@ -29,7 +29,7 @@ const schema = `
     type        VARCHAR(32) DEFAULT 'booster',
     wave        INTEGER DEFAULT 0,
     active      BOOLEAN DEFAULT FALSE,
-    release_date VARCHAR(32),
+    og_release_date VARCHAR(32),
     image_path  VARCHAR(255)
   );
 
@@ -344,10 +344,97 @@ const schema = `
     END IF;
   END $$;
 
-  -- Game release date for scheduled auto-activation of sets
+  -- In-game release date for scheduled auto-activation of sets
   DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'game_release_date') THEN
-      ALTER TABLE shop_set_config ADD COLUMN game_release_date DATE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'ig_release_date')
+    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'game_release_date') THEN
+      ALTER TABLE shop_set_config ADD COLUMN ig_release_date DATE;
+    END IF;
+  END $$;
+
+  -- Shop displays (independent product that bundles multiple booster sets; ig_release_date = in-game release)
+  CREATE TABLE IF NOT EXISTS shop_displays (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(128) UNIQUE NOT NULL,
+    price INTEGER NOT NULL DEFAULT 0,
+    desc_de TEXT,
+    desc_en TEXT,
+    showcase_card_ids INTEGER[],
+    showcase_animated BOOLEAN NOT NULL DEFAULT FALSE,
+    ig_release_date DATE,
+    active BOOLEAN DEFAULT FALSE,
+    shop_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+    wave INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  -- Display contents (which booster sets are included in a display)
+  CREATE TABLE IF NOT EXISTS shop_display_contents (
+    id SERIAL PRIMARY KEY,
+    display_id INTEGER NOT NULL REFERENCES shop_displays(id) ON DELETE CASCADE,
+    booster_set_name VARCHAR(128) NOT NULL REFERENCES card_sets(name) ON DELETE CASCADE,
+    pack_count INTEGER NOT NULL DEFAULT 24,
+    UNIQUE(display_id, booster_set_name)
+  );
+
+  -- Release windows (scheduled availability for products)
+  CREATE TABLE IF NOT EXISTS shop_release_windows (
+    id SERIAL PRIMARY KEY,
+    product_type VARCHAR(32) NOT NULL,
+    product_id VARCHAR(128) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_release_windows_product ON shop_release_windows(product_type, product_id);
+
+  -- Drop deprecated display columns from shop_set_config (moved to shop_displays)
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'price_display') THEN
+      ALTER TABLE shop_set_config DROP COLUMN price_display;
+    END IF;
+  END $$;
+
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_size') THEN
+      ALTER TABLE shop_set_config DROP COLUMN display_size;
+    END IF;
+  END $$;
+
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_card_ids') THEN
+      ALTER TABLE shop_set_config DROP COLUMN display_showcase_card_ids;
+    END IF;
+  END $$;
+
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_animated') THEN
+      ALTER TABLE shop_set_config DROP COLUMN display_showcase_animated;
+    END IF;
+  END $$;
+
+  -- Rename release_date → og_release_date (original real-world release)
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_sets' AND column_name = 'release_date')
+    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_sets' AND column_name = 'og_release_date') THEN
+      ALTER TABLE card_sets RENAME COLUMN release_date TO og_release_date;
+    END IF;
+  END $$;
+
+  -- Rename shop_set_config.game_release_date → ig_release_date (first in-game release)
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'game_release_date')
+    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'ig_release_date') THEN
+      ALTER TABLE shop_set_config RENAME COLUMN game_release_date TO ig_release_date;
+    END IF;
+  END $$;
+
+  -- Rename shop_displays.game_release_date → ig_release_date (first in-game release)
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'game_release_date')
+    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'ig_release_date') THEN
+      ALTER TABLE shop_displays RENAME COLUMN game_release_date TO ig_release_date;
     END IF;
   END $$;
 

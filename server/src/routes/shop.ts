@@ -14,38 +14,10 @@ type PgClient = pg.PoolClient;
 export const shopRouter = Router();
 
 // ---------------------------------------------------------------------------
-// Auto-activation: activate sets whose game_release_date has been reached.
-// Runs at most once per hour (checked on every GET /products request).
-// ---------------------------------------------------------------------------
-let lastAutoActivateCheck = 0;
-async function checkAutoActivation() {
-  const now = Date.now();
-  if (now - lastAutoActivateCheck < 3600000) return; // once per hour
-  lastAutoActivateCheck = now;
-  try {
-    const result = await pool.query(`
-      UPDATE card_sets cs SET active = TRUE
-      FROM shop_set_config sc
-      WHERE sc.set_name = cs.name
-        AND sc.game_release_date IS NOT NULL
-        AND sc.game_release_date <= CURRENT_DATE
-        AND cs.active = FALSE
-    `);
-    if (result.rowCount && result.rowCount > 0) {
-      console.log(`[AUTO-RELEASE] Activated ${result.rowCount} set(s)`);
-      await pool.query('UPDATE data_version SET version = version + 1, updated_at = NOW() WHERE id = 1');
-    }
-  } catch (err) {
-    console.error('[AUTO-RELEASE] Check failed:', err);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // GET /api/shop/products — public, no auth required
 // Returns all shop products grouped by type (boosters, starters, cosmetics).
 // ---------------------------------------------------------------------------
 shopRouter.get('/products', async (_req, res) => {
-  await checkAutoActivation();
   try {
     // Boosters: join card_sets + shop_set_config, count cards per set
     const boostersResult = await pool.query(`
@@ -56,17 +28,13 @@ shopRouter.get('/products', async (_req, res) => {
         cs.active,
         sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
-        sc.price_display AS "priceDisplay",
         sc.pack_size   AS "packSize",
-        sc.display_size AS "displaySize",
         sc.desc_de     AS "descDe",
         sc.desc_en     AS "descEn",
         sc.featured,
         sc.showcase_card_ids AS "showcaseCardIds",
         COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
-        sc.display_showcase_card_ids AS "displayShowcaseCardIds",
-        COALESCE(sc.display_showcase_animated, FALSE) AS "displayShowcaseAnimated",
-        sc.game_release_date AS "gameReleaseDate",
+        sc.ig_release_date AS "igReleaseDate",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
@@ -88,17 +56,13 @@ shopRouter.get('/products', async (_req, res) => {
         cs.active,
         sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
-        sc.price_display AS "priceDisplay",
         sc.pack_size   AS "packSize",
-        sc.display_size AS "displaySize",
         sc.desc_de     AS "descDe",
         sc.desc_en     AS "descEn",
         sc.featured,
         sc.showcase_card_ids AS "showcaseCardIds",
         COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
-        sc.display_showcase_card_ids AS "displayShowcaseCardIds",
-        COALESCE(sc.display_showcase_animated, FALSE) AS "displayShowcaseAnimated",
-        sc.game_release_date AS "gameReleaseDate",
+        sc.ig_release_date AS "igReleaseDate",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
@@ -161,14 +125,96 @@ shopRouter.get('/products', async (_req, res) => {
         if (!product.showcaseCardIds || product.showcaseCardIds.length === 0) {
           product.showcaseCardIds = autoMap.get(product.setName) ?? [];
         }
-        // Always provide auto-picked 5 cards for display mode
-        product.autoShowcaseCardIds = autoMap.get(product.setName) ?? [];
+      }
+    }
+
+    // Displays: independent products from shop_displays table
+    const displaysResult = await pool.query(`
+      SELECT
+        d.id, d.name, d.price,
+        d.desc_de AS "descDe", d.desc_en AS "descEn",
+        d.showcase_card_ids AS "showcaseCardIds",
+        COALESCE(d.showcase_animated, FALSE) AS "showcaseAnimated",
+        d.ig_release_date AS "igReleaseDate",
+        d.active, d.wave, d.sort_order AS "sortOrder",
+        (SELECT COALESCE(SUM(dc.pack_count), 0)::int
+         FROM shop_display_contents dc WHERE dc.display_id = d.id) AS "totalPacks",
+        (SELECT COALESCE(SUM(cnt.card_count), 0)::int
+         FROM shop_display_contents dc2
+         JOIN (SELECT set_name, COUNT(DISTINCT card_id)::int AS card_count
+               FROM card_set_entries GROUP BY set_name) cnt
+         ON cnt.set_name = dc2.booster_set_name
+         WHERE dc2.display_id = d.id) AS "cardCount"
+      FROM shop_displays d
+      WHERE d.shop_visible = TRUE
+      ORDER BY d.sort_order, d.id
+    `);
+
+    // Fetch contents for all displays
+    const displayIds = displaysResult.rows.map((d: any) => d.id);
+    let displayContents: any[] = [];
+    if (displayIds.length > 0) {
+      const dcResult = await pool.query(`
+        SELECT dc.display_id, dc.booster_set_name AS "boosterSetName",
+               dc.pack_count AS "packCount"
+        FROM shop_display_contents dc
+        WHERE dc.display_id = ANY($1)
+      `, [displayIds]);
+      displayContents = dcResult.rows;
+    }
+
+    const displays = displaysResult.rows.map((d: any) => ({
+      ...d,
+      contents: displayContents
+        .filter((c: any) => c.display_id === d.id)
+        .map(({ boosterSetName, packCount }: any) => ({ boosterSetName, packCount })),
+    }));
+
+    // Auto-pick showcase cards for displays without manually set ones
+    const displaysNeedAuto = displays.filter((d: any) => !d.showcaseCardIds || d.showcaseCardIds.length === 0);
+    if (displaysNeedAuto.length > 0) {
+      const displayBoosterNames = [...new Set(displaysNeedAuto.flatMap((d: any) => d.contents.map((c: any) => c.boosterSetName)))];
+      if (displayBoosterNames.length > 0) {
+        const autoDisplayResult = await pool.query(
+          `SELECT DISTINCT ON (cse.set_name, rarity_rank)
+             cse.set_name, cse.card_id
+           FROM card_set_entries cse
+           JOIN cards c ON c.id = cse.card_id
+           CROSS JOIN LATERAL (
+             SELECT CASE cse.rarity
+               WHEN 'Secret Rare' THEN 1 WHEN 'Ultra Rare' THEN 2
+               WHEN 'Super Rare' THEN 3 WHEN 'Rare' THEN 4
+               ELSE 5 END AS rarity_rank
+           ) rr
+           WHERE cse.set_name = ANY($1) AND c.frame_type IN ('normal', 'effect', 'fusion', 'ritual')
+           ORDER BY cse.set_name, rarity_rank, RANDOM()`,
+          [displayBoosterNames]
+        );
+
+        const autoDisplayMap = new Map<string, number[]>();
+        for (const row of autoDisplayResult.rows as any[]) {
+          const list = autoDisplayMap.get(row.set_name) ?? [];
+          if (list.length < 5) list.push(row.card_id);
+          autoDisplayMap.set(row.set_name, list);
+        }
+
+        for (const display of displaysNeedAuto as any[]) {
+          const allCardIds: number[] = [];
+          for (const content of display.contents) {
+            const cards = autoDisplayMap.get(content.boosterSetName) ?? [];
+            for (const cardId of cards) {
+              if (!allCardIds.includes(cardId) && allCardIds.length < 5) allCardIds.push(cardId);
+            }
+          }
+          display.showcaseCardIds = allCardIds;
+        }
       }
     }
 
     res.json({
       boosters: boostersResult.rows,
       starters: startersResult.rows,
+      displays,
       cosmetics: cosmeticsResult.rows,
     });
   } catch (err) {
@@ -217,17 +263,13 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
         cs.active,
         sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
-        sc.price_display AS "priceDisplay",
         sc.pack_size   AS "packSize",
-        sc.display_size AS "displaySize",
         sc.desc_de     AS "descDe",
         sc.desc_en     AS "descEn",
         sc.featured,
         sc.showcase_card_ids AS "showcaseCardIds",
         COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
-        sc.display_showcase_card_ids AS "displayShowcaseCardIds",
-        COALESCE(sc.display_showcase_animated, FALSE) AS "displayShowcaseAnimated",
-        sc.game_release_date AS "gameReleaseDate",
+        sc.ig_release_date AS "igReleaseDate",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
@@ -378,10 +420,80 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
       return;
     }
 
-    // --- Pack / starter / display purchase ---
+    // --- Display purchase (independent product) ---
+    if (productType === 'display') {
+      const displayId = parseInt(productId, 10);
+      if (isNaN(displayId)) {
+        await client.query('ROLLBACK');
+        res.status(400).json({ error: 'Ungueltige Display-ID' });
+        return;
+      }
+
+      const displayResult = await client.query(
+        'SELECT id, price, active FROM shop_displays WHERE id = $1',
+        [displayId]
+      );
+      if (displayResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        res.status(404).json({ error: 'Display nicht gefunden' });
+        return;
+      }
+
+      const display = displayResult.rows[0];
+      if (!display.active) {
+        await client.query('ROLLBACK');
+        res.status(400).json({ error: 'Display nicht verfuegbar' });
+        return;
+      }
+
+      if (currentDp < display.price) {
+        await client.query('ROLLBACK');
+        res.status(400).json({ error: 'Nicht genug DP' });
+        return;
+      }
+
+      // Deduct DP
+      await client.query(
+        'UPDATE users SET dp = dp - $1 WHERE id = $2',
+        [display.price, userId]
+      );
+
+      // Load display contents (which booster sets, how many packs each)
+      const contentsResult = await client.query(
+        `SELECT dc.booster_set_name, dc.pack_count,
+                COALESCE(sc.pack_size, 5) AS pack_size
+         FROM shop_display_contents dc
+         JOIN shop_set_config sc ON sc.set_name = dc.booster_set_name
+         WHERE dc.display_id = $1`,
+        [displayId]
+      );
+
+      const pulledCards: PulledCard[] = [];
+      for (const content of contentsResult.rows as any[]) {
+        for (let i = 0; i < content.pack_count; i++) {
+          const packCards = await openBoosterPack(client, content.booster_set_name, content.pack_size);
+          pulledCards.push(...packCards);
+        }
+      }
+
+      // Add cards to user collection + unlock artworks
+      await addCardsToCollection(client, userId, pulledCards);
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        type: 'display',
+        cards: pulledCards.map((c) => c.cardId),
+        pulledCards,
+        dpRemaining: currentDp - display.price,
+      });
+      return;
+    }
+
+    // --- Pack / starter purchase ---
     // Load config from shop_set_config
     const configResult = await client.query(
-      `SELECT product_type, price_pack, price_display, pack_size, display_size
+      `SELECT product_type, price_pack, pack_size
        FROM shop_set_config
        WHERE set_name = $1`,
       [productId]
@@ -394,20 +506,7 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
     }
 
     const config = configResult.rows[0];
-
-    // Determine the actual price based on purchase type
-    let price: number;
-    if (productType === 'display') {
-      if (config.price_display == null) {
-        await client.query('ROLLBACK');
-        res.status(400).json({ error: 'Display-Kauf fuer dieses Set nicht verfuegbar' });
-        return;
-      }
-      price = config.price_display;
-    } else {
-      // booster or starter
-      price = config.price_pack;
-    }
+    const price: number = config.price_pack;
 
     if (currentDp < price) {
       await client.query('ROLLBACK');
@@ -426,15 +525,6 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
     if (productType === 'starter') {
       // Starter deck: give ALL cards in the set
       pulledCards = await getStarterDeckCards(client, productId);
-    } else if (productType === 'display') {
-      // Display: open displaySize packs
-      const packCount = config.display_size ?? 24;
-      const packSize = config.pack_size ?? 5;
-      pulledCards = [];
-      for (let i = 0; i < packCount; i++) {
-        const packCards = await openBoosterPack(client, productId, packSize);
-        pulledCards.push(...packCards);
-      }
     } else {
       // Single booster pack
       const packSize = config.pack_size ?? 5;

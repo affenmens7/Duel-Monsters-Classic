@@ -2,18 +2,19 @@
  * ShopStorefrontView — main shop page with featured banner, product rows, cosmetics.
  */
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
 import { Modal } from '../../components/common/Modal';
 import { FeaturedCarousel } from './FeaturedCarousel';
 import { ProductRow } from './ProductRow';
-import type { ShopSetProduct, ShopFeaturedItem, BuyResult } from '../../services/shopApi';
+import type { ShopSetProduct, ShopDisplayProduct, ShopFeaturedItem, BuyResult } from '../../services/shopApi';
 import styles from '../ShopPage.module.css';
 
 interface ShopStorefrontViewProps {
   boosters: ShopSetProduct[];
   starters: ShopSetProduct[];
+  displays: ShopDisplayProduct[];
   featuredItems: ShopFeaturedItem[];
   dp: number;
   user: { dp: number } | null;
@@ -23,13 +24,14 @@ interface ShopStorefrontViewProps {
   buyResult: BuyResult | null;
   shopLoading: boolean;
   onOpenDetail: (setName: string, mode: 'booster' | 'display') => void;
+  onOpenDisplayDetail: (displayId: number) => void;
   onSetBuyResult: (result: BuyResult | null) => void;
 }
 
 export function ShopStorefrontView({
-  boosters, starters, featuredItems, dp, user, isEn,
+  boosters, starters, displays, featuredItems, dp, user, isEn,
   error, buying, buyResult, shopLoading,
-  onOpenDetail, onSetBuyResult,
+  onOpenDetail, onOpenDisplayDetail, onSetBuyResult,
 }: ShopStorefrontViewProps) {
   const { t } = useTranslation();
   const [boosterMode, setBoosterModeState] = useState<'pack' | 'display'>(
@@ -40,20 +42,7 @@ export function ShopStorefrontView({
     setBoosterModeState(mode);
   };
 
-  const displayProducts = useMemo(() => {
-    if (boosterMode !== 'display') return [];
-    return boosters
-      .filter((b) => b.priceDisplay != null)
-      .map((b) => ({
-        ...b,
-        pricePack: b.priceDisplay!,
-        productType: 'display' as string,
-        showcaseCardIds: b.displayShowcaseCardIds ?? b.autoShowcaseCardIds ?? b.showcaseCardIds,
-        showcaseAnimated: b.displayShowcaseAnimated ?? false,
-      }));
-  }, [boosters, boosterMode]);
-
-  const hasDisplays = boosters.some((b) => b.priceDisplay != null);
+  const hasDisplays = displays.length > 0;
 
   return (
     <div className={styles.page}>
@@ -67,8 +56,8 @@ export function ShopStorefrontView({
         </>
       )}
 
-      {/* Booster Packs / Displays */}
-      {boosters.length > 0 && (
+      {/* Booster Packs / Displays — toggle */}
+      {(boosters.length > 0 || displays.length > 0) && (
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
@@ -87,11 +76,37 @@ export function ShopStorefrontView({
               </div>
             )}
           </div>
-          <ProductRow
-            products={boosterMode === 'pack' ? boosters : displayProducts}
-            isEn={isEn}
-            onProductClick={(name) => onOpenDetail(name, boosterMode === 'pack' ? 'booster' : 'display')}
-          />
+          {boosterMode === 'pack' ? (
+            <ProductRow
+              products={boosters}
+              isEn={isEn}
+              onProductClick={(name) => onOpenDetail(name, 'booster')}
+            />
+          ) : (
+            <ProductRow
+              products={displays.map((d) => ({
+                setName: d.name,
+                code: '',
+                wave: d.wave,
+                active: d.active,
+                productType: 'display',
+                pricePack: d.price,
+                packSize: d.totalPacks,
+                descDe: d.descDe,
+                descEn: d.descEn,
+                featured: false,
+                cardCount: d.cardCount,
+                showcaseCardIds: d.showcaseCardIds ?? [],
+                showcaseAnimated: d.showcaseAnimated,
+                igReleaseDate: d.igReleaseDate,
+              }))}
+              isEn={isEn}
+              onProductClick={(_name, idx) => {
+                const display = displays[idx];
+                if (display) onOpenDisplayDetail(display.id);
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -104,7 +119,7 @@ export function ShopStorefrontView({
       )}
 
       {/* Empty state */}
-      {boosters.length === 0 && starters.length === 0 && !shopLoading && (
+      {boosters.length === 0 && starters.length === 0 && displays.length === 0 && !shopLoading && (
         <div className={styles.loading}>{t('shop.noProducts')}</div>
       )}
 

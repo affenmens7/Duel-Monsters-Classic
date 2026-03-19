@@ -16,24 +16,37 @@ export interface ShopSetProduct {
   active: boolean;
   productType?: string;
   pricePack: number;
-  priceDisplay: number | null;
   packSize: number;
-  displaySize: number | null;
   descDe: string;
   descEn: string;
   featured: boolean;
   cardCount: number;
   showcaseCardIds: number[];
   showcaseAnimated: boolean;
-  displayShowcaseCardIds?: number[] | null;
-  displayShowcaseAnimated?: boolean;
-  autoShowcaseCardIds?: number[];
-  gameReleaseDate?: string | null;
+  igReleaseDate?: string | null;
+}
+
+export interface ShopDisplayProduct {
+  id: number;
+  name: string;
+  price: number;
+  descDe: string;
+  descEn: string;
+  showcaseCardIds: number[];
+  showcaseAnimated: boolean;
+  igReleaseDate: string | null;
+  active: boolean;
+  wave: number;
+  sortOrder: number;
+  totalPacks: number;
+  cardCount: number;
+  contents: { boosterSetName: string; packCount: number }[];
 }
 
 export interface ShopData {
   boosters: ShopSetProduct[];
   starters: ShopSetProduct[];
+  displays: ShopDisplayProduct[];
 }
 
 export interface RarityRate {
@@ -51,6 +64,12 @@ export interface SetCardEntry {
 
 export interface SetDetail {
   set: ShopSetProduct;
+  rarityRates: RarityRate[];
+  cards: SetCardEntry[];
+}
+
+export interface DisplayDetail {
+  display: ShopDisplayProduct;
   rarityRates: RarityRate[];
   cards: SetCardEntry[];
 }
@@ -151,16 +170,16 @@ export async function buyPack(setName: string, token: string): Promise<BuyResult
 }
 
 /**
- * Buys a full display (24 packs) from a set.
+ * Buys a full display by its numeric ID.
  */
-export async function buyDisplay(setName: string, token: string): Promise<BuyResult> {
+export async function buyDisplay(displayId: number, token: string): Promise<BuyResult> {
   const response = await fetch(`${env.api.baseUrl}/shop/buy`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ productId: setName, productType: 'display' }),
+    body: JSON.stringify({ productId: String(displayId), productType: 'display' }),
   });
 
   const data = await response.json();
@@ -170,6 +189,26 @@ export async function buyDisplay(setName: string, token: string): Promise<BuyRes
   }
 
   return data;
+}
+
+/**
+ * Fetches detailed info for a display — cards, rarity rates, ownership.
+ * Requires authentication.
+ */
+export async function fetchDisplayDetail(displayId: number, token: string): Promise<DisplayDetail> {
+  const response = await fetch(
+    `${env.api.baseUrl}/shop/displays/${displayId}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => null);
+    throw new Error(errData?.error ?? 'Display-Details konnten nicht geladen werden');
+  }
+
+  return response.json();
 }
 
 /**

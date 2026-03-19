@@ -10,11 +10,13 @@ import { env } from './config/env.js';
 import { authRouter } from './routes/auth.js';
 import { userRouter } from './routes/user.js';
 import { shopRouter } from './routes/shop.js';
+import { displaysRouter } from './routes/displays.js';
 import { cardsRouter } from './routes/cards.js';
 import { decksRouter } from './routes/decks.js';
 import { adminRouter } from './routes/admin/index.js';
 import { contentRouter } from './routes/content.js';
 import { versionRouter } from './routes/version.js';
+import { initScheduler } from './services/releaseScheduler.js';
 
 const app = express();
 
@@ -59,6 +61,7 @@ const shopLimiter = rateLimit({
 app.use('/api/auth', authLimiter, authRouter);
 app.use('/api/user', userRouter);
 app.use('/api/shop/buy', shopLimiter);
+app.use('/api/shop/displays', displaysRouter);
 app.use('/api/shop', shopRouter);
 app.use('/api/cards', cardsRouter);
 app.use('/api/decks', decksRouter);
@@ -73,4 +76,5 @@ app.get('/api/health', (_req, res) => {
 
 app.listen(env.port, () => {
   console.log(`DMC Server running on port ${env.port}`);
+  initScheduler();
 });

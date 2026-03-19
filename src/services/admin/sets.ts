@@ -81,7 +81,7 @@ export async function searchApiSets(
 
 export async function createSet(
   token: string,
-  data: { name: string; code: string; type: string; wave: number; active?: boolean; release_date?: string },
+  data: { name: string; code: string; type: string; wave: number; active?: boolean; og_release_date?: string },
 ): Promise<AdminSetRow> {
   const response = await fetch(`${env.api.baseUrl}/admin/sets`, {
     method: 'POST', headers: authHeaders(token), body: JSON.stringify(data),

@@ -4,40 +4,42 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { useSession } from '../../store/SessionContext';
 import { useAppData } from '../../store/AppDataContext';
 import {
   fetchSetDetail,
+  fetchDisplayDetail,
   fetchShopFeatured,
   buyPack,
-  buyDisplay,
   buyStarter,
+  buyDisplay,
   type ShopFeaturedItem,
   type SetDetail,
+  type DisplayDetail,
   type BuyResult,
 } from '../../services/shopApi';
 import { RARITY_ORDER } from '../../utils/rarity';
 
-type ViewMode = 'storefront' | 'detail';
+type ViewMode = 'storefront' | 'detail' | 'display-detail';
 
 export function useShop() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { setName: urlSetName } = useParams<{ setName?: string }>();
+  const { setName: urlSetName, displayId: urlDisplayId } = useParams<{ setName?: string; displayId?: string }>();
 
-  // Derive product mode from URL path
-  const productMode: 'booster' | 'display' = location.pathname.includes('/display/') ? 'display' : 'booster';
   const { user, token } = useAuth();
   const { dp, updateDp, addCardsToInventory } = useSession();
   const { shopProducts: cachedShopData } = useAppData();
 
-  const [view, setView] = useState<ViewMode>(urlSetName ? 'detail' : 'storefront');
+  const initialView: ViewMode = urlDisplayId ? 'display-detail' : urlSetName ? 'detail' : 'storefront';
+  const [view, setView] = useState<ViewMode>(initialView);
   const [selectedSetName, setSelectedSetName] = useState<string | null>(urlSetName ?? null);
+  const [selectedDisplayId, setSelectedDisplayId] = useState<number | null>(urlDisplayId ? parseInt(urlDisplayId, 10) : null);
   const [setDetail, setSetDetail] = useState<SetDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(!!urlSetName);
+  const [displayDetail, setDisplayDetail] = useState<DisplayDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(!!urlSetName || !!urlDisplayId);
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState('');
   const [buyResult, setBuyResult] = useState<BuyResult | null>(null);
@@ -53,12 +55,18 @@ export function useShop() {
   }, []);
 
   // Navigate only — the useEffect below handles the actual fetch
-  const openDetail = useCallback((setName: string, mode: 'booster' | 'display' = 'booster') => {
+  const openDetail = useCallback((setName: string, _mode: 'booster' | 'display' = 'booster') => {
     if (!token) { setError(t('shop.loginRequired')); return; }
-    navigate(`/app/shop/${mode}/${encodeURIComponent(setName)}`);
+    navigate(`/app/shop/booster/${encodeURIComponent(setName)}`);
   }, [token, t, navigate]);
 
-  // Single source of truth: fetch detail when URL param is present
+  // Navigate to display detail
+  const openDisplayDetail = useCallback((id: number) => {
+    if (!token) { setError(t('shop.loginRequired')); return; }
+    navigate(`/app/shop/display/${id}`);
+  }, [token, t, navigate]);
+
+  // Single source of truth: fetch set detail when URL param is present
   useEffect(() => {
     if (!urlSetName) return;
     if (!token) { setError(t('shop.loginRequired')); return; }
@@ -74,17 +82,37 @@ export function useShop() {
     return () => { cancelled = true; };
   }, [urlSetName, token, t]);
 
+  // Single source of truth: fetch display detail when URL param is present
+  useEffect(() => {
+    if (!urlDisplayId) return;
+    if (!token) { setError(t('shop.loginRequired')); return; }
+    const displayIdNum = parseInt(urlDisplayId, 10);
+    if (isNaN(displayIdNum)) return;
+    let cancelled = false;
+    setDetailLoading(true);
+    setError('');
+    setView('display-detail');
+    setSelectedDisplayId(displayIdNum);
+    fetchDisplayDetail(displayIdNum, token)
+      .then((detail) => { if (!cancelled) setDisplayDetail(detail); })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : t('shop.loadError')); })
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  }, [urlDisplayId, token, t]);
+
   const goBack = useCallback(() => {
     setView('storefront');
     setSetDetail(null);
+    setDisplayDetail(null);
     setSelectedSetName(null);
+    setSelectedDisplayId(null);
     setPopupCardId(null);
     setError('');
     navigate('/app/shop', { replace: true });
   }, [navigate]);
 
   // Unified purchase handler
-  async function handlePurchase(purchaseFn: () => Promise<BuyResult>) {
+  async function handlePurchase(purchaseFn: () => Promise<BuyResult>, refreshDisplay = false) {
     if (!token || !user || buying) return;
     setBuying(true);
     setError('');
@@ -97,6 +125,10 @@ export function useShop() {
         const updatedDetail = await fetchSetDetail(selectedSetName, token);
         setSetDetail(updatedDetail);
       }
+      if (refreshDisplay && selectedDisplayId) {
+        const updatedDisplay = await fetchDisplayDetail(selectedDisplayId, token);
+        setDisplayDetail(updatedDisplay);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t('shop.purchaseFailed'));
     } finally {
@@ -108,13 +140,13 @@ export function useShop() {
     handlePurchase(() => buyPack(selectedSetName!, token!)),
     [token, user, selectedSetName, buying]);
 
-  const handleBuyDisplay = useCallback(() =>
-    handlePurchase(() => buyDisplay(selectedSetName!, token!)),
-    [token, user, selectedSetName, buying]);
-
   const handleBuyStarter = useCallback((setName: string) =>
     handlePurchase(() => buyStarter(setName, token!)),
     [token, user, buying]);
+
+  const handleBuyDisplay = useCallback(() =>
+    handlePurchase(() => buyDisplay(selectedDisplayId!, token!), true),
+    [token, user, selectedDisplayId, buying]);
 
   const sortedDetailCards = useMemo(() => {
     if (!setDetail) return [];
@@ -128,15 +160,29 @@ export function useShop() {
     return setDetail.cards.filter((c) => c.owned > 0).length;
   }, [setDetail]);
 
+  const sortedDisplayCards = useMemo(() => {
+    if (!displayDetail) return [];
+    return [...displayDetail.cards].sort((a, b) =>
+      (RARITY_ORDER[a.rarity] ?? 5) - (RARITY_ORDER[b.rarity] ?? 5)
+    );
+  }, [displayDetail]);
+
+  const displayOwnedCount = useMemo(() => {
+    if (!displayDetail) return 0;
+    return displayDetail.cards.filter((c) => c.owned > 0).length;
+  }, [displayDetail]);
+
   return {
     // State
-    view, shopData, shopLoading, featuredItems, setDetail, detailLoading,
+    view, shopData, shopLoading, featuredItems,
+    setDetail, displayDetail, detailLoading,
     buying, error, buyResult, setBuyResult,
     popupCardId, setPopupCardId,
-    dp, user, selectedSetName, productMode,
+    dp, user, selectedSetName, selectedDisplayId,
     sortedDetailCards, ownedCount,
+    sortedDisplayCards, displayOwnedCount,
     // Actions
-    openDetail, goBack,
-    handleBuyPack, handleBuyDisplay, handleBuyStarter,
+    openDetail, openDisplayDetail, goBack,
+    handleBuyPack, handleBuyStarter, handleBuyDisplay,
   };
 }

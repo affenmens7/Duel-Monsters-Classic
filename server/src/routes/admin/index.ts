@@ -13,6 +13,8 @@ import { roadmapRouter } from './roadmap.js';
 import { usersRouter } from './users.js';
 import { cosmeticsRouter } from './cosmetics.js';
 import { featuredRouter } from './featured.js';
+import { displaysRouter } from './displays.js';
+import { releasesRouter } from './releases.js';
 
 export const adminRouter = Router();
 
@@ -23,8 +25,10 @@ adminRouter.use(requireAuth, requireAdmin);
 adminRouter.use('/', dashboardRouter);       // GET /stats
 adminRouter.use('/sets', setsRouter);         // /sets/*
 adminRouter.use('/cards', cardsRouter);       // /cards/*
+adminRouter.use('/displays', displaysRouter); // /displays/*
 adminRouter.use('/news', newsRouter);         // /news/*
 adminRouter.use('/roadmap', roadmapRouter);   // /roadmap/*
 adminRouter.use('/users', usersRouter);       // /users/*
 adminRouter.use('/cosmetics', cosmeticsRouter); // /cosmetics/*
 adminRouter.use('/featured', featuredRouter);   // /featured/*
+adminRouter.use('/releases', releasesRouter);   // /releases/*

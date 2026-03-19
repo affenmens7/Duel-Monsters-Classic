@@ -6,6 +6,7 @@
 import { useTranslation } from 'react-i18next';
 import { useShop } from './shop/useShop';
 import { ShopDetailView } from './shop/ShopDetailView';
+import { DisplayDetailView } from './shop/DisplayDetailView';
 import { ShopStorefrontView } from './shop/ShopStorefrontView';
 import styles from './ShopPage.module.css';
 
@@ -22,6 +23,47 @@ export function ShopPage() {
     );
   }
 
+  // Display detail view
+  if (shop.view === 'display-detail') {
+    if (shop.detailLoading || !shop.displayDetail) {
+      return (
+        <div className={styles.page}>
+          {shop.error ? (
+            <>
+              <button className={styles.backBtn} onClick={shop.goBack}>
+                <span className={styles.backArrow}>&#8592;</span>
+                Back
+              </button>
+              <div className={styles.error}>{shop.error}</div>
+            </>
+          ) : (
+            <div className={styles.loading}>Loading...</div>
+          )}
+        </div>
+      );
+    }
+    return (
+      <DisplayDetailView
+        displayDetail={shop.displayDetail}
+        sortedDetailCards={shop.sortedDisplayCards}
+        ownedCount={shop.displayOwnedCount}
+        dp={shop.dp}
+        buying={shop.buying}
+        error={shop.error}
+        buyResult={shop.buyResult}
+        popupCardId={shop.popupCardId}
+        detailLoading={shop.detailLoading}
+        user={shop.user}
+        isEn={isEn}
+        onBack={shop.goBack}
+        onBuyDisplay={shop.handleBuyDisplay}
+        onSetBuyResult={shop.setBuyResult}
+        onSetPopupCardId={shop.setPopupCardId}
+      />
+    );
+  }
+
+  // Set detail view (booster / starter)
   if (shop.view === 'detail') {
     if (shop.detailLoading || !shop.setDetail) {
       return (
@@ -53,10 +95,8 @@ export function ShopPage() {
         detailLoading={shop.detailLoading}
         user={shop.user}
         isEn={isEn}
-        productMode={shop.productMode}
         onBack={shop.goBack}
         onBuyPack={shop.handleBuyPack}
-        onBuyDisplay={shop.handleBuyDisplay}
         onBuyStarter={shop.handleBuyStarter}
         onSetBuyResult={shop.setBuyResult}
         onSetPopupCardId={shop.setPopupCardId}
@@ -64,10 +104,12 @@ export function ShopPage() {
     );
   }
 
+  // Storefront view
   return (
     <ShopStorefrontView
       boosters={shop.shopData?.boosters ?? []}
       starters={shop.shopData?.starters ?? []}
+      displays={shop.shopData?.displays ?? []}
       featuredItems={shop.featuredItems}
       dp={shop.dp}
       user={shop.user}
@@ -77,6 +119,7 @@ export function ShopPage() {
       buyResult={shop.buyResult}
       shopLoading={shop.shopLoading}
       onOpenDetail={shop.openDetail}
+      onOpenDisplayDetail={(displayId) => shop.openDisplayDetail(displayId)}
       onSetBuyResult={shop.setBuyResult}
     />
   );

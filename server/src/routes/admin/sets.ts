@@ -33,12 +33,10 @@ setsRouter.get('/', async (req, res) => {
         cs.type,
         cs.wave,
         cs.active,
-        cs.release_date,
+        cs.og_release_date,
         sc.product_type,
         sc.price_pack,
-        sc.price_display,
         sc.pack_size,
-        sc.display_size,
         sc.desc_de,
         sc.desc_en,
         sc.featured,
@@ -46,10 +44,15 @@ setsRouter.get('/', async (req, res) => {
         COALESCE(sc.shop_visible, TRUE) AS shop_visible,
         sc.showcase_card_ids,
         COALESCE(sc.showcase_animated, FALSE) AS showcase_animated,
-        sc.display_showcase_card_ids,
-        COALESCE(sc.display_showcase_animated, FALSE) AS display_showcase_animated,
-        sc.game_release_date,
-        COALESCE(cnt.card_count, 0)::int AS card_count
+        sc.ig_release_date,
+        COALESCE(cnt.card_count, 0)::int AS card_count,
+        (SELECT rw.start_date FROM shop_release_windows rw
+         WHERE rw.product_type = sc.product_type AND rw.product_id = cs.name
+         AND rw.start_date > CURRENT_DATE ORDER BY rw.start_date LIMIT 1) AS next_release_start,
+        (SELECT rw.end_date FROM shop_release_windows rw
+         WHERE rw.product_type = sc.product_type AND rw.product_id = cs.name
+         AND rw.start_date <= CURRENT_DATE AND (rw.end_date IS NULL OR rw.end_date >= CURRENT_DATE)
+         ORDER BY rw.start_date DESC LIMIT 1) AS active_window_end
       FROM card_sets cs
       LEFT JOIN shop_set_config sc ON sc.set_name = cs.name
       LEFT JOIN (
@@ -159,17 +162,15 @@ setsRouter.get('/:name/info', async (req, res) => {
         cs.type,
         cs.wave,
         cs.active,
-        cs.release_date,
+        cs.og_release_date,
         sc.product_type,
         sc.price_pack,
-        sc.price_display,
         sc.pack_size,
-        sc.display_size,
         sc.desc_de,
         sc.desc_en,
         sc.featured,
         sc.sort_order,
-        sc.game_release_date,
+        sc.ig_release_date,
         COALESCE(cnt.card_count, 0)::int AS card_count
       FROM card_sets cs
       LEFT JOIN shop_set_config sc ON sc.set_name = cs.name
@@ -198,12 +199,12 @@ setsRouter.get('/:name/info', async (req, res) => {
 
 /**
  * PUT /api/admin/sets/:name
- * Update set fields: active, wave, release_date.
+ * Update set fields: active, wave, og_release_date.
  */
 setsRouter.put('/:name', async (req, res) => {
   try {
     const { name } = req.params;
-    const { active, wave, release_date } = req.body;
+    const { active, wave, og_release_date } = req.body;
 
     // Validate that the set exists
     const existing = await pool.query(
@@ -228,9 +229,9 @@ setsRouter.put('/:name', async (req, res) => {
       updates.push(`wave = $${idx++}`);
       params.push(Number(wave));
     }
-    if (release_date !== undefined) {
-      updates.push(`release_date = $${idx++}`);
-      params.push(String(release_date));
+    if (og_release_date !== undefined) {
+      updates.push(`og_release_date = $${idx++}`);
+      params.push(String(og_release_date));
     }
 
     if (updates.length === 0) {
@@ -262,9 +263,9 @@ setsRouter.put('/:name/config', async (req, res) => {
   try {
     const { name } = req.params;
     const {
-      price_pack, price_display, pack_size, display_size,
+      price_pack, pack_size,
       desc_de, desc_en, featured, sort_order, shop_visible, showcase_card_ids, showcase_animated,
-      display_showcase_card_ids, display_showcase_animated, game_release_date,
+      ig_release_date,
     } = req.body;
 
     // Verify the set exists
@@ -285,17 +286,9 @@ setsRouter.put('/:name/config', async (req, res) => {
       updates.push(`price_pack = $${idx++}`);
       params.push(Number(price_pack));
     }
-    if (price_display !== undefined) {
-      updates.push(`price_display = $${idx++}`);
-      params.push(price_display === null ? null : Number(price_display));
-    }
     if (pack_size !== undefined) {
       updates.push(`pack_size = $${idx++}`);
       params.push(Number(pack_size));
-    }
-    if (display_size !== undefined) {
-      updates.push(`display_size = $${idx++}`);
-      params.push(display_size === null ? null : Number(display_size));
     }
     if (desc_de !== undefined) {
       updates.push(`desc_de = $${idx++}`);
@@ -325,17 +318,9 @@ setsRouter.put('/:name/config', async (req, res) => {
       updates.push(`showcase_animated = $${idx++}`);
       params.push(Boolean(showcase_animated));
     }
-    if (display_showcase_card_ids !== undefined) {
-      updates.push(`display_showcase_card_ids = $${idx++}`);
-      params.push(Array.isArray(display_showcase_card_ids) ? display_showcase_card_ids : null);
-    }
-    if (display_showcase_animated !== undefined) {
-      updates.push(`display_showcase_animated = $${idx++}`);
-      params.push(Boolean(display_showcase_animated));
-    }
-    if (game_release_date !== undefined) {
-      updates.push(`game_release_date = $${idx++}`);
-      params.push(game_release_date === null || game_release_date === '' ? null : String(game_release_date));
+    if (ig_release_date !== undefined) {
+      updates.push(`ig_release_date = $${idx++}`);
+      params.push(ig_release_date === null || ig_release_date === '' ? null : String(ig_release_date));
     }
 
     if (updates.length === 0) {
@@ -481,13 +466,13 @@ setsRouter.put('/:name/rates', async (req, res) => {
 /**
  * POST /api/admin/sets
  * Create a new set with default shop config and rarity rates.
- * Body: { name, code, type, wave, active, release_date }
+ * Body: { name, code, type, wave, active, og_release_date }
  */
 setsRouter.post('/', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { name, code, type, wave, active, release_date } = req.body;
+    const { name, code, type, wave, active, og_release_date } = req.body;
 
     if (!name || !code) {
       res.status(400).json({ error: 'Pflichtfelder: name, code' });
@@ -501,10 +486,10 @@ setsRouter.post('/', async (req, res) => {
 
     // Insert the set itself
     const setResult = await client.query(
-      `INSERT INTO card_sets (name, code, type, wave, active, release_date)
+      `INSERT INTO card_sets (name, code, type, wave, active, og_release_date)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [name, code, setType, wave ?? 0, active ?? false, release_date ?? null]
+      [name, code, setType, wave ?? 0, active ?? false, og_release_date ?? null]
     );
 
     // Auto-create default shop_set_config based on set type

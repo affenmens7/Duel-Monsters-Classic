@@ -24,6 +24,7 @@ const ADMIN_SECTIONS: NavSection[] = [
     items: [
       { to: '/app/admin/cards', labelKey: 'admin.cardDatabase' },
       { to: '/app/admin/sets/booster', labelKey: 'admin.boosterPacks' },
+      { to: '/app/admin/shop/displays', labelKey: 'admin.displays' },
       { to: '/app/admin/sets/starter', labelKey: 'admin.starterDecks' },
     ],
   },
@@ -32,6 +33,7 @@ const ADMIN_SECTIONS: NavSection[] = [
     items: [
       { to: '/app/admin/shop/featured-sektion', labelKey: 'admin.shopFeatured' },
       { to: '/app/admin/shop/booster-sets', labelKey: 'admin.boosterPacks' },
+      { to: '/app/admin/shop/displays', labelKey: 'admin.displays' },
       { to: '/app/admin/shop/starter-decks', labelKey: 'admin.starterDecks' },
     ],
   },

@@ -11,32 +11,30 @@ async function seedShop() {
 
   // Shop config for card sets (booster packs + starter decks)
   const setConfigs = [
-    { setName: 'Legend of Blue Eyes White Dragon', type: 'booster', pricePack: 120, priceDisplay: 2400, packSize: 5, displaySize: 24, descDe: 'Das allererste Booster-Set. Blue-Eyes White Dragon, Dark Magician und Exodia warten auf dich.', descEn: 'The very first booster set. Blue-Eyes White Dragon, Dark Magician and Exodia await you.', featured: true, sort: 1 },
-    { setName: 'Metal Raiders', type: 'booster', pricePack: 120, priceDisplay: 2400, packSize: 5, displaySize: 24, descDe: 'Neue Fallen, Fusionsmonster und starke Effektmonster. Mirror Force und Gate Guardian!', descEn: 'New traps, fusion monsters and powerful effect monsters. Mirror Force and Gate Guardian!', featured: false, sort: 2 },
-    { setName: 'Spell Ruler', type: 'booster', pricePack: 130, priceDisplay: 2600, packSize: 5, displaySize: 24, descDe: 'Maechtige Zauberkarten und Ritualmonster. Relinquished und Thousand-Eyes Restrict!', descEn: 'Powerful spell cards and ritual monsters. Relinquished and Thousand-Eyes Restrict!', featured: false, sort: 3 },
-    { setName: "Pharaoh's Servant", type: 'booster', pricePack: 130, priceDisplay: 2600, packSize: 5, displaySize: 24, descDe: 'Jinzo, Imperial Order und staerkere Strategien fuer jeden Spieler.', descEn: 'Jinzo, Imperial Order and stronger strategies for every player.', featured: false, sort: 4 },
-    { setName: 'Labyrinth of Nightmare', type: 'booster', pricePack: 130, priceDisplay: 2600, packSize: 5, displaySize: 24, descDe: 'Spirit-Monster und neue Fallen aus dem Labyrinth der Albtraeume.', descEn: 'Spirit monsters and new traps from the Labyrinth of Nightmare.', featured: false, sort: 5 },
-    { setName: 'Legacy of Darkness', type: 'booster', pricePack: 130, priceDisplay: 2600, packSize: 5, displaySize: 24, descDe: 'Dunkle Krieger und Untote aus dem Vermaechtnis der Finsternis.', descEn: 'Dark warriors and undead from the Legacy of Darkness.', featured: false, sort: 6 },
-    { setName: 'Dark Crisis', type: 'booster', pricePack: 140, priceDisplay: 2800, packSize: 5, displaySize: 24, descDe: 'Die dunkle Krise bringt maechtige Krieger und neue Fusionsmonster.', descEn: 'The Dark Crisis brings powerful warriors and new fusion monsters.', featured: false, sort: 7 },
-    { setName: 'Starter Deck: Yugi', type: 'starter', pricePack: 600, priceDisplay: null, packSize: 40, displaySize: null, descDe: 'Dark Magician, Summoned Skull und maechtige Zauberkarten. Ein vielseitiges Deck mit starker Magie.', descEn: 'Dark Magician, Summoned Skull and powerful spells. A versatile deck with strong magic.', featured: false, sort: 1 },
-    { setName: 'Starter Deck: Kaiba', type: 'starter', pricePack: 600, priceDisplay: null, packSize: 40, displaySize: null, descDe: 'Blue-Eyes White Dragon und starke Krieger. Ein aggressives Deck mit roher Kraft.', descEn: 'Blue-Eyes White Dragon and strong warriors. An aggressive deck with raw power.', featured: false, sort: 2 },
+    { setName: 'Legend of Blue Eyes White Dragon', type: 'booster', pricePack: 120, packSize: 5, descDe: 'Das allererste Booster-Set. Blue-Eyes White Dragon, Dark Magician und Exodia warten auf dich.', descEn: 'The very first booster set. Blue-Eyes White Dragon, Dark Magician and Exodia await you.', featured: true, sort: 1 },
+    { setName: 'Metal Raiders', type: 'booster', pricePack: 120, packSize: 5, descDe: 'Neue Fallen, Fusionsmonster und starke Effektmonster. Mirror Force und Gate Guardian!', descEn: 'New traps, fusion monsters and powerful effect monsters. Mirror Force and Gate Guardian!', featured: false, sort: 2 },
+    { setName: 'Spell Ruler', type: 'booster', pricePack: 130, packSize: 5, descDe: 'Maechtige Zauberkarten und Ritualmonster. Relinquished und Thousand-Eyes Restrict!', descEn: 'Powerful spell cards and ritual monsters. Relinquished and Thousand-Eyes Restrict!', featured: false, sort: 3 },
+    { setName: "Pharaoh's Servant", type: 'booster', pricePack: 130, packSize: 5, descDe: 'Jinzo, Imperial Order und staerkere Strategien fuer jeden Spieler.', descEn: 'Jinzo, Imperial Order and stronger strategies for every player.', featured: false, sort: 4 },
+    { setName: 'Labyrinth of Nightmare', type: 'booster', pricePack: 130, packSize: 5, descDe: 'Spirit-Monster und neue Fallen aus dem Labyrinth der Albtraeume.', descEn: 'Spirit monsters and new traps from the Labyrinth of Nightmare.', featured: false, sort: 5 },
+    { setName: 'Legacy of Darkness', type: 'booster', pricePack: 130, packSize: 5, descDe: 'Dunkle Krieger und Untote aus dem Vermaechtnis der Finsternis.', descEn: 'Dark warriors and undead from the Legacy of Darkness.', featured: false, sort: 6 },
+    { setName: 'Dark Crisis', type: 'booster', pricePack: 140, packSize: 5, descDe: 'Die dunkle Krise bringt maechtige Krieger und neue Fusionsmonster.', descEn: 'The Dark Crisis brings powerful warriors and new fusion monsters.', featured: false, sort: 7 },
+    { setName: 'Starter Deck: Yugi', type: 'starter', pricePack: 600, packSize: 40, descDe: 'Dark Magician, Summoned Skull und maechtige Zauberkarten. Ein vielseitiges Deck mit starker Magie.', descEn: 'Dark Magician, Summoned Skull and powerful spells. A versatile deck with strong magic.', featured: false, sort: 1 },
+    { setName: 'Starter Deck: Kaiba', type: 'starter', pricePack: 600, packSize: 40, descDe: 'Blue-Eyes White Dragon und starke Krieger. Ein aggressives Deck mit roher Kraft.', descEn: 'Blue-Eyes White Dragon and strong warriors. An aggressive deck with raw power.', featured: false, sort: 2 },
   ];
 
   for (const cfg of setConfigs) {
     await pool.query(
-      `INSERT INTO shop_set_config (set_name, product_type, price_pack, price_display, pack_size, display_size, desc_de, desc_en, featured, sort_order)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO shop_set_config (set_name, product_type, price_pack, pack_size, desc_de, desc_en, featured, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (set_name) DO UPDATE SET
          product_type = EXCLUDED.product_type,
          price_pack = EXCLUDED.price_pack,
-         price_display = EXCLUDED.price_display,
          pack_size = EXCLUDED.pack_size,
-         display_size = EXCLUDED.display_size,
          desc_de = EXCLUDED.desc_de,
          desc_en = EXCLUDED.desc_en,
          featured = EXCLUDED.featured,
          sort_order = EXCLUDED.sort_order`,
-      [cfg.setName, cfg.type, cfg.pricePack, cfg.priceDisplay, cfg.packSize, cfg.displaySize, cfg.descDe, cfg.descEn, cfg.featured, cfg.sort]
+      [cfg.setName, cfg.type, cfg.pricePack, cfg.packSize, cfg.descDe, cfg.descEn, cfg.featured, cfg.sort]
     );
   }
   console.log(`  ${setConfigs.length} set configs inserted/updated`);

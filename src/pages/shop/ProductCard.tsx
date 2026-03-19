@@ -18,9 +18,9 @@ function formatInactiveLabel(
   isEn: boolean,
   t: (key: string, opts?: Record<string, string>) => string,
 ): string {
-  if (product.gameReleaseDate) {
+  if (product.igReleaseDate) {
     return t('shop.availableFrom', {
-      date: new Date(product.gameReleaseDate).toLocaleDateString(isEn ? 'en-US' : 'de-DE'),
+      date: new Date(product.igReleaseDate).toLocaleDateString(isEn ? 'en-US' : 'de-DE'),
     });
   }
   return t('shop.notAvailable');

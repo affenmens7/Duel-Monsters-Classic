@@ -883,6 +883,24 @@
   color: #c8a830;
 }
 
+/* === Display Contents === */
+
+.displayContents {
+  margin-bottom: 16px;
+}
+
+.displayContentItem {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.displayContentCount {
+  color: var(--orichalcos-light);
+  font-weight: 700;
+}
+
 /* Card selection indicator */
 .cardCellSelected {
   outline: 2px solid var(--orichalcos-light) !important;

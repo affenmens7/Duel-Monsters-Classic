@@ -11,3 +11,5 @@ export * from './news';
 export * from './roadmap';
 export * from './users';
 export * from './featured';
+export * from './releases';
+export * from './displays';

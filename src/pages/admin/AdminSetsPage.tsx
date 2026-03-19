@@ -27,6 +27,7 @@ import {
 } from '../../services/admin';
 import { getCardImageUrl } from '../../services/cardApi';
 import { SettingsModal, settingsModalStyles as ms } from '../../components/admin/SettingsModal';
+import { ReleaseModal } from '../../components/admin/ReleaseModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import styles from './AdminSets.module.css';
 
@@ -42,15 +43,13 @@ interface SetForm {
 
 interface ConfigForm {
   pricePack: number;
-  priceDisplay: number | null;
   packSize: number;
-  displaySize: number | null;
   descDe: string;
   descEn: string;
   sortOrder: number;
   shopVisible: boolean;
   showcaseAnimated: boolean;
-  gameReleaseDate: string;
+  igReleaseDate: string;
 }
 
 // ============================================================
@@ -94,6 +93,9 @@ export function AdminSetsPage() {
   // Showcase card picker state (shop context)
   const [showcaseCards, setShowcaseCards] = useState<number[]>([]);
   const [setCardOptions, setSetCardOptions] = useState<{ id: number; name_de: string; name_en: string }[]>([]);
+
+  // Release modal state
+  const [releaseRow, setReleaseRow] = useState<AdminSetRow | null>(null);
 
   // Create modal state
   const [createOpen, setCreateOpen] = useState(false);
@@ -191,7 +193,7 @@ export function AdminSetsPage() {
           type: createForm.type,
           wave: createForm.wave,
           active: createForm.active,
-          release_date: createForm.releaseDate || undefined,
+          og_release_date: createForm.releaseDate || undefined,
         });
       }
 
@@ -245,8 +247,8 @@ export function AdminSetsPage() {
     const list = routeFilter ? sets.filter((s) => s.product_type === routeFilter) : [...sets];
     return list.sort((a, b) => {
       if (a.wave !== b.wave) return a.wave - b.wave;
-      const dateA = a.release_date ?? '';
-      const dateB = b.release_date ?? '';
+      const dateA = a.og_release_date ?? '';
+      const dateB = b.og_release_date ?? '';
       return dateA.localeCompare(dateB);
     });
   }, [sets, routeFilter]);
@@ -255,18 +257,16 @@ export function AdminSetsPage() {
   const openModal = useCallback(async (row: AdminSetRow) => {
     setSaveResult(null);
     setModalRow(row);
-    setSetForm({ active: row.active, wave: row.wave, releaseDate: row.release_date ?? '' });
+    setSetForm({ active: row.active, wave: row.wave, releaseDate: row.og_release_date ?? '' });
     setConfigForm({
       pricePack: row.price_pack,
-      priceDisplay: row.price_display,
       packSize: row.pack_size,
-      displaySize: row.display_size,
       descDe: row.desc_de,
       descEn: row.desc_en,
       sortOrder: row.sort_order,
       shopVisible: row.shop_visible ?? true,
       showcaseAnimated: row.showcase_animated ?? false,
-      gameReleaseDate: row.game_release_date ? row.game_release_date.split('T')[0] : '',
+      igReleaseDate: row.ig_release_date ? row.ig_release_date.split('T')[0] : '',
     });
     if (token && context === 'sets') {
       try {
@@ -359,7 +359,7 @@ export function AdminSetsPage() {
       promises.push(updateSet(token, modalRow.name, {
         active: setForm.active,
         wave: setForm.wave,
-        release_date: setForm.releaseDate || undefined,
+        og_release_date: setForm.releaseDate || undefined,
       } as never));
       promises.push(updateSetRates(token, modalRow.name, ratesForm));
     }
@@ -367,16 +367,14 @@ export function AdminSetsPage() {
       promises.push(
         updateSetConfig(token, modalRow.name, {
           price_pack: configForm.pricePack,
-          price_display: configForm.priceDisplay,
           pack_size: configForm.packSize,
-          display_size: configForm.displaySize,
           desc_de: configForm.descDe,
           desc_en: configForm.descEn,
           sort_order: configForm.sortOrder,
           shop_visible: configForm.shopVisible,
           showcase_animated: configForm.showcaseAnimated,
           showcase_card_ids: showcaseCards.length > 0 ? showcaseCards : null,
-          game_release_date: configForm.gameReleaseDate || null,
+          ig_release_date: configForm.igReleaseDate || null,
         }),
       );
     }
@@ -418,13 +416,9 @@ export function AdminSetsPage() {
             <th className={styles.th}>{t('admin.code')}</th>
             <th className={styles.th}>{t('admin.wave')}</th>
             <th className={styles.th}>{t('admin.release')}</th>
-            <th className={styles.th}>{t('admin.status')}</th>
             <th className={styles.th}>{t('admin.cards')}</th>
             {context === 'shop' && routeFilter === 'booster' && (
-              <>
-                <th className={styles.th}>{t('admin.packDisplayPrice')}</th>
-                <th className={styles.th}>{t('admin.packDisplaySize')}</th>
-              </>
+              <th className={styles.th}>{t('admin.packPrice')}</th>
             )}
             {context === 'shop' && routeFilter === 'starter' && (
               <th className={styles.th}>{t('admin.deckPrice')}</th>
@@ -447,18 +441,31 @@ export function AdminSetsPage() {
               </td>
               <td className={styles.tdCode}>{row.code}</td>
               <td className={styles.td}>{row.wave}</td>
-              <td className={styles.td}>{row.release_date ? row.release_date.split('-').reverse().join('.') : '—'}</td>
-              <td className={styles.td}>
-                <span className={row.active ? styles.statusActive : styles.statusInactive}>
-                  {row.active ? t('admin.statusActive') : t('admin.statusInactive')}
-                </span>
+              <td
+                className={styles.td}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); setReleaseRow(row); }}
+              >
+                {row.active && !row.active_window_end && (
+                  <span className={styles.statusActive}>{t('admin.releaseActive')}</span>
+                )}
+                {row.active && row.active_window_end && (
+                  <span className={styles.statusActive}>
+                    {t('admin.releaseActiveUntil', { date: row.active_window_end.split('T')[0].split('-').reverse().join('.') })}
+                  </span>
+                )}
+                {!row.active && row.next_release_start && (
+                  <span style={{ color: 'var(--gold)' }}>
+                    {t('admin.releasePlanned', { date: row.next_release_start.split('T')[0].split('-').reverse().join('.') })}
+                  </span>
+                )}
+                {!row.active && !row.next_release_start && (
+                  <span style={{ color: 'var(--text-muted)' }}>{t('admin.releaseNotPlanned')}</span>
+                )}
               </td>
               <td className={styles.td}>{row.card_count}</td>
               {context === 'shop' && routeFilter === 'booster' && (
-                <>
-                  <td className={styles.td}>{row.price_pack} DP / {row.price_display ? `${row.price_display} DP` : '—'}</td>
-                  <td className={styles.td}>{row.pack_size} {t('admin.cardsPerPack')} / {row.display_size ?? '—'} {t('admin.boostersPerDisplay')}</td>
-                </>
+                <td className={styles.td}>{row.price_pack} DP</td>
               )}
               {context === 'shop' && routeFilter === 'starter' && (
                 <td className={styles.td}>{row.price_pack} DP</td>
@@ -586,23 +593,11 @@ export function AdminSetsPage() {
                 onChange={(e) => setConfigForm((p) => p ? { ...p, pricePack: Number(e.target.value) } : p)} />
             </div>
             {routeFilter === 'booster' && (
-              <>
-                <div className={ms.fieldRow}>
-                  <span className={ms.fieldLabel}>{t('admin.displayPrice')}</span>
-                  <input className={ms.fieldInput} type="number" min={0} value={configForm.priceDisplay ?? ''}
-                    onChange={(e) => setConfigForm((p) => p ? { ...p, priceDisplay: e.target.value ? Number(e.target.value) : null } : p)} />
-                </div>
-                <div className={ms.fieldRow}>
-                  <span className={ms.fieldLabel}>{t('admin.packSize')}</span>
-                  <input className={ms.fieldInput} type="number" min={1} value={configForm.packSize}
-                    onChange={(e) => setConfigForm((p) => p ? { ...p, packSize: Number(e.target.value) } : p)} />
-                </div>
-                <div className={ms.fieldRow}>
-                  <span className={ms.fieldLabel}>{t('admin.displaySize')}</span>
-                  <input className={ms.fieldInput} type="number" min={0} value={configForm.displaySize ?? ''}
-                    onChange={(e) => setConfigForm((p) => p ? { ...p, displaySize: e.target.value ? Number(e.target.value) : null } : p)} />
-                </div>
-              </>
+              <div className={ms.fieldRow}>
+                <span className={ms.fieldLabel}>{t('admin.packSize')}</span>
+                <input className={ms.fieldInput} type="number" min={1} value={configForm.packSize}
+                  onChange={(e) => setConfigForm((p) => p ? { ...p, packSize: Number(e.target.value) } : p)} />
+              </div>
             )}
             <div className={ms.fieldRow}>
               <span className={ms.fieldLabel}>{t('admin.descDe')}</span>
@@ -620,9 +615,9 @@ export function AdminSetsPage() {
                 onChange={(e) => setConfigForm((p) => p ? { ...p, sortOrder: Number(e.target.value) } : p)} />
             </div>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.gameReleaseDate')}</span>
-              <input className={ms.fieldInput} type="date" value={configForm.gameReleaseDate}
-                onChange={(e) => setConfigForm((p) => p ? { ...p, gameReleaseDate: e.target.value } : p)} />
+              <span className={ms.fieldLabel}>{t('admin.igReleaseDate')}</span>
+              <input className={ms.fieldInput} type="date" value={configForm.igReleaseDate}
+                onChange={(e) => setConfigForm((p) => p ? { ...p, igReleaseDate: e.target.value } : p)} />
             </div>
             <div className={ms.fieldRow}>
               <span className={ms.fieldLabel}>{t('admin.shopVisibility')}</span>
@@ -872,6 +867,22 @@ export function AdminSetsPage() {
           </div>
         )}
       </ConfirmModal>
+
+      {/* Release Modal */}
+      {token && releaseRow && (
+        <ReleaseModal
+          open={releaseRow !== null}
+          onClose={() => setReleaseRow(null)}
+          productType={releaseRow.product_type ?? 'booster'}
+          productId={releaseRow.name}
+          productName={releaseRow.name}
+          ogReleaseDate={releaseRow.og_release_date}
+          igReleaseDate={releaseRow.ig_release_date}
+          active={releaseRow.active}
+          token={token}
+          onChanged={() => loadSets()}
+        />
+      )}
     </div>
   );
 }

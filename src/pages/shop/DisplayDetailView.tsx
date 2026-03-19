@@ -1,5 +1,5 @@
 /**
- * ShopDetailView — set detail page with hero, rarity bars, buy buttons, card preview.
+ * DisplayDetailView — display detail page with hero, content breakdown, rarity bars, buy button, card preview.
  */
 
 import { useState, useCallback, useMemo } from 'react';
@@ -9,19 +9,19 @@ import { useAuth } from '../../store/AuthContext';
 import { useAppData } from '../../store/AppDataContext';
 import { useCardLocale } from '../../hooks/useCardLocale';
 import { getCardImageUrl } from '../../services/cardApi';
-import { updateSetConfig } from '../../services/admin/sets';
+import { updateDisplay } from '../../services/admin/displays';
 import { getRarityTier } from '../../utils/rarity';
 import { localizeBilingual } from '../../utils/localize';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
 import { Modal } from '../../components/common/Modal';
 import { SetShowcase } from './SetShowcase';
-import type { SetDetail, BuyResult } from '../../services/shopApi';
+import type { DisplayDetail, BuyResult } from '../../services/shopApi';
 import styles from '../ShopPage.module.css';
 import cardStyles from './ProductRow.module.css';
 
-interface ShopDetailViewProps {
-  setDetail: SetDetail;
-  sortedDetailCards: SetDetail['cards'];
+interface DisplayDetailViewProps {
+  displayDetail: DisplayDetail;
+  sortedDetailCards: DisplayDetail['cards'];
   ownedCount: number;
   dp: number;
   buying: boolean;
@@ -32,27 +32,24 @@ interface ShopDetailViewProps {
   user: { dp: number } | null;
   isEn: boolean;
   onBack: () => void;
-  onBuyPack: () => void;
-  onBuyStarter: (setName: string) => void;
+  onBuyDisplay: () => void;
   onSetBuyResult: (result: BuyResult | null) => void;
   onSetPopupCardId: (id: number | null) => void;
 }
 
-export function ShopDetailView({
-  setDetail, sortedDetailCards, ownedCount, dp, buying, error,
+export function DisplayDetailView({
+  displayDetail, sortedDetailCards, ownedCount, dp, buying, error,
   buyResult, popupCardId, detailLoading, user, isEn,
-  onBack, onBuyPack, onBuyStarter,
-  onSetBuyResult, onSetPopupCardId,
-}: ShopDetailViewProps) {
+  onBack, onBuyDisplay, onSetBuyResult, onSetPopupCardId,
+}: DisplayDetailViewProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user: authUser, token } = useAuth();
   const { cards: allCards } = useAppData();
   const { localize } = useCardLocale();
 
-  const { set, rarityRates, cards } = setDetail;
-  const isStarter = set.productType === 'starter';
-  const canBuyPack = user && (dp >= set.pricePack) && set.active;
+  const { display, rarityRates, cards } = displayDetail;
+  const canBuy = user && (dp >= display.price) && display.active;
   const isAdmin = authUser?.role === 'admin';
 
   // Showcase editor state (admin only)
@@ -61,37 +58,21 @@ export function ShopDetailView({
   const [editAnimated, setEditAnimated] = useState(false);
   const [savingShowcase, setSavingShowcase] = useState(false);
 
-  const maxSlots = isStarter ? 3 : 3;
+  const maxSlots = 5;
 
-  // Fallback: pick random cards from the set when no showcase cards are configured
+  // Fallback: pick random cards from the display when no showcase cards are configured
   const showcaseFallback = useMemo(() => {
-    if (set.showcaseCardIds && set.showcaseCardIds.length > 0) return set.showcaseCardIds;
+    if (display.showcaseCardIds && display.showcaseCardIds.length > 0) return display.showcaseCardIds;
     if (!cards || cards.length === 0) return [];
     const shuffled = [...cards].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3).map((c) => c.cardId);
-  }, [set.showcaseCardIds, cards]);
+    return shuffled.slice(0, 5).map((c) => c.cardId);
+  }, [display.showcaseCardIds, cards]);
 
   const startEditing = useCallback(() => {
-    setEditCards(set.showcaseCardIds ?? []);
-    setEditAnimated(set.showcaseAnimated ?? false);
+    setEditCards(display.showcaseCardIds ?? []);
+    setEditAnimated(display.showcaseAnimated ?? false);
     setEditingShowcase(true);
-  }, [set.showcaseCardIds, set.showcaseAnimated]);
-
-  const saveShowcase = useCallback(async () => {
-    if (!token) return;
-    setSavingShowcase(true);
-    try {
-      await updateSetConfig(token, set.setName, {
-        showcase_card_ids: editCards.length > 0 ? editCards : null,
-        showcase_animated: editAnimated,
-      });
-      // Update local state so preview refreshes
-      set.showcaseCardIds = editCards.length > 0 ? editCards : null as any;
-      set.showcaseAnimated = editAnimated;
-      setEditingShowcase(false);
-    } catch { /* ignore */ }
-    finally { setSavingShowcase(false); }
-  }, [token, set, editCards, editAnimated]);
+  }, [display.showcaseCardIds, display.showcaseAnimated]);
 
   const toggleCardInShowcase = useCallback((cardId: number) => {
     setEditCards((prev) => {
@@ -100,6 +81,21 @@ export function ShopDetailView({
       return [...prev, cardId];
     });
   }, [maxSlots]);
+
+  const saveShowcase = useCallback(async () => {
+    if (!token) return;
+    setSavingShowcase(true);
+    try {
+      await updateDisplay(token, display.id, {
+        showcase_card_ids: editCards.length > 0 ? editCards : null,
+        showcase_animated: editAnimated,
+      });
+      display.showcaseCardIds = editCards.length > 0 ? editCards : null as any;
+      display.showcaseAnimated = editAnimated;
+      setEditingShowcase(false);
+    } catch { /* ignore */ }
+    finally { setSavingShowcase(false); }
+  }, [token, display, editCards, editAnimated]);
 
   return (
     <div className={styles.page}>
@@ -112,56 +108,69 @@ export function ShopDetailView({
 
       {/* Hero Section */}
       <div className={styles.hero}>
-        <div className={`${cardStyles.card} ${set.active ? cardStyles.cardActive : cardStyles.cardInactive} ${styles.detailCard}`}>
-          <div className={`${cardStyles.cardImage} ${set.active ? cardStyles.cardImageActive : cardStyles.cardImageInactive}`}>
+        <div className={`${cardStyles.card} ${display.active ? cardStyles.cardActive : cardStyles.cardInactive} ${styles.detailCard}`}>
+          <div className={`${cardStyles.cardImage} ${display.active ? cardStyles.cardImageActive : cardStyles.cardImageInactive}`}>
             <SetShowcase
               cardIds={editingShowcase ? editCards : showcaseFallback}
-              code={set.code ?? 'N/A'}
-              productType={isStarter ? 'starter' : 'booster'}
-              animated={editingShowcase ? editAnimated : set.showcaseAnimated}
+              code={'DSP'}
+              productType="display"
+              animated={editingShowcase ? editAnimated : display.showcaseAnimated}
             />
-            <span className={`${cardStyles.waveBadge} ${set.active ? cardStyles.waveBadgeActive : cardStyles.waveBadgeInactive}`}>
-              {t('shop.wave', { wave: set.wave })}
+            <span className={`${cardStyles.waveBadge} ${display.active ? cardStyles.waveBadgeActive : cardStyles.waveBadgeInactive}`}>
+              {t('shop.wave', { wave: display.wave })}
             </span>
-            {!set.active && (
+            {!display.active && (
               <span className={cardStyles.inactiveTag}>
-                {set.igReleaseDate
+                {display.igReleaseDate
                   ? t('shop.availableFrom', {
-                      date: new Date(set.igReleaseDate).toLocaleDateString(isEn ? 'en-US' : 'de-DE'),
+                      date: new Date(display.igReleaseDate).toLocaleDateString(isEn ? 'en-US' : 'de-DE'),
                     })
                   : t('shop.notAvailable')}
               </span>
             )}
           </div>
           <div className={cardStyles.cardBody}>
-            <span className={cardStyles.cardName}>{set.setName}</span>
-            <span className={cardStyles.cardDesc}>{localizeBilingual(set.descDe, set.descEn, isEn)}</span>
+            <span className={cardStyles.cardName}>{display.name}</span>
+            <span className={cardStyles.cardDesc}>{localizeBilingual(display.descDe, display.descEn, isEn)}</span>
             <div className={cardStyles.cardFooter}>
-              <span className={cardStyles.cardPrice}>{set.pricePack} DP</span>
+              <span className={cardStyles.cardPrice}>{display.price} DP</span>
               <span className={cardStyles.cardCount}>
-                {set.cardCount > 0 ? t('shop.cards', { count: set.cardCount }) : '--'}
+                {display.cardCount > 0 ? t('shop.cards', { count: display.cardCount }) : '--'}
               </span>
             </div>
           </div>
         </div>
         <div className={styles.heroInfo}>
-          <h1 className={styles.heroSetName}>{set.setName}</h1>
-          <div className={styles.heroWave}>{t('shop.wave', { wave: set.wave })}</div>
+          <h1 className={styles.heroSetName}>{display.name}</h1>
+          <div className={styles.heroWave}>{t('shop.wave', { wave: display.wave })}</div>
 
           <div className={styles.statsRow}>
             <div className={styles.statBox}>
-              <span className={styles.statValue}>{set.packSize}</span>
-              <span className={styles.statLabel}>{t('shop.cardsPerPack')}</span>
+              <span className={styles.statValue}>{display.totalPacks}</span>
+              <span className={styles.statLabel}>{t('shop.totalPacks')}</span>
             </div>
             <div className={styles.statBox}>
-              <span className={styles.statValue}>{set.cardCount}</span>
-              <span className={styles.statLabel}>{t('shop.setSize')}</span>
+              <span className={styles.statValue}>{display.cardCount}</span>
+              <span className={styles.statLabel}>{t('shop.uniqueCards')}</span>
             </div>
             <div className={styles.statBox}>
               <span className={styles.statValue}>{ownedCount}</span>
               <span className={styles.statLabel}>{t('inventory.owned')}</span>
             </div>
           </div>
+
+          {/* Content Breakdown */}
+          {display.contents && display.contents.length > 0 && (
+            <div className={styles.displayContents}>
+              <div className={styles.rarityTitle}>{t('shop.displayContents')}</div>
+              {display.contents.map((entry) => (
+                <div key={entry.boosterSetName} className={styles.displayContentItem}>
+                  <span className={styles.displayContentCount}>{entry.packCount}x</span>{' '}
+                  {entry.boosterSetName}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Rarity Distribution */}
           {rarityRates.length > 0 && (
@@ -183,19 +192,12 @@ export function ShopDetailView({
             </div>
           )}
 
-          {/* Buy Buttons */}
+          {/* Buy Button */}
           <div className={styles.buyRow}>
-            {isStarter ? (
-              <button className={styles.buyBtn} onClick={() => onBuyStarter(set.setName)} disabled={!canBuyPack || buying}>
-                {buying ? '...' : t('shop.buyStarter')}
-                <span className={styles.buyPrice}>({set.pricePack} DP)</span>
-              </button>
-            ) : (
-              <button className={styles.buyBtn} onClick={onBuyPack} disabled={!canBuyPack || buying}>
-                {buying ? '...' : t('shop.buyPack')}
-                <span className={styles.buyPrice}>({set.pricePack} DP)</span>
-              </button>
-            )}
+            <button className={`${styles.buyBtn} ${styles.buyBtnDisplay}`} onClick={onBuyDisplay} disabled={!canBuy || buying}>
+              {buying ? '...' : t('shop.buyDisplay')}
+              <span className={styles.buyPrice}>({display.price} DP)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -219,12 +221,12 @@ export function ShopDetailView({
             </>
           )}
           <button
-            className={`${styles.buyBtn} ${!(editingShowcase ? editAnimated : (set.showcaseAnimated ?? false)) ? '' : styles.buyBtnDisplay}`}
+            className={`${styles.buyBtn} ${!(editingShowcase ? editAnimated : display.showcaseAnimated) ? '' : styles.buyBtnDisplay}`}
             onClick={() => editingShowcase ? setEditAnimated(false) : undefined}
             disabled={!editingShowcase}
           >{t('admin.showcaseStatic')}</button>
           <button
-            className={`${styles.buyBtn} ${(editingShowcase ? editAnimated : (set.showcaseAnimated ?? false)) ? '' : styles.buyBtnDisplay}`}
+            className={`${styles.buyBtn} ${(editingShowcase ? editAnimated : display.showcaseAnimated) ? '' : styles.buyBtnDisplay}`}
             onClick={() => editingShowcase ? setEditAnimated(true) : undefined}
             disabled={!editingShowcase}
           >{t('admin.showcaseAnimated')}</button>
@@ -259,7 +261,7 @@ export function ShopDetailView({
         {/* Card Detail Popup */}
         {popupCardId && (() => {
           const cardData = allCards.find((c) => c.id === popupCardId);
-          const setEntry = setDetail?.cards.find((c) => c.cardId === popupCardId);
+          const setEntry = displayDetail?.cards.find((c) => c.cardId === popupCardId);
           if (!cardData) return null;
           const loc = localize(cardData);
           return (

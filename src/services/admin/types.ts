@@ -18,9 +18,7 @@ export interface AdminSet {
   cardCount: number;
   productType: string;
   pricePack: number;
-  priceDisplay: number | null;
   packSize: number;
-  displaySize: number | null;
   descDe: string;
   descEn: string;
   featured: boolean;
@@ -32,12 +30,10 @@ export interface AdminSetRow {
   type: string;
   wave: number;
   active: boolean;
-  release_date: string | null;
+  og_release_date: string | null;
   product_type: string;
   price_pack: number;
-  price_display: number | null;
   pack_size: number;
-  display_size: number | null;
   desc_de: string;
   desc_en: string;
   featured: boolean;
@@ -45,10 +41,31 @@ export interface AdminSetRow {
   shop_visible: boolean;
   showcase_card_ids: number[] | null;
   showcase_animated: boolean;
-  display_showcase_card_ids: number[] | null;
-  display_showcase_animated: boolean;
-  game_release_date: string | null;
+  ig_release_date: string | null;
   card_count: number;
+  next_release_start: string | null;
+  active_window_end: string | null;
+}
+
+export interface AdminDisplayRow {
+  id: number;
+  name: string;
+  price: number;
+  desc_de: string | null;
+  desc_en: string | null;
+  showcase_card_ids: number[] | null;
+  showcase_animated: boolean;
+  ig_release_date: string | null;
+  active: boolean;
+  shop_visible: boolean;
+  wave: number;
+  sort_order: number;
+  total_packs: number;
+  card_count: number;
+  created_at: string;
+  next_release_start: string | null;
+  active_window_end: string | null;
+  contents: { boosterSetName: string; packCount: number }[];
 }
 
 export interface RarityRate {
@@ -105,6 +122,15 @@ export interface AdminCosmetic {
   price: number;
   previewData: string | null;
   available: boolean;
+}
+
+export interface ReleaseWindow {
+  id: number;
+  product_type: string;
+  product_id: string;
+  start_date: string;
+  end_date: string | null;
+  created_at: string;
 }
 
 export interface AdminCardRow {
