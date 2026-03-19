@@ -282,6 +282,79 @@
   padding: 8px 0;
 }
 
+/* ---- Card Breakdown Modal ---- */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: rgba(8, 12, 14, 0.95);
+  border: 1px solid var(--orichalcos-subtle, rgba(0, 220, 168, 0.15));
+  max-width: 520px;
+  width: 100%;
+  padding: 20px 24px 24px;
+  border-radius: 4px;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalTitle {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.modalClose:hover {
+  color: var(--text-primary);
+}
+
+.summaryCell {
+  text-align: left;
+  padding: 14px 14px;
+  background: rgba(0, 220, 168, 0.03);
+  border-bottom: 1px solid rgba(0, 220, 168, 0.08);
+}
+
+.summaryValue {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  display: block;
+}
+
+.summaryLabel {
+  font-family: var(--font-heading);
+  font-size: 0.42rem;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
 /* ---- Responsive ---- */
 
 @media (max-width: 768px) {

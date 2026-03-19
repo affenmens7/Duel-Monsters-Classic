@@ -55,6 +55,33 @@ export async function deleteReleaseWindow(
   return handleResponse<{ success: boolean }>(response);
 }
 
+export async function activateProduct(
+  token: string,
+  productType: string,
+  productId: string,
+  igReleaseDate: string,
+): Promise<{ success: boolean; activatedNow: boolean }> {
+  const response = await fetch(`${env.api.baseUrl}/admin/releases/activate`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ product_type: productType, product_id: productId, ig_release_date: igReleaseDate }),
+  });
+  return handleResponse<{ success: boolean; activatedNow: boolean }>(response);
+}
+
+export async function reactivateProduct(
+  token: string,
+  productType: string,
+  productId: string,
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${env.api.baseUrl}/admin/releases/reactivate`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ product_type: productType, product_id: productId }),
+  });
+  return handleResponse<{ success: boolean }>(response);
+}
+
 export async function deactivateProduct(
   token: string,
   productType: string,

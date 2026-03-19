@@ -13,8 +13,8 @@ export async function fetchAdminDisplays(token: string): Promise<AdminDisplayRow
   return handleResponse<AdminDisplayRow[]>(response);
 }
 
-export async function fetchAdminDisplay(token: string, id: number): Promise<AdminDisplayRow> {
-  const response = await fetch(`${env.api.baseUrl}/admin/displays/${id}`, {
+export async function fetchAdminDisplay(token: string, id: number | string): Promise<AdminDisplayRow> {
+  const response = await fetch(`${env.api.baseUrl}/admin/displays/${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse<AdminDisplayRow>(response);

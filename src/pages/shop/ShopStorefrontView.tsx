@@ -113,7 +113,9 @@ export function ShopStorefrontView({
       {/* Starter Decks */}
       {starters.length > 0 && (
         <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t('shop.starterDecks')}</h2>
+          <div className={styles.sectionHeader}>
+            <h2 className={styles.sectionTitle}>{t('shop.starterDecks')}</h2>
+          </div>
           <ProductRow products={starters} isEn={isEn} onProductClick={(name) => onOpenDetail(name, 'booster')} />
         </div>
       )}

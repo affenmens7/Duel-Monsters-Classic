@@ -419,7 +419,7 @@ export function AdminCardsPage() {
           }}
           onClose={() => { setPopupCard(null); setPopupArtworks([]); }}
           artworks={popupArtworks}
-          onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
+          onSetClick={(setName) => navigate(`/app/admin/sets/booster/${encodeURIComponent(setName)}`)}
           currentArtworkId={popupCard.default_artwork_id}
           onArtworkChange={async (artworkId) => {
             if (!token || !popupCard) return;

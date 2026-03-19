@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../store/AuthContext';
 import {
@@ -25,6 +26,7 @@ import styles from './AdminDisplays.module.css';
 
 interface DisplayForm {
   name: string;
+  codeSuffix: string;
   price: number;
   descDe: string;
   descEn: string;
@@ -45,11 +47,15 @@ interface ContentEntry {
 export function AdminDisplaysPage() {
   const { token } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   // Data
   const [displays, setDisplays] = useState<AdminDisplayRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Card breakdown modal
+  const [cardBreakdownRow, setCardBreakdownRow] = useState<AdminDisplayRow | null>(null);
 
   // Edit modal state
   const [editRow, setEditRow] = useState<AdminDisplayRow | null>(null);
@@ -60,7 +66,7 @@ export function AdminDisplaysPage() {
   // Create modal state
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<DisplayForm>({
-    name: '', price: 0, descDe: '', descEn: '', wave: 0, sortOrder: 0, shopVisible: true,
+    name: '', codeSuffix: '', price: 0, descDe: '', descEn: '', wave: 0, sortOrder: 0, shopVisible: true,
   });
   const [createContents, setCreateContents] = useState<ContentEntry[]>([]);
   const [creating, setCreating] = useState(false);
@@ -154,6 +160,7 @@ export function AdminDisplaysPage() {
     try {
       await createDisplay(token, {
         name: createForm.name,
+        code: createForm.codeSuffix ? `DSP-${createForm.codeSuffix.toUpperCase()}` : undefined,
         price: createForm.price,
         desc_de: createForm.descDe || undefined,
         desc_en: createForm.descEn || undefined,
@@ -250,7 +257,7 @@ export function AdminDisplaysPage() {
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <h1 className={styles.title}>{t('admin.manageDisplays')}</h1>
+        <h1 className={styles.title}>{t('admin.displays')}</h1>
         <button className={styles.createBtn} onClick={openCreateModal}>
           {t('admin.createDisplay')}
         </button>
@@ -263,23 +270,26 @@ export function AdminDisplaysPage() {
           <thead className={styles.tableHead}>
             <tr>
               <th className={styles.th}>{t('admin.name')}</th>
-              <th className={styles.th}>{t('admin.displayPrice')}</th>
-              <th className={styles.th}>{t('admin.displayTotalPacks')}</th>
-              <th className={styles.th}>{t('admin.displayContentsCol')}</th>
+              <th className={styles.th}>{t('admin.code')}</th>
               <th className={styles.th}>{t('admin.wave')}</th>
               <th className={styles.th}>{t('admin.release')}</th>
+              <th className={styles.th}>{t('admin.displayContentsCol')}</th>
+              <th className={styles.th}>{t('admin.displayTotalPacks')}</th>
+              <th className={styles.th}>{t('admin.cards')}</th>
               <th className={styles.th} />
             </tr>
           </thead>
           <tbody>
             {displays.map((row) => (
               <tr key={row.id} className={styles.tr}>
-                <td className={styles.td}>{row.name}</td>
-                <td className={styles.td}>{row.price} DP</td>
-                <td className={styles.td}>{row.total_packs}</td>
-                <td className={styles.td}>
-                  {row.contents.length} Booster
+                <td
+                  className={styles.td}
+                  style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }}
+                  onClick={() => navigate(`/app/admin/sets/display/${encodeURIComponent(row.name)}`)}
+                >
+                  {row.name}
                 </td>
+                <td className={styles.td}>{row.code ?? '—'}</td>
                 <td className={styles.td}>{row.wave}</td>
                 <td
                   className={styles.td}
@@ -307,6 +317,9 @@ export function AdminDisplaysPage() {
                     <span style={{ color: 'var(--text-muted)' }}>{t('admin.releaseNotPlanned')}</span>
                   )}
                 </td>
+                <td className={styles.td} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }} onClick={() => setCardBreakdownRow(row)}>{row.contents.length} Booster</td>
+                <td className={styles.td} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }} onClick={() => setCardBreakdownRow(row)}>{row.total_packs} Booster</td>
+                <td className={styles.td} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }} onClick={() => setCardBreakdownRow(row)}>{row.card_count}</td>
                 <td className={styles.tdGear}>
                   <button
                     className={styles.gearBtn}
@@ -350,32 +363,14 @@ export function AdminDisplaysPage() {
               />
             </div>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.displayPrice')}</span>
-              <input
-                className={ms.fieldInput}
-                type="number"
-                min={0}
-                value={editForm.price}
-                onChange={(e) => setEditForm((p) => p ? { ...p, price: Number(e.target.value) } : p)}
-              />
-            </div>
-            <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.descDe')}</span>
-              <textarea
-                className={`${ms.fieldInput} ${ms.fieldTextarea}`}
-                rows={3}
-                value={editForm.descDe}
-                onChange={(e) => setEditForm((p) => p ? { ...p, descDe: e.target.value } : p)}
-              />
-            </div>
-            <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.descEn')}</span>
-              <textarea
-                className={`${ms.fieldInput} ${ms.fieldTextarea}`}
-                rows={3}
-                value={editForm.descEn}
-                onChange={(e) => setEditForm((p) => p ? { ...p, descEn: e.target.value } : p)}
-              />
+              <span className={ms.fieldLabel}>{t('admin.active')}</span>
+              <div className={ms.statusRow}>
+                <button
+                  className={`${ms.statusBtn} ${editRow?.active ? ms.statusBtnActive : ''}`}
+                  onClick={() => setEditForm((p) => p ? { ...p, shopVisible: true } : p)}
+                  disabled
+                >{editRow?.active ? t('admin.statusActive') : t('admin.statusInactive')}</button>
+              </div>
             </div>
             <div className={ms.fieldRow}>
               <span className={ms.fieldLabel}>{t('admin.wave')}</span>
@@ -434,6 +429,20 @@ export function AdminDisplaysPage() {
             value={createForm.name}
             onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
           />
+        </div>
+        <div className={ms.fieldRow}>
+          <span className={ms.fieldLabel}>{t('admin.code')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '1px' }}>DSP-</span>
+            <input
+              className={ms.fieldInput}
+              type="text"
+              style={{ width: '100px', textTransform: 'uppercase' }}
+              value={createForm.codeSuffix}
+              onChange={(e) => setCreateForm((p) => ({ ...p, codeSuffix: e.target.value.toUpperCase() }))}
+              placeholder="LOB"
+            />
+          </div>
         </div>
         <div className={ms.fieldRow}>
           <span className={ms.fieldLabel}>{t('admin.displayPrice')}</span>
@@ -576,10 +585,62 @@ export function AdminDisplaysPage() {
           productId={String(releaseRow.id)}
           productName={releaseRow.name}
           igReleaseDate={releaseRow.ig_release_date}
+          isEvent={releaseRow.is_event ?? false}
           active={releaseRow.active}
           token={token}
           onChanged={() => loadDisplays()}
         />
+      )}
+
+      {/* Breakdown Modal (Style A) */}
+      {cardBreakdownRow && (
+        <div className={styles.modalOverlay} onClick={() => setCardBreakdownRow(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>{cardBreakdownRow.name}</h3>
+              <button className={styles.modalClose} onClick={() => setCardBreakdownRow(null)}>x</button>
+            </div>
+            <table className={styles.table} style={{ marginTop: '12px' }}>
+              <thead>
+                <tr>
+                  <td className={styles.summaryCell}>
+                    <span className={styles.summaryValue}>{cardBreakdownRow.contents.length}</span>
+                    <span className={styles.summaryLabel}>Booster Sets</span>
+                  </td>
+                  <td className={styles.summaryCell}>
+                    <span className={styles.summaryValue}>{cardBreakdownRow.total_packs}</span>
+                    <span className={styles.summaryLabel}>{t('admin.displayTotalPacks')}</span>
+                  </td>
+                  <td className={styles.summaryCell}>
+                    <span className={styles.summaryValue}>{cardBreakdownRow.card_count}</span>
+                    <span className={styles.summaryLabel}>{t('common.total')} {t('admin.cards')}</span>
+                  </td>
+                </tr>
+              </thead>
+              <thead className={styles.tableHead}>
+                <tr>
+                  <th className={styles.th}>{t('admin.boosterName')}</th>
+                  <th className={styles.th}>Packs</th>
+                  <th className={styles.th}>{t('admin.cards')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cardBreakdownRow.contents.map((c) => (
+                  <tr key={c.boosterSetName} className={styles.tr}>
+                    <td className={styles.td}>{c.boosterSetName}</td>
+                    <td className={styles.td}>{c.packCount}</td>
+                    <td className={styles.td}>{c.cardCount ?? 0}</td>
+                  </tr>
+                ))}
+                <tr className={styles.tr} style={{ borderTop: '1px solid rgba(0, 220, 168, 0.12)' }}>
+                  <td className={styles.td} style={{ fontWeight: 700, fontFamily: 'var(--font-heading)', fontSize: '0.7rem', letterSpacing: '1px', color: 'var(--orichalcos-light)' }}>{t('common.total')}</td>
+                  <td className={styles.td} style={{ fontWeight: 700, color: 'var(--orichalcos-light)' }}>{cardBreakdownRow.total_packs}</td>
+                  <td className={styles.td} style={{ fontWeight: 700, color: 'var(--orichalcos-light)' }}>{cardBreakdownRow.card_count}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );

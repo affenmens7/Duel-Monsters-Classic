@@ -217,7 +217,7 @@ export function AdminSetsPage() {
 
       setCreateOpen(false);
       await loadSets();
-      navigate(`/app/admin/sets/${encodeURIComponent(createForm.name)}`);
+      navigate(`/app/admin/sets/${createForm.type ?? 'booster'}/${encodeURIComponent(createForm.name)}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('admin.createFailed');
       setCreateResult({ ok: false, msg });
@@ -231,8 +231,8 @@ export function AdminSetsPage() {
   const handlePostImportNavigate = useCallback(async () => {
     setCreateOpen(false);
     await loadSets();
-    navigate(`/app/admin/sets/${encodeURIComponent(createForm.name)}`);
-  }, [createForm.name, loadSets, navigate]);
+    navigate(`/app/admin/sets/${createForm.type ?? 'booster'}/${encodeURIComponent(createForm.name)}`);
+  }, [createForm.name, createForm.type, loadSets, navigate]);
 
   // Close create modal — just close, no navigation
   const handleCloseCreateModal = useCallback(() => {
@@ -435,7 +435,7 @@ export function AdminSetsPage() {
               <td
                 className={styles.td}
                 style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }}
-                onClick={() => navigate(`/app/admin/sets/${encodeURIComponent(row.name)}`)}
+                onClick={() => navigate(`/app/admin/sets/${row.product_type ?? 'booster'}/${encodeURIComponent(row.name)}`)}
               >
                 {row.name}
               </td>
@@ -878,6 +878,7 @@ export function AdminSetsPage() {
           productName={releaseRow.name}
           ogReleaseDate={releaseRow.og_release_date}
           igReleaseDate={releaseRow.ig_release_date}
+          isEvent={releaseRow.is_event ?? false}
           active={releaseRow.active}
           token={token}
           onChanged={() => loadSets()}

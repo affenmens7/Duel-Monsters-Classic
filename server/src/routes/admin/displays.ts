@@ -17,11 +17,12 @@ displaysRouter.get('/', async (req, res) => {
   try {
     const displaysResult = await pool.query(`
       SELECT
-        d.id, d.name, d.price,
+        d.id, d.name, d.code, d.price,
         d.desc_de, d.desc_en,
         d.showcase_card_ids,
         COALESCE(d.showcase_animated, FALSE) AS showcase_animated,
         d.ig_release_date,
+        COALESCE(d.is_event, FALSE) AS is_event,
         d.active, d.shop_visible, d.wave,
         d.sort_order, d.created_at,
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
@@ -42,8 +43,13 @@ displaysRouter.get('/', async (req, res) => {
     let contentsRows: any[] = [];
     if (displayIds.length > 0) {
       const contentsResult = await pool.query(`
-        SELECT dc.display_id, dc.booster_set_name, dc.pack_count
+        SELECT dc.display_id, dc.booster_set_name, dc.pack_count,
+               COALESCE(cnt.card_count, 0)::int AS card_count
         FROM shop_display_contents dc
+        LEFT JOIN (
+          SELECT set_name, COUNT(DISTINCT card_id)::int AS card_count
+          FROM card_set_entries GROUP BY set_name
+        ) cnt ON cnt.set_name = dc.booster_set_name
         WHERE dc.display_id = ANY($1)
       `, [displayIds]);
       contentsRows = contentsResult.rows;
@@ -53,9 +59,10 @@ displaysRouter.get('/', async (req, res) => {
       ...d,
       contents: contentsRows
         .filter((c: any) => c.display_id === d.id)
-        .map(({ booster_set_name, pack_count }: any) => ({
+        .map(({ booster_set_name, pack_count, card_count }: any) => ({
           boosterSetName: booster_set_name,
           packCount: pack_count,
+          cardCount: card_count,
         })),
     }));
 
@@ -97,24 +104,22 @@ displaysRouter.get('/search-boosters', async (req, res) => {
 });
 
 /**
- * GET /api/admin/displays/:id
- * Single display detail.
+ * GET /api/admin/displays/:idOrName
+ * Single display detail. Accepts numeric ID or display name.
  */
-displaysRouter.get('/:id', async (req, res) => {
-  const displayId = parseInt(req.params.id, 10);
-  if (isNaN(displayId)) {
-    res.status(400).json({ error: 'Ungueltige Display-ID' });
-    return;
-  }
+displaysRouter.get('/:idOrName', async (req, res) => {
+  const param = req.params.idOrName;
+  const displayId = /^\d+$/.test(param) ? parseInt(param, 10) : null;
 
   try {
     const displayResult = await pool.query(`
       SELECT
-        d.id, d.name, d.price,
+        d.id, d.name, d.code, d.price,
         d.desc_de, d.desc_en,
         d.showcase_card_ids,
         COALESCE(d.showcase_animated, FALSE) AS showcase_animated,
         d.ig_release_date,
+        COALESCE(d.is_event, FALSE) AS is_event,
         d.active, d.shop_visible, d.wave,
         d.sort_order, d.created_at,
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
@@ -126,19 +131,20 @@ displaysRouter.get('/:id', async (req, res) => {
          ON cnt.set_name = dc2.booster_set_name
          WHERE dc2.display_id = d.id) AS card_count
       FROM shop_displays d
-      WHERE d.id = $1
-    `, [displayId]);
+      WHERE ${displayId !== null ? 'd.id = $1' : 'd.name = $1'}
+    `, [displayId !== null ? displayId : param]);
 
     if (displayResult.rows.length === 0) {
       res.status(404).json({ error: 'Display nicht gefunden' });
       return;
     }
 
+    const resolvedId = displayResult.rows[0].id;
     const contentsResult = await pool.query(`
       SELECT dc.booster_set_name, dc.pack_count
       FROM shop_display_contents dc
       WHERE dc.display_id = $1
-    `, [displayId]);
+    `, [resolvedId]);
 
     const display = {
       ...displayResult.rows[0],
@@ -165,8 +171,8 @@ displaysRouter.post('/', async (req, res) => {
 
   try {
     const {
-      name, price, desc_de, desc_en, wave, sort_order, active, shop_visible,
-      ig_release_date, showcase_card_ids, showcase_animated, contents,
+      name, code, price, desc_de, desc_en, wave, sort_order, active, shop_visible,
+      ig_release_date, showcase_card_ids, showcase_animated, contents, is_event,
     } = req.body;
 
     if (!name) {
@@ -178,13 +184,14 @@ displaysRouter.post('/', async (req, res) => {
     await client.query('BEGIN');
 
     const displayResult = await client.query(
-      `INSERT INTO shop_displays (name, price, desc_de, desc_en, wave, sort_order,
+      `INSERT INTO shop_displays (name, code, price, desc_de, desc_en, wave, sort_order,
                                    active, shop_visible, ig_release_date,
-                                   showcase_card_ids, showcase_animated)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                                   showcase_card_ids, showcase_animated, is_event)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [
         name,
+        code ?? null,
         price ?? 0,
         desc_de ?? null,
         desc_en ?? null,
@@ -195,6 +202,7 @@ displaysRouter.post('/', async (req, res) => {
         ig_release_date || null,
         Array.isArray(showcase_card_ids) ? showcase_card_ids : null,
         showcase_animated ?? false,
+        is_event ?? false,
       ]
     );
 
@@ -244,8 +252,8 @@ displaysRouter.put('/:id', async (req, res) => {
 
   try {
     const {
-      name, price, desc_de, desc_en, wave, sort_order, active, shop_visible,
-      ig_release_date, showcase_card_ids, showcase_animated, contents,
+      name, code, price, desc_de, desc_en, wave, sort_order, active, shop_visible,
+      ig_release_date, showcase_card_ids, showcase_animated, contents, is_event,
     } = req.body;
 
     await client.query('BEGIN');
@@ -256,6 +264,7 @@ displaysRouter.put('/:id', async (req, res) => {
     let idx = 1;
 
     if (name !== undefined) { updates.push(`name = $${idx++}`); params.push(name); }
+    if (code !== undefined) { updates.push(`code = $${idx++}`); params.push(code); }
     if (price !== undefined) { updates.push(`price = $${idx++}`); params.push(Number(price)); }
     if (desc_de !== undefined) { updates.push(`desc_de = $${idx++}`); params.push(desc_de); }
     if (desc_en !== undefined) { updates.push(`desc_en = $${idx++}`); params.push(desc_en); }
@@ -274,6 +283,10 @@ displaysRouter.put('/:id', async (req, res) => {
     if (showcase_animated !== undefined) {
       updates.push(`showcase_animated = $${idx++}`);
       params.push(Boolean(showcase_animated));
+    }
+    if (is_event !== undefined) {
+      updates.push(`is_event = $${idx++}`);
+      params.push(Boolean(is_event));
     }
 
     if (updates.length > 0) {

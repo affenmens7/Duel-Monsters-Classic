@@ -134,16 +134,19 @@ displaysRouter.get('/:id', requireAuth, async (req, res) => {
       ratePct: totalCards > 0 ? ((r.count / totalCards) * 100).toFixed(2) : '0.00',
     }));
 
-    // Cards with ownership
+    // Cards with ownership — include set_name for grouping
     const cardsResult = await pool.query(`
-      SELECT DISTINCT cse.card_id AS "cardId", cse.rarity,
+      SELECT cse.card_id AS "cardId",
+             COALESCE(cse.artwork_id, cse.card_id) AS "artworkId",
+             cse.set_name AS "setName",
+             cse.rarity,
              cse.rarity_code AS "rarityCode",
              COALESCE(uc.quantity, 0)::int AS owned
       FROM card_set_entries cse
       JOIN shop_display_contents dc ON dc.booster_set_name = cse.set_name
       LEFT JOIN user_cards uc ON uc.card_id = cse.card_id AND uc.user_id = $2
       WHERE dc.display_id = $1
-      ORDER BY cse.card_id
+      ORDER BY dc.booster_set_name, cse.card_id
     `, [displayId, userId]);
 
     const display = {

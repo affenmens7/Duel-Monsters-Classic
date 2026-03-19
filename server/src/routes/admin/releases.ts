@@ -247,6 +247,117 @@ releasesRouter.delete('/:id', async (req, res) => {
 });
 
 // -------------------------------------------------------------------------
+// POST /api/admin/releases/activate — activate a normal product with ig_release_date
+// Body: { product_type, product_id, ig_release_date }
+// -------------------------------------------------------------------------
+releasesRouter.post('/activate', async (req, res) => {
+  const { product_type, product_id, ig_release_date } = req.body;
+
+  if (!product_type || !product_id || !ig_release_date) {
+    res.status(400).json({ error: 'product_type, product_id, and ig_release_date required' });
+    return;
+  }
+
+  const mapping = PRODUCT_TABLE_MAP[product_type];
+  if (!mapping) {
+    res.status(400).json({ error: `Unknown product_type: ${product_type}` });
+    return;
+  }
+
+  if (isNaN(Date.parse(ig_release_date))) {
+    res.status(400).json({ error: 'Invalid ig_release_date' });
+    return;
+  }
+
+  try {
+    const idValue = mapping.idType === 'int' ? parseInt(product_id, 10) : product_id;
+    const today = new Date().toISOString().slice(0, 10);
+    const shouldActivateNow = ig_release_date <= today;
+
+    // Set ig_release_date on the product config table
+    if (product_type === 'booster' || product_type === 'starter') {
+      await pool.query(
+        `UPDATE shop_set_config SET ig_release_date = $1 WHERE set_name = $2`,
+        [ig_release_date, product_id],
+      );
+      if (shouldActivateNow) {
+        await pool.query(`UPDATE card_sets SET active = TRUE WHERE name = $1`, [product_id]);
+      }
+    } else if (product_type === 'display') {
+      await pool.query(
+        `UPDATE shop_displays SET ig_release_date = $1 WHERE id = $2`,
+        [ig_release_date, idValue],
+      );
+      if (shouldActivateNow) {
+        await pool.query(`UPDATE shop_displays SET active = TRUE WHERE id = $1`, [idValue]);
+      }
+    }
+
+    // Create history entry in release windows
+    if (shouldActivateNow) {
+      await pool.query(
+        `INSERT INTO shop_release_windows (product_type, product_id, start_date)
+         VALUES ($1, $2, $3)`,
+        [product_type, product_id, ig_release_date],
+      );
+    }
+
+    await bumpDataVersion();
+    await reschedule();
+
+    res.json({ success: true, activatedNow: shouldActivateNow });
+  } catch (err) {
+    console.error('Failed to activate product:', err);
+    res.status(500).json({ error: 'Produkt konnte nicht aktiviert werden' });
+  }
+});
+
+// -------------------------------------------------------------------------
+// POST /api/admin/releases/reactivate — reactivate a previously released normal product
+// Body: { product_type, product_id }
+// -------------------------------------------------------------------------
+releasesRouter.post('/reactivate', async (req, res) => {
+  const { product_type, product_id } = req.body;
+
+  if (!product_type || !product_id) {
+    res.status(400).json({ error: 'product_type and product_id required' });
+    return;
+  }
+
+  const mapping = PRODUCT_TABLE_MAP[product_type];
+  if (!mapping) {
+    res.status(400).json({ error: `Unknown product_type: ${product_type}` });
+    return;
+  }
+
+  try {
+    const idValue = mapping.idType === 'int' ? parseInt(product_id, 10) : product_id;
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Activate the product
+    await pool.query(
+      `UPDATE ${mapping.table} SET active = TRUE WHERE ${mapping.idColumn} = $1`,
+      [idValue],
+    );
+
+    // Create new history entry (no end_date = permanent)
+    await pool.query(
+      `INSERT INTO shop_release_windows (product_type, product_id, start_date)
+       VALUES ($1, $2, $3)`,
+      [product_type, product_id, today],
+    );
+
+    await bumpDataVersion();
+    await reschedule();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to reactivate product:', err);
+    res.status(500).json({ error: 'Produkt konnte nicht reaktiviert werden' });
+  }
+});
+
+// -------------------------------------------------------------------------
 // POST /api/admin/releases/deactivate — manually deactivate a product now
 // Body: { product_type, product_id }
 // -------------------------------------------------------------------------

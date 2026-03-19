@@ -41,8 +41,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   padding: 20px 24px 16px;
   border-bottom: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+}
+
+.eventBadge {
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 3px;
+  background: rgba(200, 168, 48, 0.2);
+  color: #c8a830;
+  border: 1px solid rgba(200, 168, 48, 0.3);
 }
 
 .title {

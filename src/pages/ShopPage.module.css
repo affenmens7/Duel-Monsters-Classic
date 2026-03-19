@@ -628,6 +628,37 @@
   letter-spacing: 1px;
 }
 
+/* Booster group header inside display detail */
+.boosterGroupHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0 8px;
+  margin-top: 18px;
+  border-bottom: 1px solid var(--orichalcos-faint, rgba(0, 220, 168, 0.08));
+  margin-bottom: 10px;
+}
+
+.boosterGroupHeader:first-child {
+  margin-top: 0;
+}
+
+.boosterGroupName {
+  font-family: var(--font-heading);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--orichalcos-light);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.boosterGroupCount {
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
 /* === Filter Buttons === */
 
 .filters {

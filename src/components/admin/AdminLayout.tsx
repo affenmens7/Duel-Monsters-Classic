@@ -3,7 +3,7 @@
  * Sidebar is grouped by sections: Dashboard, Cards & Sets, Shop, Content, Users.
  */
 
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import styles from './AdminLayout.module.css';
 
@@ -24,7 +24,7 @@ const ADMIN_SECTIONS: NavSection[] = [
     items: [
       { to: '/app/admin/cards', labelKey: 'admin.cardDatabase' },
       { to: '/app/admin/sets/booster', labelKey: 'admin.boosterPacks' },
-      { to: '/app/admin/shop/displays', labelKey: 'admin.displays' },
+      { to: '/app/admin/sets/display', labelKey: 'admin.displays' },
       { to: '/app/admin/sets/starter', labelKey: 'admin.starterDecks' },
     ],
   },
@@ -52,8 +52,20 @@ const ADMIN_SECTIONS: NavSection[] = [
   },
 ];
 
+/**
+ * Check if a nav item should be highlighted.
+ * Uses prefix matching: /admin/sets/booster/LOB matches /admin/sets/booster.
+ */
+function isNavActive(itemPath: string, currentPath: string, isEnd?: boolean): boolean {
+  if (currentPath === itemPath) return true;
+  if (isEnd) return false;
+  if (currentPath.startsWith(itemPath + '/')) return true;
+  return false;
+}
+
 export function AdminLayout() {
   const { t } = useTranslation();
+  const location = useLocation();
 
   return (
     <div className={styles.layout}>
@@ -70,8 +82,8 @@ export function AdminLayout() {
                   key={item.to}
                   to={item.to}
                   end={item.end}
-                  className={({ isActive }) =>
-                    `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
+                  className={() =>
+                    `${styles.navItem} ${isNavActive(item.to, location.pathname, item.end) ? styles.navItemActive : ''}`
                   }
                 >
                   {t(item.labelKey)}

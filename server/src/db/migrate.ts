@@ -438,6 +438,26 @@ const schema = `
     END IF;
   END $$;
 
+  -- Add is_event flag to shop_set_config (event products use release windows, normal products use ig_release_date)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'is_event') THEN
+      ALTER TABLE shop_set_config ADD COLUMN is_event BOOLEAN NOT NULL DEFAULT FALSE;
+    END IF;
+  END $$;
+
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'is_event') THEN
+      ALTER TABLE shop_displays ADD COLUMN is_event BOOLEAN NOT NULL DEFAULT FALSE;
+    END IF;
+  END $$;
+
+  -- Add code column to shop_displays
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'code') THEN
+      ALTER TABLE shop_displays ADD COLUMN code VARCHAR(32);
+    END IF;
+  END $$;
+
   -- Auto-create missing shop_set_config for any card_sets without one
   INSERT INTO shop_set_config (set_name, product_type, price_pack, pack_size)
   SELECT

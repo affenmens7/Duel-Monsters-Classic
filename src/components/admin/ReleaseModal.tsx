@@ -1,6 +1,9 @@
 /**
  * ReleaseModal — manages release windows for products (boosters, starters, displays).
  * Shows OG/IG release dates, current status, release history, and a form to plan new releases.
+ *
+ * Normal products: activate via ig_release_date, reactivate after deactivation, no planned windows.
+ * Event products: schedule windows with mandatory start + end dates, can recur.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,6 +13,8 @@ import {
   createReleaseWindow,
   deleteReleaseWindow,
   deactivateProduct,
+  activateProduct,
+  reactivateProduct,
 } from '../../services/admin/releases';
 import type { ReleaseWindow } from '../../services/admin/types';
 import styles from './ReleaseModal.module.css';
@@ -22,6 +27,7 @@ interface ReleaseModalProps {
   productName: string;
   ogReleaseDate?: string | null;
   igReleaseDate?: string | null;
+  isEvent: boolean;
   active: boolean;
   token: string;
   onChanged: () => void;
@@ -46,7 +52,7 @@ function getWindowStatus(w: ReleaseWindow): 'active' | 'ended' | 'planned' {
 
 export function ReleaseModal({
   open, onClose, productType, productId, productName,
-  ogReleaseDate, igReleaseDate, active, token, onChanged,
+  ogReleaseDate, igReleaseDate, isEvent, active, token, onChanged,
 }: ReleaseModalProps) {
   const { t, i18n } = useTranslation();
   const isEn = i18n.language === 'en';
@@ -62,7 +68,6 @@ export function ReleaseModal({
     setLoading(true);
     try {
       const data = await fetchReleaseWindows(token, productType, productId);
-      // Sort newest first
       const sorted = [...data].sort((a, b) =>
         b.start_date.localeCompare(a.start_date)
       );
@@ -83,6 +88,32 @@ export function ReleaseModal({
     }
   }, [open, loadWindows]);
 
+  // Normal product: set ig_release_date and activate
+  const handleActivateNormal = useCallback(async () => {
+    if (!planStart) return;
+    setSaving(true);
+    try {
+      await activateProduct(token, productType, productId, planStart);
+      await loadWindows();
+      onChanged();
+      setShowPlanForm(false);
+      setPlanStart('');
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  }, [token, productType, productId, planStart, loadWindows, onChanged]);
+
+  // Normal product: reactivate after deactivation
+  const handleReactivate = useCallback(async () => {
+    setSaving(true);
+    try {
+      await reactivateProduct(token, productType, productId);
+      await loadWindows();
+      onChanged();
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  }, [token, productType, productId, loadWindows, onChanged]);
+
+  // Deactivate any product
   const handleDeactivate = useCallback(async () => {
     setSaving(true);
     try {
@@ -93,30 +124,16 @@ export function ReleaseModal({
     finally { setSaving(false); }
   }, [token, productType, productId, loadWindows, onChanged]);
 
-  const handleActivate = useCallback(async () => {
-    setSaving(true);
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      await createReleaseWindow(token, {
-        product_type: productType,
-        product_id: productId,
-        start_date: today,
-      });
-      await loadWindows();
-      onChanged();
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
-  }, [token, productType, productId, loadWindows, onChanged]);
-
-  const handleCreateWindow = useCallback(async () => {
-    if (!planStart) return;
+  // Event product: create window with start + end
+  const handleCreateEventWindow = useCallback(async () => {
+    if (!planStart || !planEnd) return;
     setSaving(true);
     try {
       await createReleaseWindow(token, {
         product_type: productType,
         product_id: productId,
         start_date: planStart,
-        end_date: planEnd || undefined,
+        end_date: planEnd,
       });
       await loadWindows();
       onChanged();
@@ -141,16 +158,22 @@ export function ReleaseModal({
 
   const today = new Date().toISOString().split('T')[0];
 
+  // Normal product states
+  const hasBeenReleased = !!igReleaseDate;
+  const isNormalUnreleased = !isEvent && !hasBeenReleased;
+  const isNormalInactiveAfterRelease = !isEvent && hasBeenReleased && !active;
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>{productName}</h2>
+          {isEvent && <span className={styles.eventBadge}>Event</span>}
           <button className={styles.close} onClick={onClose}>x</button>
         </div>
 
         <div className={styles.body}>
-          {/* OG Release Date (read-only, only if provided) */}
+          {/* OG Release Date (read-only) */}
           {ogReleaseDate && (
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>{t('admin.ogReleaseDate')}</span>
@@ -168,13 +191,15 @@ export function ReleaseModal({
             )}
           </div>
 
-          {/* Current Status */}
+          {/* Current Status + Actions */}
           <div className={styles.statusRow}>
             <span className={styles.infoLabel}>{t('admin.status')}</span>
             <span className={active ? styles.badgeActive : styles.badgeInactive}>
               {active ? t('admin.releaseActive') : t('admin.inactive')}
             </span>
-            {active ? (
+
+            {/* Active product: deactivate button */}
+            {active && (
               <button
                 className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                 disabled={saving}
@@ -182,20 +207,23 @@ export function ReleaseModal({
               >
                 {t('admin.deactivateNow')}
               </button>
-            ) : (
+            )}
+
+            {/* Normal product, inactive after release: reactivate */}
+            {isNormalInactiveAfterRelease && (
               <button
                 className={styles.actionBtn}
                 disabled={saving}
-                onClick={handleActivate}
+                onClick={handleReactivate}
               >
-                {t('admin.activateNow')}
+                {t('admin.reactivate')}
               </button>
             )}
           </div>
 
           <div className={styles.divider} />
 
-          {/* Release History */}
+          {/* Release History (read-only for all products) */}
           <span className={styles.sectionTitle}>{t('admin.releaseHistory')}</span>
 
           {loading ? (
@@ -228,7 +256,8 @@ export function ReleaseModal({
                     <span className={badgeClass}>
                       {badgeLabel}
                     </span>
-                    {isFuture && (
+                    {/* Only event products can delete future windows */}
+                    {isEvent && isFuture && (
                       <button
                         className={styles.historyDeleteBtn}
                         onClick={() => handleDeleteWindow(w.id)}
@@ -246,14 +275,45 @@ export function ReleaseModal({
 
           <div className={styles.divider} />
 
-          {/* Plan New Release */}
-          {!showPlanForm ? (
+          {/* Normal product, unreleased: Plan Release (single date) */}
+          {isNormalUnreleased && !showPlanForm && (
             <button className={styles.planToggle} onClick={() => setShowPlanForm(true)}>
-              {t('admin.planRelease')}
+              {t('admin.planReleaseDate')}
             </button>
-          ) : (
+          )}
+
+          {isNormalUnreleased && showPlanForm && (
             <div className={styles.planForm}>
-              <span className={styles.sectionTitle}>{t('admin.planRelease')}</span>
+              <span className={styles.sectionTitle}>{t('admin.planReleaseDate')}</span>
+              <div className={styles.fieldRow}>
+                <span className={styles.fieldLabel}>{t('admin.releaseDate')}</span>
+                <input
+                  className={styles.fieldInput}
+                  type="date"
+                  value={planStart}
+                  onChange={(e) => setPlanStart(e.target.value)}
+                />
+              </div>
+              <button
+                className={styles.saveBtn}
+                disabled={saving || !planStart}
+                onClick={handleActivateNormal}
+              >
+                {saving ? '...' : t('common.save')}
+              </button>
+            </div>
+          )}
+
+          {/* Event product: Plan New Window (start + end required) */}
+          {isEvent && !showPlanForm && (
+            <button className={styles.planToggle} onClick={() => setShowPlanForm(true)}>
+              {t('admin.planNewWindow')}
+            </button>
+          )}
+
+          {isEvent && showPlanForm && (
+            <div className={styles.planForm}>
+              <span className={styles.sectionTitle}>{t('admin.planNewWindow')}</span>
               <div className={styles.fieldRow}>
                 <span className={styles.fieldLabel}>{t('admin.releaseStart')}</span>
                 <input
@@ -274,8 +334,8 @@ export function ReleaseModal({
               </div>
               <button
                 className={styles.saveBtn}
-                disabled={saving || !planStart}
-                onClick={handleCreateWindow}
+                disabled={saving || !planStart || !planEnd}
+                onClick={handleCreateEventWindow}
               >
                 {saving ? '...' : t('common.save')}
               </button>

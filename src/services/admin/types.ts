@@ -42,6 +42,7 @@ export interface AdminSetRow {
   showcase_card_ids: number[] | null;
   showcase_animated: boolean;
   ig_release_date: string | null;
+  is_event: boolean;
   card_count: number;
   next_release_start: string | null;
   active_window_end: string | null;
@@ -50,12 +51,14 @@ export interface AdminSetRow {
 export interface AdminDisplayRow {
   id: number;
   name: string;
+  code: string | null;
   price: number;
   desc_de: string | null;
   desc_en: string | null;
   showcase_card_ids: number[] | null;
   showcase_animated: boolean;
   ig_release_date: string | null;
+  is_event: boolean;
   active: boolean;
   shop_visible: boolean;
   wave: number;
@@ -65,7 +68,7 @@ export interface AdminDisplayRow {
   created_at: string;
   next_release_start: string | null;
   active_window_end: string | null;
-  contents: { boosterSetName: string; packCount: number }[];
+  contents: { boosterSetName: string; packCount: number; cardCount?: number }[];
 }
 
 export interface RarityRate {

@@ -65,7 +65,7 @@ export function DisplayDetailView({
     if (display.showcaseCardIds && display.showcaseCardIds.length > 0) return display.showcaseCardIds;
     if (!cards || cards.length === 0) return [];
     const shuffled = [...cards].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 5).map((c) => c.cardId);
+    return shuffled.slice(0, 5).map((c) => c.artworkId ?? c.cardId);
   }, [display.showcaseCardIds, cards]);
 
   const startEditing = useCallback(() => {
@@ -74,11 +74,11 @@ export function DisplayDetailView({
     setEditingShowcase(true);
   }, [display.showcaseCardIds, display.showcaseAnimated]);
 
-  const toggleCardInShowcase = useCallback((cardId: number) => {
+  const toggleCardInShowcase = useCallback((artworkId: number) => {
     setEditCards((prev) => {
-      if (prev.includes(cardId)) return prev.filter((id) => id !== cardId);
+      if (prev.includes(artworkId)) return prev.filter((id) => id !== artworkId);
       if (prev.length >= maxSlots) return prev;
-      return [...prev, cardId];
+      return [...prev, artworkId];
     });
   }, [maxSlots]);
 
@@ -233,30 +233,54 @@ export function DisplayDetailView({
         </div>
       )}
 
-      {/* Card Set Preview */}
+      {/* Card Set Preview — grouped by booster */}
       <div className={styles.cardPreview}>
         <div className={styles.cardPreviewHeader}>
           <span className={styles.cardPreviewTitle}>{t('shop.setPreview')}</span>
           <span className={styles.cardPreviewProgress}>{ownedCount}/{cards.length} {t('shop.owned')}</span>
         </div>
-        <div className={styles.cardGrid}>
-          {sortedDetailCards.map((card) => {
-            const colorSuffix = getRarityTier(card.rarity ?? 'Common');
-            const isSelected = editingShowcase && editCards.includes(card.cardId);
-            const slotIndex = editingShowcase ? editCards.indexOf(card.cardId) : -1;
-            return (
-              <div
-                key={card.cardId}
-                className={`${styles.cardCell} ${card.owned > 0 ? styles.cardCellOwned : styles.cardCellNotOwned} ${isSelected ? styles.cardCellSelected : ''}`}
-                onClick={() => editingShowcase ? toggleCardInShowcase(card.cardId) : onSetPopupCardId(card.cardId)}
-              >
-                <img className={styles.cardCellImg} src={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)} alt="" loading="lazy" />
-                <span className={`${styles.rarityDot} ${styles[`rarityDot${colorSuffix}`] ?? styles.rarityDotDefault}`} />
-                {isSelected && <span className={styles.cardCellSlot}>{slotIndex + 1}</span>}
+
+        {/* Group cards by setName (booster), preserving order from API */}
+        {(() => {
+          const groups: { setName: string; cards: typeof sortedDetailCards }[] = [];
+          for (const card of sortedDetailCards) {
+            const name = card.setName ?? 'Unknown';
+            let group = groups.find((g) => g.setName === name);
+            if (!group) {
+              group = { setName: name, cards: [] };
+              groups.push(group);
+            }
+            group.cards.push(card);
+          }
+
+          return groups.map((group) => (
+            <div key={group.setName}>
+              <div className={styles.boosterGroupHeader}>
+                <span className={styles.boosterGroupName}>{group.setName}</span>
+                <span className={styles.boosterGroupCount}>{group.cards.filter((c) => c.owned > 0).length}/{group.cards.length}</span>
               </div>
-            );
-          })}
-        </div>
+              <div className={styles.cardGrid}>
+                {group.cards.map((card) => {
+                  const colorSuffix = getRarityTier(card.rarity ?? 'Common');
+                  const imgId = card.artworkId ?? card.cardId;
+                  const isSelected = editingShowcase && editCards.includes(imgId);
+                  const slotIndex = editingShowcase ? editCards.indexOf(imgId) : -1;
+                  return (
+                    <div
+                      key={`${group.setName}-${card.cardId}`}
+                      className={`${styles.cardCell} ${card.owned > 0 ? styles.cardCellOwned : styles.cardCellNotOwned} ${isSelected ? styles.cardCellSelected : ''}`}
+                      onClick={() => editingShowcase ? toggleCardInShowcase(imgId) : onSetPopupCardId(card.cardId)}
+                    >
+                      <img className={styles.cardCellImg} src={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)} alt="" loading="lazy" />
+                      <span className={`${styles.rarityDot} ${styles[`rarityDot${colorSuffix}`] ?? styles.rarityDotDefault}`} />
+                      {isSelected && <span className={styles.cardCellSlot}>{slotIndex + 1}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ));
+        })()}
 
         {/* Card Detail Popup */}
         {popupCardId && (() => {

@@ -45,6 +45,7 @@ setsRouter.get('/', async (req, res) => {
         sc.showcase_card_ids,
         COALESCE(sc.showcase_animated, FALSE) AS showcase_animated,
         sc.ig_release_date,
+        COALESCE(sc.is_event, FALSE) AS is_event,
         COALESCE(cnt.card_count, 0)::int AS card_count,
         (SELECT rw.start_date FROM shop_release_windows rw
          WHERE rw.product_type = sc.product_type AND rw.product_id = cs.name
@@ -171,6 +172,7 @@ setsRouter.get('/:name/info', async (req, res) => {
         sc.featured,
         sc.sort_order,
         sc.ig_release_date,
+        COALESCE(sc.is_event, FALSE) AS is_event,
         COALESCE(cnt.card_count, 0)::int AS card_count
       FROM card_sets cs
       LEFT JOIN shop_set_config sc ON sc.set_name = cs.name
@@ -265,7 +267,7 @@ setsRouter.put('/:name/config', async (req, res) => {
     const {
       price_pack, pack_size,
       desc_de, desc_en, featured, sort_order, shop_visible, showcase_card_ids, showcase_animated,
-      ig_release_date,
+      ig_release_date, is_event,
     } = req.body;
 
     // Verify the set exists
@@ -321,6 +323,10 @@ setsRouter.put('/:name/config', async (req, res) => {
     if (ig_release_date !== undefined) {
       updates.push(`ig_release_date = $${idx++}`);
       params.push(ig_release_date === null || ig_release_date === '' ? null : String(ig_release_date));
+    }
+    if (is_event !== undefined) {
+      updates.push(`is_event = $${idx++}`);
+      params.push(Boolean(is_event));
     }
 
     if (updates.length === 0) {

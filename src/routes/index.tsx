@@ -25,6 +25,7 @@ import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
 import { AdminSetDetailPage } from '../pages/admin/AdminSetDetailPage';
 import { AdminShopPage } from '../pages/admin/AdminShopPage';
 import { AdminDisplaysPage } from '../pages/admin/AdminDisplaysPage';
+import { AdminDisplayDetailPage } from '../pages/admin/AdminDisplayDetailPage';
 
 export const router = createBrowserRouter([
   {
@@ -59,8 +60,11 @@ export const router = createBrowserRouter([
               { index: true, element: <AdminDashboardPage /> },
               { path: 'cards', element: <AdminCardsPage /> },
               { path: 'sets/booster', element: <AdminSetsPage /> },
+              { path: 'sets/booster/:name', element: <AdminSetDetailPage /> },
               { path: 'sets/starter', element: <AdminSetsPage /> },
-              { path: 'sets/:name', element: <AdminSetDetailPage /> },
+              { path: 'sets/starter/:name', element: <AdminSetDetailPage /> },
+              { path: 'sets/display', element: <AdminDisplaysPage /> },
+              { path: 'sets/display/:name', element: <AdminDisplayDetailPage /> },
               { path: 'shop/featured-sektion', element: <AdminShopPage /> },
               { path: 'shop/booster-sets', element: <AdminSetsPage /> },
               { path: 'shop/starter-decks', element: <AdminSetsPage /> },

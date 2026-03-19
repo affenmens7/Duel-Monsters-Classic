@@ -35,6 +35,7 @@ shopRouter.get('/products', async (_req, res) => {
         sc.showcase_card_ids AS "showcaseCardIds",
         COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
         sc.ig_release_date AS "igReleaseDate",
+        COALESCE(sc.is_event, FALSE) AS "isEvent",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
@@ -63,6 +64,7 @@ shopRouter.get('/products', async (_req, res) => {
         sc.showcase_card_ids AS "showcaseCardIds",
         COALESCE(sc.showcase_animated, FALSE) AS "showcaseAnimated",
         sc.ig_release_date AS "igReleaseDate",
+        COALESCE(sc.is_event, FALSE) AS "isEvent",
         COALESCE(cnt.card_count, 0)::int AS "cardCount"
       FROM shop_set_config sc
       JOIN card_sets cs ON cs.name = sc.set_name
@@ -98,7 +100,7 @@ shopRouter.get('/products', async (_req, res) => {
     if (allSetNames.length > 0) {
       const autoResult = await pool.query(
         `SELECT DISTINCT ON (cse.set_name, rarity_rank)
-           cse.set_name, cse.card_id
+           cse.set_name, COALESCE(cse.artwork_id, cse.card_id) AS card_id
          FROM card_set_entries cse
          JOIN cards c ON c.id = cse.card_id
          CROSS JOIN LATERAL (
@@ -121,7 +123,6 @@ shopRouter.get('/products', async (_req, res) => {
       }
 
       for (const product of allProducts as any[]) {
-        // Fill showcaseCardIds if empty
         if (!product.showcaseCardIds || product.showcaseCardIds.length === 0) {
           product.showcaseCardIds = autoMap.get(product.setName) ?? [];
         }
@@ -136,6 +137,7 @@ shopRouter.get('/products', async (_req, res) => {
         d.showcase_card_ids AS "showcaseCardIds",
         COALESCE(d.showcase_animated, FALSE) AS "showcaseAnimated",
         d.ig_release_date AS "igReleaseDate",
+        COALESCE(d.is_event, FALSE) AS "isEvent",
         d.active, d.wave, d.sort_order AS "sortOrder",
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
          FROM shop_display_contents dc WHERE dc.display_id = d.id) AS "totalPacks",
@@ -177,7 +179,7 @@ shopRouter.get('/products', async (_req, res) => {
       if (displayBoosterNames.length > 0) {
         const autoDisplayResult = await pool.query(
           `SELECT DISTINCT ON (cse.set_name, rarity_rank)
-             cse.set_name, cse.card_id
+             cse.set_name, COALESCE(cse.artwork_id, cse.card_id) AS card_id
            FROM card_set_entries cse
            JOIN cards c ON c.id = cse.card_id
            CROSS JOIN LATERAL (

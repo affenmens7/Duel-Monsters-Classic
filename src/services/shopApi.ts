@@ -24,6 +24,7 @@ export interface ShopSetProduct {
   showcaseCardIds: number[];
   showcaseAnimated: boolean;
   igReleaseDate?: string | null;
+  isEvent?: boolean;
 }
 
 export interface ShopDisplayProduct {
@@ -35,6 +36,7 @@ export interface ShopDisplayProduct {
   showcaseCardIds: number[];
   showcaseAnimated: boolean;
   igReleaseDate: string | null;
+  isEvent?: boolean;
   active: boolean;
   wave: number;
   sortOrder: number;
@@ -60,6 +62,7 @@ export interface SetCardEntry {
   rarityCode: string;
   artworkId: number | null;
   owned: number;
+  setName?: string;
 }
 
 export interface SetDetail {

@@ -68,7 +68,7 @@ export function ShopDetailView({
     if (set.showcaseCardIds && set.showcaseCardIds.length > 0) return set.showcaseCardIds;
     if (!cards || cards.length === 0) return [];
     const shuffled = [...cards].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 3).map((c) => c.cardId);
+    return shuffled.slice(0, 3).map((c) => c.artworkId ?? c.cardId);
   }, [set.showcaseCardIds, cards]);
 
   const startEditing = useCallback(() => {
@@ -93,11 +93,11 @@ export function ShopDetailView({
     finally { setSavingShowcase(false); }
   }, [token, set, editCards, editAnimated]);
 
-  const toggleCardInShowcase = useCallback((cardId: number) => {
+  const toggleCardInShowcase = useCallback((artworkId: number) => {
     setEditCards((prev) => {
-      if (prev.includes(cardId)) return prev.filter((id) => id !== cardId);
+      if (prev.includes(artworkId)) return prev.filter((id) => id !== artworkId);
       if (prev.length >= maxSlots) return prev;
-      return [...prev, cardId];
+      return [...prev, artworkId];
     });
   }, [maxSlots]);
 
@@ -240,13 +240,14 @@ export function ShopDetailView({
         <div className={styles.cardGrid}>
           {sortedDetailCards.map((card) => {
             const colorSuffix = getRarityTier(card.rarity ?? 'Common');
-            const isSelected = editingShowcase && editCards.includes(card.cardId);
-            const slotIndex = editingShowcase ? editCards.indexOf(card.cardId) : -1;
+            const imgId = card.artworkId ?? card.cardId;
+            const isSelected = editingShowcase && editCards.includes(imgId);
+            const slotIndex = editingShowcase ? editCards.indexOf(imgId) : -1;
             return (
               <div
                 key={card.cardId}
                 className={`${styles.cardCell} ${card.owned > 0 ? styles.cardCellOwned : styles.cardCellNotOwned} ${isSelected ? styles.cardCellSelected : ''}`}
-                onClick={() => editingShowcase ? toggleCardInShowcase(card.cardId) : onSetPopupCardId(card.cardId)}
+                onClick={() => editingShowcase ? toggleCardInShowcase(imgId) : onSetPopupCardId(card.cardId)}
               >
                 <img className={styles.cardCellImg} src={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)} alt="" loading="lazy" />
                 <span className={`${styles.rarityDot} ${styles[`rarityDot${colorSuffix}`] ?? styles.rarityDotDefault}`} />
