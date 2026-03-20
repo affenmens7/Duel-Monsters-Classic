@@ -101,6 +101,11 @@ export const de = {
     notAvailable: 'Nicht verfuegbar',
     artworks: 'Artworks',
     artworkLocked: 'Artwork nicht freigeschaltet',
+    effects: 'Effekte',
+    effectNormal: 'Normal',
+    effectGhost: 'Geist',
+    effectMisprint: 'Druckfehler',
+    effectLocked: 'Noch nicht freigeschaltet',
   },
 
   // Settings
@@ -165,6 +170,9 @@ export const de = {
     viewSet: 'Zum Set',
     noProducts: 'Keine Produkte verfuegbar.',
     purchaseFailed: 'Kauf fehlgeschlagen',
+    ghostRare: 'Ghost Rare!',
+    misprint: 'Druckfehler!',
+    ghostMisprint: 'Ghost Rare + Druckfehler!',
     loadError: 'Fehler beim Laden',
     wave: 'Wave {{wave}}',
     starterYugi: 'Starter Deck: Yugi',

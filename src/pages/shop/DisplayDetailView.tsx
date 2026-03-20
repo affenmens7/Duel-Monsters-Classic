@@ -15,6 +15,7 @@ import { getRarityTier } from '../../utils/rarity';
 import { sortSetCards, type CardSortKey } from '../../utils/cardSort';
 import { localizeBilingual } from '../../utils/localize';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
+import { CardEffects } from '../../components/animations/CardEffects';
 import { SortDropdown } from '../../components/common/SortDropdown';
 import { Modal } from '../../components/common/Modal';
 import { SetShowcase } from './SetShowcase';
@@ -362,11 +363,30 @@ export function DisplayDetailView({
           <div className={styles.packResult}>
             <p className={styles.packResultText}>{t('shop.cardsReceived')}</p>
             <div className={styles.packCards}>
-              {(buyResult.pulledCards ?? buyResult.cards?.map((id) => ({ cardId: id, artworkId: id })) ?? []).map((card, i) => (
-                <div key={`${card.cardId}-${i}`} className={styles.packCard}>
-                  <img src={getCardImageUrl(card.cardId, 'small', card.artworkId)} alt="" loading="lazy" />
-                </div>
-              ))}
+              {(buyResult.pulledCards ?? buyResult.cards?.map((id) => ({ cardId: id, artworkId: id, rarity: 'Common', isGhost: false, isMisprint: false, misprintData: null })) ?? []).map((card, i) => {
+                const cardData = allCards.find((c) => c.id === card.cardId);
+                const rarity = cardData?.rarity ?? card.rarity ?? 'Common';
+                return (
+                  <div key={`${card.cardId}-${i}`} className={styles.packCard}>
+                    <CardEffects
+                      imageSrc={getCardImageUrl(card.cardId, 'small', card.artworkId)}
+                      rarity={rarity}
+                      isGhost={card.isGhost}
+                      isMisprint={card.isMisprint}
+                      misprintData={card.misprintData as any}
+                    />
+                    {card.isGhost && card.isMisprint && (
+                      <span className={styles.pullBadgeGhostMisprint}>{t('shop.ghostMisprint')}</span>
+                    )}
+                    {card.isGhost && !card.isMisprint && (
+                      <span className={styles.pullBadgeGhost}>{t('shop.ghostRare')}</span>
+                    )}
+                    {card.isMisprint && !card.isGhost && (
+                      <span className={styles.pullBadgeMisprint}>{t('shop.misprint')}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

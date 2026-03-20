@@ -101,6 +101,11 @@ export const en = {
     notAvailable: 'Not available',
     artworks: 'Artworks',
     artworkLocked: 'Artwork not unlocked',
+    effects: 'Effects',
+    effectNormal: 'Normal',
+    effectGhost: 'Ghost',
+    effectMisprint: 'Misprint',
+    effectLocked: 'Not yet unlocked',
   },
 
   // Settings
@@ -165,6 +170,9 @@ export const en = {
     viewSet: 'View Set',
     noProducts: 'No products available.',
     purchaseFailed: 'Purchase failed',
+    ghostRare: 'Ghost Rare!',
+    misprint: 'Misprint!',
+    ghostMisprint: 'Ghost Rare + Misprint!',
     loadError: 'Error loading data',
     wave: 'Wave {{wave}}',
     starterYugi: 'Starter Deck: Yugi',

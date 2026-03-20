@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
+import { CardEffects } from '../../components/animations/CardEffects';
 import { Modal } from '../../components/common/Modal';
 import { FeaturedCarousel } from './FeaturedCarousel';
 import { ProductRow } from './ProductRow';
@@ -131,9 +132,21 @@ export function ShopStorefrontView({
           <div className={styles.packResult}>
             <p className={styles.packResultText}>{t('shop.cardsReceived')}</p>
             <div className={styles.packCards}>
-              {buyResult.cards.map((cardId, i) => (
-                <div key={`${cardId}-${i}`} className={styles.packCard}>
-                  <img src={getCardImageUrl(cardId, 'small')} alt="" loading="lazy" />
+              {(buyResult.pulledCards ?? buyResult.cards?.map((id) => ({ cardId: id, artworkId: id, rarity: 'Common', isGhost: false, isMisprint: false, misprintData: null })) ?? []).map((card, i) => (
+                <div key={`${card.cardId}-${i}`} className={styles.packCard}>
+                  <CardEffects
+                    imageSrc={getCardImageUrl(card.cardId, 'small', card.artworkId)}
+                    rarity={card.rarity}
+                    isGhost={card.isGhost}
+                    isMisprint={card.isMisprint}
+                    misprintData={card.misprintData as any}
+                  />
+                  {card.isGhost && (
+                    <span className={styles.pullBadgeGhost}>{t('shop.ghostRare')}</span>
+                  )}
+                  {card.isMisprint && (
+                    <span className={styles.pullBadgeMisprint}>{t('shop.misprint')}</span>
+                  )}
                 </div>
               ))}
             </div>
