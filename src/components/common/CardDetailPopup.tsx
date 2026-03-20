@@ -10,7 +10,10 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
-import { getRarityTier } from '../../utils/rarity';
+import { getRarityTier, getEffectTier } from '../../utils/rarity';
+import { CardEffects } from '../animations/CardEffects';
+import type { MisprintData } from '../../utils/misprint';
+import type { ArtworkVariant } from '../../types/card';
 import styles from './CardDetailPopup.module.css';
 
 // Maps rarity tier to CSS module class
@@ -74,6 +77,10 @@ interface CardDetailPopupProps {
   ownedArtworkIds?: number[];
   isPreviewGreyed?: boolean;
   onPreviewArtworkChange?: (artworkId: number) => void;
+  /** Available effect variants (ghost/misprint) per artwork — from user collection */
+  artworkVariants?: ArtworkVariant[];
+  /** If true, show all effect toggles as preview (public database mode) */
+  effectPreviewMode?: boolean;
   children?: React.ReactNode;
 }
 
@@ -87,6 +94,8 @@ export function CardDetailPopup({
   ownedArtworkIds,
   isPreviewGreyed,
   onPreviewArtworkChange,
+  artworkVariants,
+  effectPreviewMode,
   children,
 }: CardDetailPopupProps) {
   const { i18n, t } = useTranslation();
@@ -94,13 +103,39 @@ export function CardDetailPopup({
 
   const defaultArtId = currentArtworkId ?? card.artworkId ?? card.id;
   const [previewArtId, setPreviewArtId] = useState<number>(defaultArtId);
+  const [previewGhost, setPreviewGhost] = useState(false);
+  const [previewMisprint, setPreviewMisprint] = useState(false);
 
   // Sync preview when card or default artwork changes
   useEffect(() => {
     setPreviewArtId(defaultArtId);
-  }, [defaultArtId]);
+    setPreviewGhost(false);
+    setPreviewMisprint(false);
+  }, [defaultArtId, card.id]);
 
   const artId = previewArtId;
+
+  // Determine which effect variants the user owns for the current artwork
+  const currentVariants = artworkVariants?.filter((v) => v.artworkId === artId) ?? [];
+  const hasGhostVariant = currentVariants.some((v) => v.isGhost);
+  const hasMisprintVariant = currentVariants.some((v) => v.isMisprint);
+  const misprintVariant = currentVariants.find((v) => v.isMisprint && !v.isGhost);
+  const ghostMisprintVariant = currentVariants.find((v) => v.isGhost && v.isMisprint);
+
+  // Determine active misprint data based on toggle state
+  const activeMisprintData: MisprintData | null =
+    previewMisprint && previewGhost && ghostMisprintVariant?.misprintData
+      ? ghostMisprintVariant.misprintData as MisprintData
+      : previewMisprint && misprintVariant?.misprintData
+        ? misprintVariant.misprintData as MisprintData
+        : null;
+
+  // Can the user toggle this effect?
+  const effectTier = getEffectTier(card.rarity ?? undefined);
+  const canGhost = effectPreviewMode || hasGhostVariant;
+  const canMisprint = effectPreviewMode || hasMisprintVariant;
+  const showEffectToggles = effectPreviewMode || (artworkVariants && artworkVariants.length > 0);
+  const ghostEligible = effectTier === 'holo' || effectTier === 'rainbow';
 
   // Find the currently previewed artwork info
   const activeArtwork = artworks?.find((a) => a.artworkId === artId);
@@ -121,7 +156,14 @@ export function CardDetailPopup({
         <button className={styles.close} onClick={onClose}>x</button>
         <div className={styles.content}>
           <div className={`${styles.imageCol} ${shouldGreyImage ? styles.imageGreyed : ''}`}>
-            <img src={getCardImageUrl(card.id, 'full', artId)} alt={displayName} />
+            <CardEffects
+              imageSrc={getCardImageUrl(card.id, 'full', artId)}
+              alt={displayName}
+              rarity={card.rarity ?? undefined}
+              isGhost={previewGhost}
+              isMisprint={previewMisprint}
+              misprintData={activeMisprintData}
+            />
           </div>
           <div className={styles.infoCol}>
             <h3 className={styles.name}>{displayName}</h3>
@@ -199,8 +241,8 @@ export function CardDetailPopup({
 
             {desc && <p className={styles.desc}>{desc}</p>}
 
-            {/* Artwork gallery — click to preview, thumbnails only */}
-            {artworks && artworks.length > 1 && (
+            {/* Artwork gallery — always show (even with 1 artwork) */}
+            {artworks && artworks.length > 0 && (
               <div className={styles.artworkSection}>
                 <span className={styles.artworkTitle}>Artworks ({artworks.length})</span>
                 <div className={styles.artworkGrid}>
@@ -213,6 +255,8 @@ export function CardDetailPopup({
                         title={!owned ? t('cardDetail.artworkLocked') : undefined}
                         onClick={() => {
                           setPreviewArtId(art.artworkId);
+                          setPreviewGhost(false);
+                          setPreviewMisprint(false);
                           if (owned) {
                             onArtworkChange?.(art.artworkId);
                           } else {
@@ -224,6 +268,37 @@ export function CardDetailPopup({
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Effect variant toggles — Ghost / Misprint */}
+            {showEffectToggles && (
+              <div className={styles.artworkSection}>
+                <span className={styles.artworkTitle}>{t('cardDetail.effects', 'Effekte')}</span>
+                <div className={styles.effectGrid}>
+                  <button
+                    className={`${styles.effectToggle} ${!previewGhost && !previewMisprint ? styles.effectActive : ''}`}
+                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(false); }}
+                  >
+                    Normal
+                  </button>
+                  {(ghostEligible || effectPreviewMode) && (
+                    <button
+                      className={`${styles.effectToggle} ${previewGhost && !previewMisprint ? styles.effectActive : ''} ${!canGhost && !effectPreviewMode ? styles.effectLocked : ''}`}
+                      onClick={() => { setPreviewGhost(true); setPreviewMisprint(false); }}
+                      title={!canGhost && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
+                    >
+                      Ghost
+                    </button>
+                  )}
+                  <button
+                    className={`${styles.effectToggle} ${previewMisprint && !previewGhost ? styles.effectActive : ''} ${!canMisprint && !effectPreviewMode ? styles.effectLocked : ''}`}
+                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(true); }}
+                    title={!canMisprint && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
+                  >
+                    Misprint
+                  </button>
                 </div>
               </div>
             )}
