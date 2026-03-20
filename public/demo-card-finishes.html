@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Shining Effects — Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #060a0c;
+    color: #d0d8d4;
+    font-family: 'Cinzel', serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    color: #00dca8;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 20px rgba(0,220,168,0.3);
+  }
+  .subtitle {
+    font-size: 0.55rem;
+    color: rgba(176,192,184,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 50px;
+  }
+  .cards-row {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .card-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .card-label {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .card-label.common { color: #b0b0b0; }
+  .card-label.holo { color: #ccaa22; }
+  .card-label.rainbow { color: #cc44cc; }
+  .card-label.ghost { color: #a0c8ff; }
+  .card-label.misprint { color: #ff4444; }
+  .card-rarity {
+    font-size: 0.45rem;
+    color: rgba(176,192,184,0.4);
+    letter-spacing: 1px;
+  }
+
+  /* === CARD CONTAINER === */
+  .card-container {
+    position: relative;
+    width: 200px;
+    height: 291px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: default;
+  }
+  /* No hover effects */
+  .card-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Effect overlay region — full card */
+  .artwork-clip {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+
+  /* === 1. NICHTS (Common/Rare) === */
+  .card-common img {
+    /* No effect */
+  }
+
+  /* === 2. HOLO (Super/Ultra Rare) — 3D shimmer/emboss effect === */
+  .card-holo .artwork-clip .holo-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 0%,
+      transparent 25%,
+      rgba(255,255,255,0.18) 38%,
+      rgba(255,255,255,0.25) 50%,
+      rgba(255,255,255,0.18) 62%,
+      transparent 75%,
+      transparent 100%
+    );
+    background-size: 300% 100%;
+    mix-blend-mode: overlay;
+    animation: holo-sweep 3s linear infinite;
+  }
+  @keyframes holo-sweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -100% 0; }
+  }
+  .card-holo .artwork-clip .holo-lines {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255,255,255,0.13) 0%,
+        transparent 50%,
+        rgba(0,0,0,0.13) 100%
+      );
+    mix-blend-mode: overlay;
+  }
+  .card-holo .artwork-clip .holo-specular {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      160deg,
+      rgba(100,180,255,0.13),
+      rgba(200,100,255,0.1),
+      rgba(255,200,100,0.13)
+    );
+    background-size: 300% 300%;
+    mix-blend-mode: color-dodge;
+    animation: holo-tint 6s ease-in-out infinite alternate;
+  }
+  @keyframes holo-tint {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+  }
+
+  /* === 3. RAINBOW (Secret Rare) — rainbow border === */
+  .card-rainbow {
+    border-radius: 8px;
+    padding: 3px;
+    background: linear-gradient(
+      180deg,
+      #c45050,
+      #c48040,
+      #b8a848,
+      #50a060,
+      #4878a8,
+      #6050a0,
+      #985088,
+      #c45050
+    );
+    background-size: 100% 400%;
+    animation: rainbow-border 11s linear infinite;
+  }
+  .card-rainbow img {
+    border-radius: 5px;
+  }
+  @keyframes rainbow-border {
+    0%   { background-position: 0 0%; }
+    100% { background-position: 0 400%; }
+  }
+  /* Rainbow shimmer on artwork */
+  .card-rainbow .artwork-clip .rainbow-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(196,80,80,0.2) 0%,
+      rgba(196,128,64,0.2) 14%,
+      rgba(184,168,72,0.2) 28%,
+      rgba(80,160,96,0.2) 42%,
+      rgba(72,120,168,0.2) 57%,
+      rgba(96,80,160,0.2) 71%,
+      rgba(152,80,136,0.2) 85%,
+      rgba(196,80,80,0.2) 100%
+    );
+    background-size: 100% 400%;
+    mix-blend-mode: color-dodge;
+    animation: rainbow-shimmer-flow 3s linear infinite;
+  }
+  @keyframes rainbow-shimmer-flow {
+    0%   { background-position: 0 0%; }
+    100% { background-position: 0 400%; }
+  }
+
+  /* === 4. GHOST RARE — greyed out with shimmering silver border === */
+  .card-ghost {
+    border-radius: 8px;
+    padding: 3px;
+    background: linear-gradient(
+      180deg,
+      #e8e8e8,
+      #888888,
+      #d0d0d0,
+      #555555,
+      #f0f0f0,
+      #777777,
+      #cccccc,
+      #444444,
+      #e8e8e8
+    );
+    background-size: 100% 400%;
+    animation: ghost-border 11s linear infinite;
+  }
+  .card-ghost img,
+  .card-ghost.card-misprint img.misprint-base {
+    border-radius: 5px;
+    animation: ghost-pulse 10s cubic-bezier(0.45, 0, 0.55, 1) infinite !important;
+  }
+  @keyframes ghost-pulse {
+    0%   { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+    30%  { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+    43%  { filter: saturate(0.5) brightness(1.2) contrast(0.75) invert(0.05); }
+    50%  { filter: saturate(0.8) brightness(1.05) contrast(0.9) invert(0); }
+    57%  { filter: saturate(0.5) brightness(1.2) contrast(0.75) invert(0.05); }
+    70%  { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+    100% { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+  }
+  /* Same rainbow shimmer as Secret Rare */
+  .card-ghost .artwork-clip .ghost-shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(196,80,80,0.2) 0%,
+      rgba(196,128,64,0.2) 14%,
+      rgba(184,168,72,0.2) 28%,
+      rgba(80,160,96,0.2) 42%,
+      rgba(72,120,168,0.2) 57%,
+      rgba(96,80,160,0.2) 71%,
+      rgba(152,80,136,0.2) 85%,
+      rgba(196,80,80,0.2) 100%
+    );
+    background-size: 100% 400%;
+    mix-blend-mode: color-dodge;
+    animation: rainbow-shimmer-flow 10s linear infinite;
+  }
+  @keyframes ghost-border {
+    0%   { background-position: 0 0%; }
+    100% { background-position: 0 400%; }
+  }
+
+  /* === 5. PRINTFEHLER (Misprint) — heavily randomized via JS === */
+  .card-misprint {
+    position: relative;
+  }
+  /* Rainbow + Misprint: keep rainbow border */
+  .card-rainbow.card-misprint {
+    border-radius: 8px;
+    padding: 3px;
+    background: linear-gradient(
+      180deg,
+      #c45050, #c48040, #b8a848, #50a060, #4878a8, #6050a0, #985088, #c45050
+    );
+    background-size: 100% 400%;
+    animation: rainbow-border 11s linear infinite;
+  }
+  /* Ghost + Misprint: keep ghost border */
+  .card-ghost.card-misprint {
+    border-radius: 8px;
+    padding: 3px;
+    background: linear-gradient(
+      180deg,
+      #e8e8e8, #888888, #d0d0d0, #555555, #f0f0f0, #777777, #cccccc, #444444, #e8e8e8
+    );
+    background-size: 100% 400%;
+    animation: ghost-border 11s linear infinite;
+  }
+  .card-misprint img.misprint-base {
+    border-radius: var(--mp-border-size, 0) == 0 ? 8px : 5px;
+    filter: var(--mp-base-filter, none);
+    /* Card always stays straight */
+  }
+  /* Shifted duplicate — misaligned print */
+  .card-misprint .misprint-shift {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  .card-misprint .misprint-shift img {
+    position: absolute;
+    top: var(--mp-shift-y, 3px);
+    left: var(--mp-shift-x, 4px);
+    width: 100%;
+    height: 100%;
+    opacity: var(--mp-shift-opacity, 0.3);
+    mix-blend-mode: multiply;
+    filter: hue-rotate(var(--mp-shift-hue, 15deg)) saturate(1.4);
+  }
+  /* Ink bleed */
+  .card-misprint .misprint-ink {
+    position: absolute;
+    pointer-events: none;
+    width: var(--mp-ink-w, 60px);
+    height: var(--mp-ink-h, 80px);
+    border-radius: 50%;
+    background: radial-gradient(ellipse, var(--mp-ink-color, rgba(200,200,255,0.2)) 0%, transparent 70%);
+    mix-blend-mode: color-dodge;
+    top: var(--mp-ink-y, 40%);
+    left: var(--mp-ink-x, 15%);
+    transform: rotate(var(--mp-ink-rot, -20deg));
+  }
+  /* Scratch */
+  .card-misprint .misprint-scratch {
+    position: absolute;
+    pointer-events: none;
+    top: var(--mp-scratch-y, 20%);
+    left: 5%;
+    width: 90%;
+    height: var(--mp-scratch-h, 2px);
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.15) 70%, transparent 100%);
+    transform: rotate(var(--mp-scratch-rot, -5deg));
+    border-radius: 8px;
+  }
+  /* Ghost double-image layer */
+  .card-misprint .misprint-ghost {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  .card-misprint .misprint-ghost img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: var(--mp-ghost-opacity, 0);
+    mix-blend-mode: screen;
+    filter: var(--mp-ghost-filter, none);
+    transform: var(--mp-ghost-transform, none);
+  }
+  /* Overlay container for effects */
+  .card-misprint .misprint-fx {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  /* Holo sweep */
+  .card-misprint .misprint-fx .mp-holo {
+    position: absolute;
+    inset: 0;
+    background: var(--mp-holo-bg, transparent);
+    background-size: 300% 100%;
+    mix-blend-mode: overlay;
+    animation: var(--mp-holo-anim, none);
+  }
+  /* Rainbow shimmer */
+  .card-misprint .misprint-fx .mp-rainbow {
+    position: absolute;
+    inset: 0;
+    background: var(--mp-rainbow-bg, transparent);
+    background-size: 100% 400%;
+    mix-blend-mode: color-dodge;
+    animation: var(--mp-rainbow-anim, none);
+  }
+  /* Ghost pulse */
+  .card-misprint .misprint-fx .mp-ghost-pulse {
+    display: var(--mp-ghost-pulse-display, none);
+  }
+  /* Glitch bands */
+  .card-misprint .misprint-fx .mp-glitch {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    top: var(--mp-glitch1-y, 0);
+    height: var(--mp-glitch1-h, 0);
+    background: var(--mp-glitch1-bg, transparent);
+    mix-blend-mode: var(--mp-glitch1-blend, screen);
+    opacity: var(--mp-glitch1-opacity, 0);
+    transform: skewX(var(--mp-glitch1-skew, 0deg));
+  }
+  .card-misprint .misprint-fx .mp-glitch2 {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    top: var(--mp-glitch2-y, 0);
+    height: var(--mp-glitch2-h, 0);
+    background: var(--mp-glitch2-bg, transparent);
+    mix-blend-mode: var(--mp-glitch2-blend, screen);
+    opacity: var(--mp-glitch2-opacity, 0);
+    transform: skewX(var(--mp-glitch2-skew, 0deg));
+  }
+  /* Print lines — horizontal streaks across card */
+  .card-misprint .misprint-fx .mp-printlines {
+    position: absolute;
+    inset: 0;
+    background: var(--mp-lines-bg, transparent);
+    mix-blend-mode: var(--mp-lines-blend, screen);
+    opacity: var(--mp-lines-opacity, 0);
+  }
+  @keyframes mp-holo-sweep {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -100% 0; }
+  }
+  @keyframes mp-rainbow-flow {
+    0%   { background-position: 0 0%; }
+    100% { background-position: 0 400%; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Card Shining Effects</h1>
+<p class="subtitle">Dark Magician &middot; Rarity + Printfehler Kombinationen</p>
+
+<div class="cards-row">
+
+  <!-- ROW 1: Normal Rarities -->
+  <div class="card-slot">
+    <span class="card-label common">Common</span>
+    <div class="card-container card-common">
+      <img src="/images/cards/46986414.jpg" alt="Dark Magician">
+    </div>
+    <span class="card-rarity">Kein Effekt</span>
+  </div>
+
+  <div class="card-slot">
+    <span class="card-label holo">Holo</span>
+    <div class="card-container card-holo">
+      <img src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="artwork-clip">
+        <div class="holo-overlay"></div>
+        <div class="holo-lines"></div>
+        <div class="holo-specular"></div>
+      </div>
+    </div>
+    <span class="card-rarity">Super / Ultra Rare</span>
+  </div>
+
+  <div class="card-slot">
+    <span class="card-label rainbow">Rainbow</span>
+    <div class="card-container card-rainbow">
+      <img src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="artwork-clip">
+        <div class="rainbow-shimmer"></div>
+      </div>
+    </div>
+    <span class="card-rarity">Secret Rare</span>
+  </div>
+
+  <div class="card-slot">
+    <span class="card-label ghost">Ghost</span>
+    <div class="card-container card-ghost">
+      <img src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="artwork-clip">
+        <div class="ghost-shimmer"></div>
+      </div>
+    </div>
+    <span class="card-rarity">Ghost Rare</span>
+  </div>
+
+  <!-- ROW 2: Same Rarities + Random Printfehler -->
+  <div class="card-slot">
+    <span class="card-label misprint">Common + Misprint</span>
+    <div class="card-container card-common card-misprint">
+      <img class="misprint-base" src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="misprint-shift"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-ink"></div>
+      <div class="misprint-scratch"></div>
+      <div class="misprint-ghost"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-fx"><div class="mp-glitch"></div><div class="mp-glitch2"></div><div class="mp-printlines"></div></div>
+    </div>
+    <span class="card-rarity">Kein Effekt + Druckfehler</span>
+  </div>
+
+  <div class="card-slot">
+    <span class="card-label misprint">Holo + Misprint</span>
+    <div class="card-container card-holo card-misprint">
+      <img class="misprint-base" src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="artwork-clip">
+        <div class="holo-overlay"></div>
+        <div class="holo-lines"></div>
+        <div class="holo-specular"></div>
+      </div>
+      <div class="misprint-shift"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-ink"></div>
+      <div class="misprint-scratch"></div>
+      <div class="misprint-ghost"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-fx"><div class="mp-glitch"></div><div class="mp-glitch2"></div><div class="mp-printlines"></div></div>
+    </div>
+    <span class="card-rarity">Holo + Druckfehler</span>
+  </div>
+
+  <div class="card-slot">
+    <span class="card-label misprint">Rainbow + Misprint</span>
+    <div class="card-container card-rainbow card-misprint">
+      <img class="misprint-base" src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="artwork-clip">
+        <div class="rainbow-shimmer"></div>
+      </div>
+      <div class="misprint-shift"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-ink"></div>
+      <div class="misprint-scratch"></div>
+      <div class="misprint-ghost"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-fx"><div class="mp-glitch"></div><div class="mp-glitch2"></div><div class="mp-printlines"></div></div>
+    </div>
+    <span class="card-rarity">Rainbow + Druckfehler</span>
+  </div>
+
+  <div class="card-slot">
+    <span class="card-label misprint">Ghost + Misprint</span>
+    <div class="card-container card-ghost card-misprint">
+      <img class="misprint-base" src="/images/cards/46986414.jpg" alt="Dark Magician">
+      <div class="artwork-clip">
+        <div class="ghost-shimmer"></div>
+      </div>
+      <div class="misprint-shift"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-ink"></div>
+      <div class="misprint-scratch"></div>
+      <div class="misprint-ghost"><img src="/images/cards/46986414.jpg" alt=""></div>
+      <div class="misprint-fx"><div class="mp-glitch"></div><div class="mp-glitch2"></div><div class="mp-printlines"></div></div>
+    </div>
+    <span class="card-rarity">Ghost + Druckfehler</span>
+  </div>
+
+</div>
+
+<script>
+  // Each card picks 3-5 random defects from a pool — guarantees variety
+  function randomMisprint(card, index) {
+    const r = (min, max) => Math.random() * (max - min) + min;
+    const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const s = card.style;
+
+    // Always: shifted print (text distortion) + ghost double (image distortion)
+    const chosen = ['heavy-shift', 'ghost-double'];
+
+    // Add 1-3 more random defects — focus on structural, not color
+    const extraDefects = [
+      'print-lines', 'print-lines-cross', 'glitch-band',
+      'scratch', 'ink-bleed'
+    ];
+    const shuffled = extraDefects.sort(() => Math.random() - 0.5);
+    const count = Math.floor(r(1, 4));
+    chosen.push(...shuffled.slice(0, count));
+
+    // --- Minimal color change — misprint is about distortion, not color ---
+    const hue = r(-8, 8).toFixed(0);
+    const sat = r(0.85, 1.15).toFixed(2);
+    const brt = r(0.92, 1.08).toFixed(2);
+    let baseFilter = `hue-rotate(${hue}deg) saturate(${sat}) brightness(${brt})`;
+
+    for (const defect of chosen) {
+      switch (defect) {
+
+        case 'heavy-shift':
+          s.setProperty('--mp-shift-x', r(-20, 20).toFixed(1) + 'px');
+          s.setProperty('--mp-shift-y', r(-16, 16).toFixed(1) + 'px');
+          s.setProperty('--mp-shift-opacity', r(0.3, 0.6).toFixed(2));
+          s.setProperty('--mp-shift-hue', r(-15, 15).toFixed(0) + 'deg');
+          break;
+
+        case 'ghost-double':
+          s.setProperty('--mp-ghost-opacity', r(0.25, 0.55).toFixed(2));
+          s.setProperty('--mp-ghost-transform',
+            `translate(${r(-25,25).toFixed(1)}px, ${r(-20,20).toFixed(1)}px) scale(${r(1.04,1.18).toFixed(3)}) skew(${r(-12,12).toFixed(1)}deg) rotate(${r(-8,8).toFixed(1)}deg)`);
+          s.setProperty('--mp-ghost-filter',
+            `blur(${r(0.5,4).toFixed(1)}px) brightness(${r(1.0,1.3).toFixed(2)}) contrast(${r(0.5,0.85).toFixed(2)})`);
+          break;
+
+        /* Color defects removed — misprints focus on structural distortion */
+
+        case 'holo-sweep': {
+          const speed = r(2, 6).toFixed(1);
+          const intensity = r(0.2, 0.5).toFixed(2);
+          s.setProperty('--mp-holo-bg', `linear-gradient(${r(90,130).toFixed(0)}deg,
+            transparent 0%, transparent 25%,
+            rgba(255,255,255,${intensity}) 38%,
+            rgba(255,255,255,${(intensity*1.5).toFixed(2)}) 50%,
+            rgba(255,255,255,${intensity}) 62%,
+            transparent 75%, transparent 100%)`);
+          s.setProperty('--mp-holo-anim', `mp-holo-sweep ${speed}s linear infinite`);
+          break;
+        }
+
+        case 'rainbow-shimmer': {
+          const speed = r(5, 14).toFixed(1);
+          const i = r(0.15, 0.35).toFixed(2);
+          s.setProperty('--mp-rainbow-bg', `linear-gradient(180deg,
+            rgba(196,80,80,${i}), rgba(196,128,64,${i}),
+            rgba(184,168,72,${i}), rgba(80,160,96,${i}),
+            rgba(72,120,168,${i}), rgba(96,80,160,${i}),
+            rgba(152,80,136,${i}), rgba(196,80,80,${i}))`);
+          s.setProperty('--mp-rainbow-anim', `mp-rainbow-flow ${speed}s linear infinite`);
+          break;
+        }
+
+        case 'rainbow-border':
+          s.setProperty('--mp-border-size', '3px');
+          s.setProperty('--mp-border-bg', `linear-gradient(180deg,
+            #c45050, #c48040, #b8a848, #50a060, #4878a8, #6050a0, #985088, #c45050)`);
+          s.setProperty('--mp-border-anim', 'rainbow-border 11s linear infinite');
+          break;
+
+        case 'ghost-border':
+          s.setProperty('--mp-border-size', '3px');
+          s.setProperty('--mp-border-bg', `linear-gradient(180deg,
+            #e8e8e8, #888888, #d0d0d0, #555555, #f0f0f0, #777777, #cccccc, #444444, #e8e8e8)`);
+          s.setProperty('--mp-border-anim', 'ghost-border 11s linear infinite');
+          break;
+
+        case 'ghost-pulse': {
+          const speed = r(4, 10).toFixed(1);
+          card.querySelector('.misprint-base').style.animation =
+            `ghost-pulse ${speed}s ease-in-out infinite`;
+          break;
+        }
+
+        case 'print-lines': {
+          const angle = pick([0, 90, 45, -45, 30, -30]);
+          const spacing = r(6, 25).toFixed(0);
+          const width = r(0.5, 3).toFixed(1);
+          const glittery = Math.random() < 0.5;
+          const color = glittery
+            ? `rgba(${r(180,255).toFixed(0)},${r(180,255).toFixed(0)},${r(200,255).toFixed(0)},${r(0.12,0.35).toFixed(2)})`
+            : `rgba(255,255,255,${r(0.06,0.2).toFixed(2)})`;
+          s.setProperty('--mp-lines-bg',
+            `repeating-linear-gradient(${angle}deg, transparent, transparent ${spacing}px, ${color} ${spacing}px, ${color} calc(${spacing}px + ${width}px))`);
+          s.setProperty('--mp-lines-opacity', r(0.6, 1).toFixed(2));
+          s.setProperty('--mp-lines-blend', glittery ? 'color-dodge' : 'screen');
+          break;
+        }
+
+        case 'print-lines-cross': {
+          const a1 = pick([0, 45, -45, 30]);
+          const a2 = a1 + pick([60, 90, 45]);
+          const sp1 = r(8, 20).toFixed(0);
+          const sp2 = r(10, 30).toFixed(0);
+          const c1 = `rgba(255,255,255,${r(0.06,0.15).toFixed(2)})`;
+          const c2 = `rgba(${r(200,255).toFixed(0)},${r(200,255).toFixed(0)},255,${r(0.08,0.2).toFixed(2)})`;
+          s.setProperty('--mp-lines-bg',
+            `repeating-linear-gradient(${a1}deg, transparent, transparent ${sp1}px, ${c1} ${sp1}px, ${c1} calc(${sp1}px + 1px)), repeating-linear-gradient(${a2}deg, transparent, transparent ${sp2}px, ${c2} ${sp2}px, ${c2} calc(${sp2}px + 1px))`);
+          s.setProperty('--mp-lines-opacity', r(0.5, 1).toFixed(2));
+          s.setProperty('--mp-lines-blend', 'color-dodge');
+          break;
+        }
+
+        case 'glitch-band':
+          s.setProperty('--mp-glitch1-y', r(8, 80).toFixed(0) + '%');
+          s.setProperty('--mp-glitch1-h', r(3, 12).toFixed(0) + '%');
+          s.setProperty('--mp-glitch1-bg', pick([
+            'rgba(255,255,255,0.2)', 'rgba(200,200,255,0.25)',
+            'rgba(255,200,255,0.2)', 'rgba(200,255,200,0.15)'
+          ]));
+          s.setProperty('--mp-glitch1-opacity', r(0.5, 1).toFixed(2));
+          s.setProperty('--mp-glitch1-skew', r(-20, 20).toFixed(1) + 'deg');
+          s.setProperty('--mp-glitch1-blend', pick(['screen', 'overlay', 'color-dodge']));
+          // Second band
+          s.setProperty('--mp-glitch2-y', r(15, 85).toFixed(0) + '%');
+          s.setProperty('--mp-glitch2-h', r(1, 8).toFixed(0) + '%');
+          s.setProperty('--mp-glitch2-bg', `rgba(${r(150,255).toFixed(0)},${r(150,255).toFixed(0)},${r(180,255).toFixed(0)},0.15)`);
+          s.setProperty('--mp-glitch2-opacity', r(0.4, 0.9).toFixed(2));
+          s.setProperty('--mp-glitch2-skew', r(-12, 12).toFixed(1) + 'deg');
+          s.setProperty('--mp-glitch2-blend', 'screen');
+          break;
+
+        case 'ink-bleed':
+          s.setProperty('--mp-ink-color', pick([
+            'rgba(200,200,255,0.3)', 'rgba(180,220,255,0.25)',
+            'rgba(255,220,255,0.25)', 'rgba(220,255,240,0.2)'
+          ]));
+          s.setProperty('--mp-ink-w', r(50, 120).toFixed(0) + 'px');
+          s.setProperty('--mp-ink-h', r(50, 140).toFixed(0) + 'px');
+          s.setProperty('--mp-ink-x', r(5, 65).toFixed(0) + '%');
+          s.setProperty('--mp-ink-y', r(10, 70).toFixed(0) + '%');
+          s.setProperty('--mp-ink-rot', r(-45, 45).toFixed(0) + 'deg');
+          break;
+
+        case 'scratch':
+          s.setProperty('--mp-scratch-y', r(10, 80).toFixed(0) + '%');
+          s.setProperty('--mp-scratch-rot', r(-12, 12).toFixed(1) + 'deg');
+          s.setProperty('--mp-scratch-h', pick(['1px', '2px', '3px', '4px']));
+          break;
+      }
+    }
+
+    // Apply base filter
+    s.setProperty('--mp-base-filter', baseFilter);
+
+    // If no shift was chosen, hide it
+    if (!chosen.includes('heavy-shift')) s.setProperty('--mp-shift-opacity', '0');
+    if (!chosen.includes('ink-bleed')) s.setProperty('--mp-ink-color', 'transparent');
+    if (!chosen.includes('scratch')) s.setProperty('--mp-scratch-h', '0px');
+  }
+
+  document.querySelectorAll('.card-misprint').forEach((card, i) => randomMisprint(card, i));
+</script>
+
+</body>
+</html>
