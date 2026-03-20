@@ -154,21 +154,49 @@ async function main() {
 
   console.log(`Found ${filteredCards.length} cards in DM/GX era sets.`);
 
+  // Rarity priority: highest rarity across all sets becomes the card's canonical rarity
+  const RARITY_PRIORITY: Record<string, number> = {
+    'Secret Rare': 0, 'Ultra Rare': 1, 'Super Rare': 2,
+    'Rare': 3, 'Short Print': 5, 'Super Short Print': 5, 'Common': 5,
+  };
+
+  // Normalize Short Print / Super Short Print → Common
+  function normalizeRarity(r: string): { rarity: string; rarity_code: string } {
+    if (r === 'Short Print' || r === 'Super Short Print') return { rarity: 'Common', rarity_code: 'C' };
+    return { rarity: r, rarity_code: '' };
+  }
+
+  function getHighestRarity(sets: { rarity: string; rarity_code: string }[]): { rarity: string; rarity_code: string } {
+    let best = sets[0];
+    for (const s of sets) {
+      const cur = RARITY_PRIORITY[s.rarity] ?? 99;
+      const prev = RARITY_PRIORITY[best.rarity] ?? 99;
+      if (cur < prev) best = s;
+    }
+    return best;
+  }
+
   // 4. Insert cards into DB + download images
   let imported = 0;
   for (const enCard of filteredCards) {
     const deCard = deCards.find((c) => c.id === enCard.id);
+    const sets = cardSetMap.get(enCard.id) ?? [];
+    const highest = getHighestRarity(sets);
+    const normalized = normalizeRarity(highest.rarity);
+    const rarity = normalized.rarity;
+    const rarity_code = normalized.rarity_code || highest.rarity_code;
 
     await pool.query(
-      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, rarity, rarity_code, image_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        ON CONFLICT (id) DO UPDATE SET
          name_de = EXCLUDED.name_de, name_en = EXCLUDED.name_en,
          desc_de = EXCLUDED.desc_de, desc_en = EXCLUDED.desc_en,
          type_de = EXCLUDED.type_de, type_en = EXCLUDED.type_en,
          frame_type = EXCLUDED.frame_type, atk = EXCLUDED.atk, def = EXCLUDED.def,
          level = EXCLUDED.level, race_de = EXCLUDED.race_de, race_en = EXCLUDED.race_en,
-         attribute = EXCLUDED.attribute, archetype = EXCLUDED.archetype`,
+         attribute = EXCLUDED.attribute, archetype = EXCLUDED.archetype,
+         rarity = EXCLUDED.rarity, rarity_code = EXCLUDED.rarity_code`,
       [
         enCard.id,
         deCard?.name ?? enCard.name,
@@ -185,18 +213,19 @@ async function main() {
         enCard.race,
         enCard.attribute ?? null,
         enCard.archetype ?? null,
+        rarity,
+        rarity_code,
         `/images/cards/${enCard.id}.jpg`,
       ]
     );
 
-    // Insert set entries
-    const sets = cardSetMap.get(enCard.id) ?? [];
+    // Insert set entries (no rarity here — lives on cards table)
     for (const s of sets) {
       await pool.query(
-        `INSERT INTO card_set_entries (card_id, set_name, set_code, rarity, rarity_code)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO card_set_entries (card_id, set_name, set_code)
+         VALUES ($1, $2, $3)
          ON CONFLICT DO NOTHING`,
-        [enCard.id, s.set_name, s.set_code, s.rarity, s.rarity_code]
+        [enCard.id, s.set_name, s.set_code]
       );
     }
 
@@ -216,16 +245,27 @@ async function main() {
 
   // 5. Summary per set
   console.log('\n--- Cards per set ---');
-  for (const setName of TARGET_SETS) {
+  for (const setDef of TARGET_SETS) {
+    const setName = setDef.name;
     const result = await pool.query(
       'SELECT COUNT(*) FROM card_set_entries WHERE set_name = $1',
       [setName]
     );
-    console.log(`  ${setName}: ${result.rows[0].count} cards`);
+    console.log(`  ${setDef.name}: ${result.rows[0].count} cards`);
   }
 
   const totalCards = await pool.query('SELECT COUNT(*) FROM cards');
   console.log(`\nTotal: ${totalCards.rows[0].count} unique cards imported.`);
+
+  // Rarity distribution
+  console.log('\n--- Rarity distribution ---');
+  const rarityDist = await pool.query(
+    'SELECT rarity, COUNT(*) as count FROM cards GROUP BY rarity ORDER BY COUNT(*) DESC'
+  );
+  for (const row of rarityDist.rows) {
+    console.log(`  ${row.rarity}: ${row.count}`);
+  }
+
   console.log('Done!');
 
   await pool.end();

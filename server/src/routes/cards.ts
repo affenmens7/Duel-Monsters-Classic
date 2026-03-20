@@ -102,7 +102,7 @@ cardsRouter.get('/sets/:name', async (req, res) => {
   try {
     const setName = req.params.name;
     const result = await pool.query(`
-      SELECT c.*, cse.set_code, cse.rarity, cse.rarity_code
+      SELECT c.*, cse.set_code
       FROM cards c
       JOIN card_set_entries cse ON cse.card_id = c.id
       WHERE cse.set_name = $1
@@ -133,7 +133,7 @@ cardsRouter.get('/:id', async (req, res) => {
     }
 
     const setsResult = await pool.query(
-      'SELECT set_name, set_code, rarity, rarity_code FROM card_set_entries WHERE card_id = $1',
+      'SELECT set_name, set_code FROM card_set_entries WHERE card_id = $1',
       [id]
     );
 

@@ -80,6 +80,10 @@ export interface DisplayDetail {
 export interface PulledCard {
   cardId: number;
   artworkId: number;
+  rarity: string;
+  isGhost: boolean;
+  isMisprint: boolean;
+  misprintData: Record<string, unknown> | null;
 }
 
 export interface BuyResult {

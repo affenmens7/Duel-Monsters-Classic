@@ -357,9 +357,10 @@ setsRouter.put('/:name/config', async (req, res) => {
 setsRouter.get('/:name/rarities', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT DISTINCT rarity FROM card_set_entries
-       WHERE set_name = $1 AND rarity IS NOT NULL
-       ORDER BY rarity`,
+      `SELECT DISTINCT c.rarity FROM card_set_entries cse
+       JOIN cards c ON c.id = cse.card_id
+       WHERE cse.set_name = $1 AND c.rarity IS NOT NULL
+       ORDER BY c.rarity`,
       [req.params.name]
     );
     res.json(result.rows.map((r: { rarity: string }) => r.rarity));
@@ -608,12 +609,17 @@ setsRouter.post('/:name/import-cards', async (req, res) => {
         // Upsert card (skip if exists)
         const existing = await pool.query('SELECT id FROM cards WHERE id = $1', [cardId]);
         if (existing.rows.length === 0) {
+          const cardSetsAll = c.card_sets ?? [];
+          const setEntryForRarity = cardSetsAll.find((s: any) => s.set_name === name);
+          const initRarity = setEntryForRarity?.set_rarity ?? 'Common';
+          const initRarityCode = setEntryForRarity?.set_rarity_code ?? 'C';
           await pool.query(
-            `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+            `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, rarity, rarity_code, image_path, ban_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
             [cardId, nameDe, nameEn, descDe, descEn, typeDe, typeEn, c.frameType,
              c.atk ?? null, c.def ?? null, c.level ?? null,
              raceDe, raceEn, c.attribute ?? null, c.archetype ?? null,
+             initRarity, initRarityCode,
              `/images/cards/${cardId}.jpg`, banStatus]
           );
           cardsInserted++;
@@ -653,7 +659,7 @@ setsRouter.post('/:name/import-cards', async (req, res) => {
         }
       }
 
-      // Create set entry with rarity from API (quantity defaults to 1 — adjust manually for starter decks)
+      // Set entry (no rarity — rarity lives on cards table)
       const cardSets = c.card_sets ?? [];
       const setEntry = cardSets.find((s: any) => s.set_name === name);
       const rarity = setEntry?.set_rarity ?? 'Common';
@@ -661,11 +667,25 @@ setsRouter.post('/:name/import-cards', async (req, res) => {
       const setCode = setEntry?.set_code ?? null;
       const defaultArtworkId = images.length > 0 ? images[0].id : null;
 
+      // Update card rarity if this set's rarity is higher (upgrade only)
+      const RARITY_PRIORITY: Record<string, number> = {
+        'Secret Rare': 0, 'Ultra Rare': 1, 'Super Rare': 2,
+        'Rare': 3, 'Short Print': 4, 'Common': 5,
+      };
+      const existingCard = await pool.query('SELECT rarity FROM cards WHERE id = $1', [cardId]);
+      const existingRarity = existingCard.rows[0]?.rarity;
+      if (!existingRarity || (RARITY_PRIORITY[rarity] ?? 99) < (RARITY_PRIORITY[existingRarity] ?? 99)) {
+        await pool.query(
+          'UPDATE cards SET rarity = $1, rarity_code = $2 WHERE id = $3',
+          [rarity, rarityCode, cardId]
+        );
+      }
+
       await pool.query(
-        `INSERT INTO card_set_entries (card_id, set_name, set_code, rarity, rarity_code, artwork_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (card_id, set_name) DO UPDATE SET rarity = EXCLUDED.rarity, rarity_code = EXCLUDED.rarity_code, artwork_id = EXCLUDED.artwork_id`,
-        [cardId, name, setCode, rarity, rarityCode, defaultArtworkId]
+        `INSERT INTO card_set_entries (card_id, set_name, set_code, artwork_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (card_id, set_name) DO UPDATE SET artwork_id = EXCLUDED.artwork_id`,
+        [cardId, name, setCode, defaultArtworkId]
       );
       setEntriesCreated++;
 
@@ -833,7 +853,7 @@ setsRouter.get('/:name/cards', async (req, res) => {
       `SELECT
         c.id, c.name_de, c.name_en, c.desc_de, c.desc_en, c.frame_type,
         c.atk, c.def, c.level, c.attribute, c.race_de, c.race_en, c.archetype, c.image_path,
-        c.ban_status, cse.rarity, cse.rarity_code, cse.artwork_id, COALESCE(cse.quantity, 1)::int AS quantity
+        c.ban_status, c.rarity, c.rarity_code, cse.artwork_id, COALESCE(cse.quantity, 1)::int AS quantity
        FROM card_set_entries cse
        JOIN cards c ON c.id = cse.card_id
        ${whereClause}
@@ -879,13 +899,21 @@ setsRouter.post('/:name/cards', async (req, res) => {
       resolvedArtworkId = defaultArt.rows[0]?.artwork_id ?? cardId;
     }
 
+    // Update card rarity if provided (rarity lives on cards table, not card_set_entries)
+    if (rarity) {
+      await pool.query(
+        'UPDATE cards SET rarity = $1, rarity_code = $2 WHERE id = $3',
+        [rarity, rarityCode ?? null, cardId]
+      );
+    }
+
     const result = await pool.query(
-      `INSERT INTO card_set_entries (card_id, set_name, rarity, rarity_code, artwork_id, quantity)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO card_set_entries (card_id, set_name, artwork_id, quantity)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (card_id, set_name)
-       DO UPDATE SET rarity = EXCLUDED.rarity, rarity_code = EXCLUDED.rarity_code, artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity
+       DO UPDATE SET artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity
        RETURNING *`,
-      [cardId, name, rarity ?? null, rarityCode ?? null, resolvedArtworkId, quantity ?? 1]
+      [cardId, name, resolvedArtworkId, quantity ?? 1]
     );
 
     console.log(`[ADMIN] user=${req.user!.userId} action=add_set_card target=${name} card=${cardId}`);
@@ -927,12 +955,20 @@ setsRouter.post('/:name/cards/bulk', async (req, res) => {
         return;
       }
 
+      // Update card rarity if provided (rarity lives on cards table)
+      if (rarity) {
+        await client.query(
+          'UPDATE cards SET rarity = $1, rarity_code = $2 WHERE id = $3',
+          [rarity, rarityCode ?? null, cardId]
+        );
+      }
+
       await client.query(
-        `INSERT INTO card_set_entries (card_id, set_name, rarity, rarity_code, artwork_id, quantity)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO card_set_entries (card_id, set_name, artwork_id, quantity)
+         VALUES ($1, $2, $3, $4)
          ON CONFLICT (card_id, set_name)
-         DO UPDATE SET rarity = EXCLUDED.rarity, rarity_code = EXCLUDED.rarity_code, artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity`,
-        [cardId, name, rarity ?? null, rarityCode ?? null, artworkId ?? null, quantity ?? 1]
+         DO UPDATE SET artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity`,
+        [cardId, name, artworkId ?? null, quantity ?? 1]
       );
     }
 

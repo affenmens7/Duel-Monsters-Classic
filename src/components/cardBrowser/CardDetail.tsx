@@ -77,6 +77,7 @@ export function CardDetail({ card, setFilter, onClose }: CardDetailProps) {
         race: loc.race,
         sets: card.sets,
         banStatus: card.banStatus,
+        rarity: card.rarity,
         artworkId: card.artworkIds?.[0] ?? null,
       }}
       onClose={onClose}

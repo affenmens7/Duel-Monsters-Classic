@@ -322,7 +322,7 @@ export function DisplayDetailView({
                 id: cardData.id, nameDe: cardData.name ?? '', nameEn: cardData.name_en ?? '',
                 desc: loc.desc, type: loc.type, frameType: cardData.frameType,
                 atk: cardData.atk, def: cardData.def, level: cardData.level,
-                attribute: cardData.attribute, rarity: setEntry?.rarity,
+                attribute: cardData.attribute, rarity: cardData.rarity ?? setEntry?.rarity,
                 sets: cardData.sets, banStatus: cardData.banStatus,
               }}
               onClose={() => onSetPopupCardId(null)}

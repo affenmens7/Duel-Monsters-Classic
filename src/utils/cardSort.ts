@@ -41,9 +41,12 @@ export function compareCards(a: Card, b: Card, sortKey: CardSortKey): number {
     }
     case 'name':
       return a.name.localeCompare(b.name);
-    case 'rarity':
-      // Not meaningful for full Card objects without set context — fallback to type
-      return compareCards(a, b, 'type');
+    case 'rarity': {
+      const ra = RARITY_ORDER[a.rarity ?? ''] ?? 5;
+      const rb = RARITY_ORDER[b.rarity ?? ''] ?? 5;
+      if (ra !== rb) return ra - rb;
+      return a.name.localeCompare(b.name);
+    }
     case 'atk': {
       // Monsters with ATK first (highest), then spells/traps
       const aAtk = a.atk ?? -1;
@@ -82,8 +85,8 @@ export function sortSetCards<T extends { cardId: number; rarity?: string }>(
     if (!cardA || !cardB) return 0;
 
     if (sortKey === 'rarity') {
-      const ra = RARITY_ORDER[a.rarity ?? ''] ?? 5;
-      const rb = RARITY_ORDER[b.rarity ?? ''] ?? 5;
+      const ra = RARITY_ORDER[cardA.rarity ?? a.rarity ?? ''] ?? 5;
+      const rb = RARITY_ORDER[cardB.rarity ?? b.rarity ?? ''] ?? 5;
       if (ra !== rb) return ra - rb;
       return cardA.name.localeCompare(cardB.name);
     }

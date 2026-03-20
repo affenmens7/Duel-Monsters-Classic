@@ -103,12 +103,22 @@ export interface Card {
   artworkIds?: number[];
   sets?: CardSetBadge[];
   banStatus?: string | null;
+  rarity?: string;
+  rarityCode?: string;
+}
+
+export interface ArtworkVariant {
+  artworkId: number;
+  isGhost: boolean;
+  isMisprint: boolean;
+  misprintData?: Record<string, unknown>;
 }
 
 export interface OwnedCard extends Card {
   owned: number;
   used_in_decks: number;
   unlockedArtworks: number[];
+  unlockedArtworkDetails?: ArtworkVariant[];
   preferredArtworkId: number | null;
 }
 

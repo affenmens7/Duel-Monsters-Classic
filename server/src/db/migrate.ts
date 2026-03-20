@@ -1,6 +1,9 @@
 /**
  * Database migration — creates all tables.
  * Run with: npm run db:migrate
+ *
+ * NOTE: This schema was cleaned up after a full DB wipe (2026-03-20).
+ * All columns are in CREATE TABLE directly — no ALTER TABLE blocks needed.
  */
 
 import { pool } from '../config/db.js';
@@ -23,16 +26,16 @@ const schema = `
 
   -- Card sets (booster packs, starter decks, etc.)
   CREATE TABLE IF NOT EXISTS card_sets (
-    id          SERIAL PRIMARY KEY,
-    name        VARCHAR(128) UNIQUE NOT NULL,
-    code        VARCHAR(32),
-    type        VARCHAR(32) DEFAULT 'booster',
-    wave        INTEGER DEFAULT 0,
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(128) UNIQUE NOT NULL,
+    code            VARCHAR(32),
+    type            VARCHAR(32) DEFAULT 'booster',
+    wave            INTEGER DEFAULT 0,
     og_release_date VARCHAR(32),
-    image_path  VARCHAR(255)
+    image_path      VARCHAR(255)
   );
 
-  -- Cards master table
+  -- Cards master table (rarity is per card, not per set)
   CREATE TABLE IF NOT EXISTS cards (
     id            INTEGER PRIMARY KEY,
     name_de       VARCHAR(255),
@@ -49,51 +52,50 @@ const schema = `
     race_en       VARCHAR(64),
     attribute     VARCHAR(16),
     archetype     VARCHAR(128),
+    rarity        VARCHAR(64),
+    rarity_code   VARCHAR(16),
+    ban_status    VARCHAR(16) DEFAULT NULL,
     image_path    VARCHAR(255)
   );
 
-  -- Card-to-set mapping (which cards are in which set)
+  -- Card-to-set mapping (which cards are in which set — rarity lives on cards, not here)
   CREATE TABLE IF NOT EXISTS card_set_entries (
     id          SERIAL PRIMARY KEY,
     card_id     INTEGER REFERENCES cards(id) ON DELETE CASCADE,
     set_name    VARCHAR(128) REFERENCES card_sets(name) ON DELETE CASCADE,
     set_code    VARCHAR(32),
-    rarity      VARCHAR(64),
-    rarity_code VARCHAR(16)
+    artwork_id  INTEGER,
+    quantity    SMALLINT NOT NULL DEFAULT 1
   );
 
-  -- Unique index to prevent duplicate card-set entries
   CREATE UNIQUE INDEX IF NOT EXISTS idx_card_set_entries_unique
     ON card_set_entries (card_id, set_name);
 
-  -- Add artwork_id column to card_set_entries (nullable, defaults to card's default artwork)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_set_entries' AND column_name = 'artwork_id') THEN
-      ALTER TABLE card_set_entries ADD COLUMN artwork_id INTEGER;
-    END IF;
-  END $$;
-
   -- Shop product config per set (prices, pack size, description)
   CREATE TABLE IF NOT EXISTS shop_set_config (
-    id            SERIAL PRIMARY KEY,
-    set_name      VARCHAR(128) REFERENCES card_sets(name) ON DELETE CASCADE UNIQUE,
-    product_type  VARCHAR(32) NOT NULL DEFAULT 'booster',
-    price_pack    INTEGER NOT NULL DEFAULT 120,
-    price_display INTEGER,
-    pack_size     INTEGER NOT NULL DEFAULT 5,
-    display_size  INTEGER DEFAULT 24,
-    desc_de       TEXT,
-    desc_en       TEXT,
-    featured      BOOLEAN DEFAULT FALSE,
-    sort_order    INTEGER DEFAULT 0
+    id                SERIAL PRIMARY KEY,
+    set_name          VARCHAR(128) REFERENCES card_sets(name) ON DELETE CASCADE UNIQUE,
+    product_type      VARCHAR(32) NOT NULL DEFAULT 'booster',
+    price_pack        INTEGER NOT NULL DEFAULT 120,
+    pack_size         INTEGER NOT NULL DEFAULT 5,
+    desc_de           TEXT,
+    desc_en           TEXT,
+    featured          BOOLEAN DEFAULT FALSE,
+    sort_order        INTEGER DEFAULT 0,
+    showcase_card_ids INTEGER[],
+    showcase_animated BOOLEAN NOT NULL DEFAULT FALSE,
+    shop_visible      BOOLEAN NOT NULL DEFAULT TRUE,
+    shop_active       BOOLEAN NOT NULL DEFAULT FALSE,
+    ig_release_date   DATE,
+    is_event          BOOLEAN NOT NULL DEFAULT FALSE
   );
 
-  -- Rarity pull rates per set (for display in shop)
+  -- Rarity pull rates per set (for booster pack opening)
   CREATE TABLE IF NOT EXISTS shop_rarity_rates (
-    id        SERIAL PRIMARY KEY,
-    set_name  VARCHAR(128) REFERENCES card_sets(name) ON DELETE CASCADE,
-    rarity    VARCHAR(64) NOT NULL,
-    rate_pct  NUMERIC(5,2) NOT NULL,
+    id         SERIAL PRIMARY KEY,
+    set_name   VARCHAR(128) REFERENCES card_sets(name) ON DELETE CASCADE,
+    rarity     VARCHAR(64) NOT NULL,
+    rate_pct   NUMERIC(5,2) NOT NULL,
     sort_order INTEGER DEFAULT 0,
     UNIQUE(set_name, rarity)
   );
@@ -125,10 +127,11 @@ const schema = `
 
   -- User card collection
   CREATE TABLE IF NOT EXISTS user_cards (
-    id        SERIAL PRIMARY KEY,
-    user_id   INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    card_id   INTEGER NOT NULL,
-    quantity  INTEGER DEFAULT 1,
+    id                   SERIAL PRIMARY KEY,
+    user_id              INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    card_id              INTEGER NOT NULL,
+    quantity             INTEGER DEFAULT 1,
+    preferred_artwork_id INTEGER,
     UNIQUE(user_id, card_id)
   );
 
@@ -141,13 +144,19 @@ const schema = `
     updated_at  TIMESTAMPTZ DEFAULT NOW()
   );
 
-  -- Cards in a deck
+  -- Cards in a deck (one row per copy, with artwork + effect variant selection)
   CREATE TABLE IF NOT EXISTS deck_cards (
-    id        SERIAL PRIMARY KEY,
-    deck_id   INTEGER REFERENCES decks(id) ON DELETE CASCADE,
-    card_id   INTEGER NOT NULL,
-    quantity  INTEGER DEFAULT 1
+    id             SERIAL PRIMARY KEY,
+    deck_id        INTEGER REFERENCES decks(id) ON DELETE CASCADE,
+    card_id        INTEGER NOT NULL,
+    quantity       INTEGER DEFAULT 1,
+    artwork_id     INTEGER,
+    copy_index     SMALLINT NOT NULL DEFAULT 0,
+    effect_variant VARCHAR(16) DEFAULT NULL
   );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_deck_cards_copy
+    ON deck_cards (deck_id, card_id, copy_index);
 
   -- Verification and reset codes
   CREATE TABLE IF NOT EXISTS email_codes (
@@ -173,23 +182,28 @@ const schema = `
 
   CREATE INDEX IF NOT EXISTS idx_card_artworks_card ON card_artworks (card_id);
 
-  -- User owned artworks (unlocked via events, achievements, shop)
+  -- User owned artworks (unlocked via pulls, events, achievements)
+  -- Ghost Rare and Misprint are bonus variants stored per artwork.
+  -- Same user can own normal + ghost + misprint of the same artwork.
   CREATE TABLE IF NOT EXISTS user_card_artworks (
-    id          SERIAL PRIMARY KEY,
-    user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    card_id     INTEGER NOT NULL,
-    artwork_id  INTEGER NOT NULL REFERENCES card_artworks(artwork_id) ON DELETE CASCADE,
-    source      VARCHAR(32) DEFAULT 'default',
-    acquired_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id, artwork_id)
+    id            SERIAL PRIMARY KEY,
+    user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    card_id       INTEGER NOT NULL,
+    artwork_id    INTEGER NOT NULL REFERENCES card_artworks(artwork_id) ON DELETE CASCADE,
+    source        VARCHAR(32) DEFAULT 'default',
+    is_ghost      BOOLEAN DEFAULT FALSE,
+    is_misprint   BOOLEAN DEFAULT FALSE,
+    misprint_data JSONB,
+    acquired_at   TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, artwork_id, is_ghost, is_misprint)
   );
 
   -- User stats
   CREATE TABLE IF NOT EXISTS user_stats (
-    user_id       INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    duels_played  INTEGER DEFAULT 0,
-    duels_won     INTEGER DEFAULT 0,
-    story_chapter VARCHAR(32) DEFAULT 'chapter-1',
+    user_id        INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    duels_played   INTEGER DEFAULT 0,
+    duels_won      INTEGER DEFAULT 0,
+    story_chapter  VARCHAR(32) DEFAULT 'chapter-1',
     starter_chosen VARCHAR(32) DEFAULT NULL
   );
 
@@ -240,254 +254,62 @@ const schema = `
 
   INSERT INTO data_version (id) VALUES (1) ON CONFLICT DO NOTHING;
 
-  -- Ban status column on cards (forbidden/limited/semi-limited, null = unlimited)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'cards' AND column_name = 'ban_status') THEN
-      ALTER TABLE cards ADD COLUMN ban_status VARCHAR(16) DEFAULT NULL;
-    END IF;
-  END $$;
-
-  -- Artwork preference per deck card (cosmetic, nullable = default artwork)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deck_cards' AND column_name = 'artwork_id') THEN
-      ALTER TABLE deck_cards ADD COLUMN artwork_id INTEGER;
-    END IF;
-  END $$;
-
-  -- Preferred artwork per card per user (null = use card default)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_cards' AND column_name = 'preferred_artwork_id') THEN
-      ALTER TABLE user_cards ADD COLUMN preferred_artwork_id INTEGER;
-    END IF;
-  END $$;
-
   -- Shop featured carousel (admin-managed rotating banners)
   CREATE TABLE IF NOT EXISTS shop_featured (
-    id          SERIAL PRIMARY KEY,
+    id           SERIAL PRIMARY KEY,
     product_type VARCHAR(32) NOT NULL,
-    product_id  VARCHAR(128) NOT NULL,
-    title_de    VARCHAR(255) NOT NULL,
-    title_en    VARCHAR(255),
-    subtitle_de TEXT,
-    subtitle_en TEXT,
-    image_path  VARCHAR(255),
-    active      BOOLEAN DEFAULT TRUE,
-    sort_order  INTEGER DEFAULT 0,
-    created_at  TIMESTAMPTZ DEFAULT NOW()
+    product_id   VARCHAR(128) NOT NULL,
+    title_de     VARCHAR(255) NOT NULL,
+    title_en     VARCHAR(255),
+    subtitle_de  TEXT,
+    subtitle_en  TEXT,
+    image_path   VARCHAR(255),
+    active       BOOLEAN DEFAULT TRUE,
+    sort_order   INTEGER DEFAULT 0,
+    created_at   TIMESTAMPTZ DEFAULT NOW()
   );
 
-  -- Per-copy artwork support: expand deck_cards from (card_id, quantity, artwork_id)
-  -- to one row per copy with copy_index (0, 1, 2).
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'deck_cards' AND column_name = 'copy_index') THEN
-      ALTER TABLE deck_cards ADD COLUMN copy_index SMALLINT NOT NULL DEFAULT 0;
-
-      -- Expand existing rows: quantity=N becomes N individual rows with copy_index 0..N-1
-      INSERT INTO deck_cards (deck_id, card_id, artwork_id, copy_index)
-      SELECT dc.deck_id, dc.card_id, dc.artwork_id, gs.idx
-      FROM deck_cards dc
-      CROSS JOIN LATERAL generate_series(1, dc.quantity - 1) AS gs(idx)
-      WHERE dc.quantity > 1;
-
-      -- Set all original rows to quantity=1 (they keep copy_index=0)
-      UPDATE deck_cards SET quantity = 1 WHERE quantity > 1;
-    END IF;
-  END $$;
-
-  -- Unique constraint: one copy_index per card per deck
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_deck_cards_copy
-    ON deck_cards (deck_id, card_id, copy_index);
-
-  -- Showcase card IDs for set artwork composition in the shop
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'showcase_card_ids') THEN
-      ALTER TABLE shop_set_config ADD COLUMN showcase_card_ids INTEGER[];
-    END IF;
-  END $$;
-
-  -- Showcase animated toggle (true = animated, false = static)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'showcase_animated') THEN
-      ALTER TABLE shop_set_config ADD COLUMN showcase_animated BOOLEAN NOT NULL DEFAULT FALSE;
-    END IF;
-  END $$;
-
-  -- Clear set image paths (set cover images removed, card images stay)
-  UPDATE card_sets SET image_path = NULL WHERE image_path IS NOT NULL;
-
-  -- Shop visibility toggle (hide sets from shop without deleting config)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'shop_visible') THEN
-      ALTER TABLE shop_set_config ADD COLUMN shop_visible BOOLEAN NOT NULL DEFAULT TRUE;
-    END IF;
-  END $$;
-
-  -- Display-specific showcase card IDs (separate from booster showcase)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_card_ids') THEN
-      ALTER TABLE shop_set_config ADD COLUMN display_showcase_card_ids INTEGER[];
-    END IF;
-  END $$;
-
-  -- Display-specific showcase animated toggle
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_animated') THEN
-      ALTER TABLE shop_set_config ADD COLUMN display_showcase_animated BOOLEAN NOT NULL DEFAULT FALSE;
-    END IF;
-  END $$;
-
-  -- Quantity per card in a set (for starter/structure decks with duplicates)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_set_entries' AND column_name = 'quantity') THEN
-      ALTER TABLE card_set_entries ADD COLUMN quantity SMALLINT NOT NULL DEFAULT 1;
-    END IF;
-  END $$;
-
-  -- In-game release date for scheduled auto-activation of sets
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'ig_release_date')
-    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'game_release_date') THEN
-      ALTER TABLE shop_set_config ADD COLUMN ig_release_date DATE;
-    END IF;
-  END $$;
-
-  -- Shop displays (independent product that bundles multiple booster sets; ig_release_date = in-game release)
+  -- Shop displays (independent product that bundles multiple booster sets)
   CREATE TABLE IF NOT EXISTS shop_displays (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(128) UNIQUE NOT NULL,
-    price INTEGER NOT NULL DEFAULT 0,
-    desc_de TEXT,
-    desc_en TEXT,
+    id                SERIAL PRIMARY KEY,
+    name              VARCHAR(128) UNIQUE NOT NULL,
+    code              VARCHAR(32),
+    price             INTEGER NOT NULL DEFAULT 0,
+    desc_de           TEXT,
+    desc_en           TEXT,
     showcase_card_ids INTEGER[],
     showcase_animated BOOLEAN NOT NULL DEFAULT FALSE,
-    ig_release_date DATE,
-    active BOOLEAN DEFAULT FALSE,
-    shop_visible BOOLEAN NOT NULL DEFAULT TRUE,
-    sort_order INTEGER DEFAULT 0,
-    wave INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    ig_release_date   DATE,
+    og_release_date   VARCHAR(32),
+    shop_active       BOOLEAN DEFAULT FALSE,
+    shop_visible      BOOLEAN NOT NULL DEFAULT TRUE,
+    is_event          BOOLEAN NOT NULL DEFAULT FALSE,
+    sort_order        INTEGER DEFAULT 0,
+    wave              INTEGER DEFAULT 0,
+    created_at        TIMESTAMPTZ DEFAULT NOW()
   );
 
   -- Display contents (which booster sets are included in a display)
   CREATE TABLE IF NOT EXISTS shop_display_contents (
-    id SERIAL PRIMARY KEY,
-    display_id INTEGER NOT NULL REFERENCES shop_displays(id) ON DELETE CASCADE,
+    id               SERIAL PRIMARY KEY,
+    display_id       INTEGER NOT NULL REFERENCES shop_displays(id) ON DELETE CASCADE,
     booster_set_name VARCHAR(128) NOT NULL REFERENCES card_sets(name) ON DELETE CASCADE,
-    pack_count INTEGER NOT NULL DEFAULT 24,
+    pack_count       INTEGER NOT NULL DEFAULT 24,
     UNIQUE(display_id, booster_set_name)
   );
 
   -- Release windows (scheduled availability for products)
   CREATE TABLE IF NOT EXISTS shop_release_windows (
-    id SERIAL PRIMARY KEY,
+    id           SERIAL PRIMARY KEY,
     product_type VARCHAR(32) NOT NULL,
-    product_id VARCHAR(128) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    product_id   VARCHAR(128) NOT NULL,
+    start_date   DATE NOT NULL,
+    end_date     DATE,
+    created_at   TIMESTAMPTZ DEFAULT NOW()
   );
-  CREATE INDEX IF NOT EXISTS idx_release_windows_product ON shop_release_windows(product_type, product_id);
 
-  -- Drop deprecated display columns from shop_set_config (moved to shop_displays)
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'price_display') THEN
-      ALTER TABLE shop_set_config DROP COLUMN price_display;
-    END IF;
-  END $$;
-
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_size') THEN
-      ALTER TABLE shop_set_config DROP COLUMN display_size;
-    END IF;
-  END $$;
-
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_card_ids') THEN
-      ALTER TABLE shop_set_config DROP COLUMN display_showcase_card_ids;
-    END IF;
-  END $$;
-
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'display_showcase_animated') THEN
-      ALTER TABLE shop_set_config DROP COLUMN display_showcase_animated;
-    END IF;
-  END $$;
-
-  -- Rename release_date → og_release_date (original real-world release)
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_sets' AND column_name = 'release_date')
-    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_sets' AND column_name = 'og_release_date') THEN
-      ALTER TABLE card_sets RENAME COLUMN release_date TO og_release_date;
-    END IF;
-  END $$;
-
-  -- Rename shop_set_config.game_release_date → ig_release_date (first in-game release)
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'game_release_date')
-    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'ig_release_date') THEN
-      ALTER TABLE shop_set_config RENAME COLUMN game_release_date TO ig_release_date;
-    END IF;
-  END $$;
-
-  -- Rename shop_displays.game_release_date → ig_release_date (first in-game release)
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'game_release_date')
-    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'ig_release_date') THEN
-      ALTER TABLE shop_displays RENAME COLUMN game_release_date TO ig_release_date;
-    END IF;
-  END $$;
-
-  -- Add is_event flag to shop_set_config (event products use release windows, normal products use ig_release_date)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'is_event') THEN
-      ALTER TABLE shop_set_config ADD COLUMN is_event BOOLEAN NOT NULL DEFAULT FALSE;
-    END IF;
-  END $$;
-
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'is_event') THEN
-      ALTER TABLE shop_displays ADD COLUMN is_event BOOLEAN NOT NULL DEFAULT FALSE;
-    END IF;
-  END $$;
-
-  -- Add code column to shop_displays
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'code') THEN
-      ALTER TABLE shop_displays ADD COLUMN code VARCHAR(32);
-    END IF;
-  END $$;
-
-  -- Add shop_active to shop_set_config (shop purchasability, separate from card_sets.active)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'shop_active') THEN
-      ALTER TABLE shop_set_config ADD COLUMN shop_active BOOLEAN NOT NULL DEFAULT FALSE;
-      -- Initialise: copy current card_sets.active value
-      UPDATE shop_set_config sc SET shop_active = cs.active
-      FROM card_sets cs WHERE cs.name = sc.set_name;
-    END IF;
-  END $$;
-
-  -- Rename shop_displays.active → shop_active (shop purchasability)
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'active')
-    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'shop_active') THEN
-      ALTER TABLE shop_displays RENAME COLUMN active TO shop_active;
-    END IF;
-  END $$;
-
-  -- Drop card_sets.active (no longer used — availability comes from shop_active)
-  DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_sets' AND column_name = 'active') THEN
-      ALTER TABLE card_sets DROP COLUMN active;
-    END IF;
-  END $$;
-
-  -- OG release date for displays (original real-world reference date)
-  DO $$ BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'og_release_date') THEN
-      ALTER TABLE shop_displays ADD COLUMN og_release_date VARCHAR(32);
-    END IF;
-  END $$;
+  CREATE INDEX IF NOT EXISTS idx_release_windows_product
+    ON shop_release_windows(product_type, product_id);
 
   -- Auto-create missing shop_set_config for any card_sets without one
   INSERT INTO shop_set_config (set_name, product_type, price_pack, pack_size)

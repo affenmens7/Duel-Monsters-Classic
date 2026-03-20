@@ -27,6 +27,8 @@ interface DbCard {
   artwork_ids?: number[];
   sets?: { name: string; code: string; active?: boolean; artworkId?: number | null }[];
   ban_status?: string | null;
+  rarity?: string | null;
+  rarity_code?: string | null;
 }
 
 export function dbCardToCard(db: DbCard): Card {
@@ -50,6 +52,8 @@ export function dbCardToCard(db: DbCard): Card {
     artworkIds: db.artwork_ids ?? [],
     sets: db.sets ?? [],
     banStatus: db.ban_status ?? null,
+    rarity: db.rarity ?? undefined,
+    rarityCode: db.rarity_code ?? undefined,
     card_images: [{
       id: db.id,
       image_url: `/images/cards/${db.id}.jpg`,

@@ -28,6 +28,7 @@ export function cardToDetailData(
     attribute: card.attribute,
     sets: card.sets,
     banStatus: card.banStatus,
+    rarity: card.rarity,
   };
 }
 

@@ -40,3 +40,15 @@ export const RARITY_SHORT: Record<string, string> = {
   'Ultra Rare': 'UR',
   'Secret Rare': 'ScR',
 };
+
+/** Visual effect tier for a given rarity. */
+export type EffectTier = 'none' | 'holo' | 'rainbow';
+
+/** Maps rarity to its visual CSS effect tier. */
+export function getEffectTier(rarity?: string): EffectTier {
+  if (!rarity) return 'none';
+  const tier = getRarityTier(rarity);
+  if (tier === 'SuperRare' || tier === 'UltraRare') return 'holo';
+  if (tier === 'SecretRare') return 'rainbow';
+  return 'none';
+}

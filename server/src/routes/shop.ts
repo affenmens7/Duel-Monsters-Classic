@@ -104,7 +104,7 @@ shopRouter.get('/products', async (_req, res) => {
          FROM card_set_entries cse
          JOIN cards c ON c.id = cse.card_id
          CROSS JOIN LATERAL (
-           SELECT CASE cse.rarity
+           SELECT CASE c.rarity
              WHEN 'Secret Rare' THEN 1 WHEN 'Ultra Rare' THEN 2
              WHEN 'Super Rare' THEN 3 WHEN 'Rare' THEN 4
              ELSE 5 END AS rarity_rank
@@ -185,7 +185,7 @@ shopRouter.get('/products', async (_req, res) => {
            FROM card_set_entries cse
            JOIN cards c ON c.id = cse.card_id
            CROSS JOIN LATERAL (
-             SELECT CASE cse.rarity
+             SELECT CASE c.rarity
                WHEN 'Secret Rare' THEN 1 WHEN 'Ultra Rare' THEN 2
                WHEN 'Super Rare' THEN 3 WHEN 'Rare' THEN 4
                ELSE 5 END AS rarity_rank
@@ -298,15 +298,16 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
       ORDER BY sort_order
     `, [setName]);
 
-    // All unique cards in this set with rarity info + user ownership
+    // All unique cards in this set with rarity info + user ownership (rarity from cards table)
     const cardsResult = await pool.query(`
       SELECT DISTINCT ON (cse.card_id)
         cse.card_id     AS "cardId",
-        cse.rarity,
-        cse.rarity_code AS "rarityCode",
+        c.rarity,
+        c.rarity_code   AS "rarityCode",
         cse.artwork_id  AS "artworkId",
         COALESCE(uc.quantity, 0)::int AS "owned"
       FROM card_set_entries cse
+      JOIN cards c ON c.id = cse.card_id
       LEFT JOIN user_cards uc ON uc.card_id = cse.card_id AND uc.user_id = $2
       WHERE cse.set_name = $1
       ORDER BY cse.card_id
@@ -575,7 +576,16 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
 interface PulledCard {
   cardId: number;
   artworkId: number;
+  rarity: string;
+  isGhost: boolean;
+  isMisprint: boolean;
+  misprintData: object | null;
 }
+
+// Rarities eligible for Ghost Rare roll
+const GHOST_ELIGIBLE = new Set(['Super Rare', 'Ultra Rare', 'Secret Rare']);
+const GHOST_CHANCE = 1 / 1024;
+const MISPRINT_CHANCE = 1 / 4096;
 
 async function openBoosterPack(
   client: PgClient,
@@ -588,9 +598,12 @@ async function openBoosterPack(
     [setName]
   );
 
-  // Load all cards grouped by rarity (include artwork_id from set entry)
+  // Load all cards grouped by rarity (rarity from cards table)
   const cardsResult = await client.query(
-    `SELECT card_id, rarity, artwork_id FROM card_set_entries WHERE set_name = $1`,
+    `SELECT cse.card_id, c.rarity, cse.artwork_id
+     FROM card_set_entries cse
+     JOIN cards c ON c.id = cse.card_id
+     WHERE cse.set_name = $1`,
     [setName]
   );
 
@@ -599,13 +612,13 @@ async function openBoosterPack(
   }
 
   // Group cards by rarity (store card_id + artwork_id)
-  const cardsByRarity: Record<string, Array<{ cardId: number; artworkId: number }>> = {};
+  const cardsByRarity: Record<string, Array<{ cardId: number; artworkId: number; rarity: string }>> = {};
   for (const row of cardsResult.rows) {
     const rarity = row.rarity ?? 'Common';
     if (!cardsByRarity[rarity]) {
       cardsByRarity[rarity] = [];
     }
-    cardsByRarity[rarity].push({ cardId: row.card_id, artworkId: row.artwork_id ?? row.card_id });
+    cardsByRarity[rarity].push({ cardId: row.card_id, artworkId: row.artwork_id ?? row.card_id, rarity });
   }
 
   // Build weighted rarity tiers from DB rates
@@ -616,8 +629,10 @@ async function openBoosterPack(
 
   // If no rarity rates configured, fall back to uniform random
   if (rarityTiers.length === 0) {
-    const allCards = cardsResult.rows.map((r: any) => ({ cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id }));
-    return pickRandomCards(allCards, packSize);
+    const allCards = cardsResult.rows.map((r: any) => ({
+      cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id, rarity: r.rarity ?? 'Common',
+    }));
+    return pickRandomCards(allCards, packSize).map(applyBonusRolls);
   }
 
   const totalWeight = rarityTiers.reduce((sum, t) => sum + t.weight, 0);
@@ -638,18 +653,126 @@ async function openBoosterPack(
 
     // Pick a random card from that rarity tier
     const pool = cardsByRarity[chosenRarity];
+    let card: { cardId: number; artworkId: number; rarity: string };
     if (pool && pool.length > 0) {
-      const idx = Math.floor(Math.random() * pool.length);
-      pulled.push(pool[idx]);
+      card = pool[Math.floor(Math.random() * pool.length)];
     } else {
-      // Fallback: pick from any rarity if the chosen rarity has no cards
-      const allCards = cardsResult.rows.map((r: any) => ({ cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id }));
-      const idx = Math.floor(Math.random() * allCards.length);
-      pulled.push(allCards[idx]);
+      const allCards = cardsResult.rows.map((r: any) => ({
+        cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id, rarity: r.rarity ?? 'Common',
+      }));
+      card = allCards[Math.floor(Math.random() * allCards.length)];
     }
+
+    pulled.push(applyBonusRolls(card));
   }
 
   return pulled;
+}
+
+// Roll for Ghost Rare and Misprint bonuses (independent rolls)
+function applyBonusRolls(card: { cardId: number; artworkId: number; rarity: string }): PulledCard {
+  const isGhost = GHOST_ELIGIBLE.has(card.rarity) && Math.random() < GHOST_CHANCE;
+  const isMisprint = Math.random() < MISPRINT_CHANCE;
+  return {
+    ...card,
+    isGhost,
+    isMisprint,
+    misprintData: isMisprint ? generateMisprintData() : null,
+  };
+}
+
+// Generate random misprint distortion data (stored permanently as JSONB)
+function generateMisprintData(): object {
+  const r = (min: number, max: number) => Math.random() * (max - min) + min;
+  const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+  // Always: shift + ghost-double. Plus 1-3 random extras.
+  const extras = ['print-lines', 'print-lines-cross', 'glitch-band', 'ink-bleed', 'scratch'];
+  const shuffled = extras.sort(() => Math.random() - 0.5);
+  const extraCount = Math.floor(r(1, 4));
+  const defects = ['heavy-shift', 'ghost-double', ...shuffled.slice(0, extraCount)];
+
+  const data: Record<string, any> = { defects };
+
+  // Base filter (minimal color distortion)
+  data.baseHue = r(-8, 8);
+  data.baseSat = r(0.85, 1.15);
+  data.baseBrt = r(0.92, 1.08);
+
+  // Heavy shift
+  data.shiftX = r(-15, 15);
+  data.shiftY = r(-12, 12);
+  data.shiftOpacity = r(0.25, 0.55);
+  data.shiftHue = r(-15, 15);
+
+  // Ghost double
+  data.ghostOpacity = r(0.15, 0.4);
+  data.ghostTranslateX = r(-18, 18);
+  data.ghostTranslateY = r(-14, 14);
+  data.ghostScale = r(1.03, 1.12);
+  data.ghostSkew = r(-8, 8);
+  data.ghostRotate = r(-5, 5);
+  data.ghostBlur = r(0.5, 3);
+  data.ghostBrt = r(1.0, 1.4);
+  data.ghostCon = r(0.5, 0.9);
+
+  for (const defect of defects) {
+    switch (defect) {
+      case 'print-lines': {
+        data.linesAngle = pick([0, 90, 45, -45, 30, -30]);
+        data.linesSpacing = r(6, 25);
+        data.linesWidth = r(0.5, 3);
+        data.linesGlittery = Math.random() < 0.5;
+        data.linesColorR = r(180, 255);
+        data.linesColorG = r(180, 255);
+        data.linesColorB = r(200, 255);
+        data.linesAlpha = r(0.06, 0.2);
+        data.linesOpacity = r(0.6, 1);
+        break;
+      }
+      case 'print-lines-cross': {
+        data.linesAngle = pick([0, 45, -45, 30]);
+        data.linesAngle2 = data.linesAngle + pick([60, 90, 45]);
+        data.linesSpacing = r(8, 20);
+        data.linesSpacing2 = r(10, 30);
+        data.linesAlpha = r(0.06, 0.15);
+        data.linesAlpha2 = r(0.08, 0.2);
+        data.linesOpacity = r(0.5, 1);
+        data.linesGlittery = true;
+        break;
+      }
+      case 'glitch-band': {
+        data.glitch1Y = r(8, 80);
+        data.glitch1H = r(3, 12);
+        data.glitch1Bg = pick(['rgba(255,255,255,0.2)', 'rgba(200,200,255,0.25)', 'rgba(255,200,255,0.2)']);
+        data.glitch1Opacity = r(0.5, 1);
+        data.glitch1Skew = r(-20, 20);
+        data.glitch1Blend = pick(['screen', 'overlay', 'color-dodge']);
+        data.glitch2Y = r(15, 85);
+        data.glitch2H = r(1, 8);
+        data.glitch2Opacity = r(0.4, 0.9);
+        data.glitch2Skew = r(-12, 12);
+        break;
+      }
+      case 'ink-bleed': {
+        data.inkColor = pick(['rgba(200,200,255,0.3)', 'rgba(180,220,255,0.25)', 'rgba(255,220,255,0.25)']);
+        data.inkW = r(50, 120);
+        data.inkH = r(50, 140);
+        data.inkX = r(5, 65);
+        data.inkY = r(10, 70);
+        data.inkRot = r(-45, 45);
+        break;
+      }
+      case 'scratch': {
+        data.scratchY = r(10, 80);
+        data.scratchRot = r(-12, 12);
+        data.scratchH = pick([1, 2, 3, 4]);
+        break;
+      }
+    }
+  }
+
+  return data;
 }
 
 // ---------------------------------------------------------------------------
@@ -660,13 +783,18 @@ async function getStarterDeckCards(
   setName: string,
 ): Promise<PulledCard[]> {
   const result = await client.query(
-    'SELECT card_id, artwork_id, COALESCE(quantity, 1) AS quantity FROM card_set_entries WHERE set_name = $1',
+    `SELECT cse.card_id, cse.artwork_id, COALESCE(cse.quantity, 1) AS quantity, c.rarity
+     FROM card_set_entries cse
+     JOIN cards c ON c.id = cse.card_id
+     WHERE cse.set_name = $1`,
     [setName]
   );
   const cards: PulledCard[] = [];
   for (const r of result.rows as any[]) {
-    const entry = { cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id };
-    for (let i = 0; i < r.quantity; i++) cards.push(entry);
+    const base = { cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id, rarity: r.rarity ?? 'Common' };
+    for (let i = 0; i < r.quantity; i++) {
+      cards.push(applyBonusRolls(base));
+    }
   }
   return cards;
 }
@@ -679,7 +807,7 @@ async function addCardsToCollection(
   userId: number,
   cards: PulledCard[],
 ) {
-  for (const { cardId, artworkId } of cards) {
+  for (const { cardId, artworkId, isGhost, isMisprint, misprintData } of cards) {
     // Add card to collection — set preferred_artwork_id on first acquisition
     await client.query(
       `INSERT INTO user_cards (user_id, card_id, quantity, preferred_artwork_id)
@@ -688,21 +816,51 @@ async function addCardsToCollection(
       [userId, cardId, artworkId]
     );
 
-    // Unlock the artwork for this user (idempotent)
+    // Always unlock the normal artwork (is_ghost=false, is_misprint=false)
     await client.query(
-      `INSERT INTO user_card_artworks (user_id, card_id, artwork_id, source)
-       VALUES ($1, $2, $3, 'shop')
-       ON CONFLICT (user_id, artwork_id) DO NOTHING`,
+      `INSERT INTO user_card_artworks (user_id, card_id, artwork_id, source, is_ghost, is_misprint)
+       VALUES ($1, $2, $3, 'shop', FALSE, FALSE)
+       ON CONFLICT (user_id, artwork_id, is_ghost, is_misprint) DO NOTHING`,
       [userId, cardId, artworkId]
     );
+
+    // If ghost: unlock ghost variant of this artwork
+    if (isGhost) {
+      await client.query(
+        `INSERT INTO user_card_artworks (user_id, card_id, artwork_id, source, is_ghost, is_misprint)
+         VALUES ($1, $2, $3, 'shop', TRUE, FALSE)
+         ON CONFLICT (user_id, artwork_id, is_ghost, is_misprint) DO NOTHING`,
+        [userId, cardId, artworkId]
+      );
+    }
+
+    // If misprint: unlock misprint variant with unique data
+    if (isMisprint) {
+      await client.query(
+        `INSERT INTO user_card_artworks (user_id, card_id, artwork_id, source, is_ghost, is_misprint, misprint_data)
+         VALUES ($1, $2, $3, 'shop', FALSE, TRUE, $4)
+         ON CONFLICT (user_id, artwork_id, is_ghost, is_misprint) DO NOTHING`,
+        [userId, cardId, artworkId, JSON.stringify(misprintData)]
+      );
+    }
+
+    // If both ghost+misprint: unlock the combined variant too
+    if (isGhost && isMisprint) {
+      await client.query(
+        `INSERT INTO user_card_artworks (user_id, card_id, artwork_id, source, is_ghost, is_misprint, misprint_data)
+         VALUES ($1, $2, $3, 'shop', TRUE, TRUE, $4)
+         ON CONFLICT (user_id, artwork_id, is_ghost, is_misprint) DO NOTHING`,
+        [userId, cardId, artworkId, JSON.stringify(misprintData)]
+      );
+    }
   }
 }
 
 // ---------------------------------------------------------------------------
 // Helper: pick N random elements from an array (with replacement)
 // ---------------------------------------------------------------------------
-function pickRandomCards(items: PulledCard[], count: number): PulledCard[] {
-  const result: PulledCard[] = [];
+function pickRandomCards(items: Array<{ cardId: number; artworkId: number; rarity: string }>, count: number) {
+  const result: Array<{ cardId: number; artworkId: number; rarity: string }> = [];
   for (let i = 0; i < count; i++) {
     const idx = Math.floor(Math.random() * items.length);
     result.push(items[idx]);
