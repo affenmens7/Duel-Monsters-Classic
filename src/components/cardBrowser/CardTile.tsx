@@ -12,6 +12,7 @@ interface CardTileProps {
   forceMaxed?: boolean;
   forceGreyed?: boolean;
   preferredArtworkId?: number;
+  ignoreAvailability?: boolean;
 }
 
 function getFrameClass(frameType: string): string {
@@ -26,20 +27,28 @@ function getFrameClass(frameType: string): string {
   }
 }
 
-export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, forceGreyed, preferredArtworkId }: CardTileProps) {
+export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, forceGreyed, preferredArtworkId, ignoreAvailability }: CardTileProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { localize } = useCardLocale();
   const loc = localize(card);
 
   // Priority: set filter artwork > user preference > default
-  const artworkId = setFilter && setFilter !== 'all'
-    ? card.sets?.find((s) => s.name === setFilter)?.artworkId ?? card.artworkIds?.[0]
+  const setEntry = setFilter && setFilter !== 'all'
+    ? card.sets?.find((s) => s.name === setFilter)
+    : undefined;
+  const artworkId = setEntry
+    ? setEntry.artworkId ?? card.artworkIds?.[0]
     : preferredArtworkId ?? card.artworkIds?.[0] ?? undefined;
   const imageUrl = getCardImageUrl(card.id, 'small', artworkId);
 
+  // When set filter active: check if this specific artwork is available in ANY active set
+  const isArtworkUnavailable = setEntry
+    ? !(card.sets?.some((s) => s.artworkId === artworkId && s.active !== false) ?? false)
+    : false;
+
   return (
     <button
-      className={`${styles.tile} ${getFrameClass(card.frameType)} ${card.available === false || forceMaxed ? styles.locked : ''} ${forceGreyed ? styles.greyedArtwork : ''}`}
+      className={`${styles.tile} ${getFrameClass(card.frameType)} ${(!ignoreAvailability && card.available === false) || forceMaxed ? styles.locked : ''} ${forceGreyed || (!ignoreAvailability && isArtworkUnavailable && card.available) ? styles.greyedArtwork : ''}`}
       data-card-id={card.id}
       onClick={onClick}
       onMouseDown={onMouseDown}

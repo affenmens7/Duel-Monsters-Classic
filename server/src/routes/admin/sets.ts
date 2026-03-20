@@ -32,7 +32,6 @@ setsRouter.get('/', async (req, res) => {
         cs.code,
         cs.type,
         cs.wave,
-        cs.active,
         cs.og_release_date,
         sc.product_type,
         sc.price_pack,
@@ -42,6 +41,7 @@ setsRouter.get('/', async (req, res) => {
         sc.featured,
         sc.sort_order,
         COALESCE(sc.shop_visible, TRUE) AS shop_visible,
+        COALESCE(sc.shop_active, FALSE) AS shop_active,
         sc.showcase_card_ids,
         COALESCE(sc.showcase_animated, FALSE) AS showcase_animated,
         sc.ig_release_date,
@@ -162,7 +162,6 @@ setsRouter.get('/:name/info', async (req, res) => {
         cs.code,
         cs.type,
         cs.wave,
-        cs.active,
         cs.og_release_date,
         sc.product_type,
         sc.price_pack,
@@ -206,7 +205,7 @@ setsRouter.get('/:name/info', async (req, res) => {
 setsRouter.put('/:name', async (req, res) => {
   try {
     const { name } = req.params;
-    const { active, wave, og_release_date } = req.body;
+    const { wave, og_release_date } = req.body;
 
     // Validate that the set exists
     const existing = await pool.query(
@@ -223,10 +222,6 @@ setsRouter.put('/:name', async (req, res) => {
     const params: unknown[] = [];
     let idx = 1;
 
-    if (active !== undefined) {
-      updates.push(`active = $${idx++}`);
-      params.push(Boolean(active));
-    }
     if (wave !== undefined) {
       updates.push(`wave = $${idx++}`);
       params.push(Number(wave));
@@ -478,7 +473,7 @@ setsRouter.post('/', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { name, code, type, wave, active, og_release_date } = req.body;
+    const { name, code, type, wave, og_release_date } = req.body;
 
     if (!name || !code) {
       res.status(400).json({ error: 'Pflichtfelder: name, code' });
@@ -492,10 +487,10 @@ setsRouter.post('/', async (req, res) => {
 
     // Insert the set itself
     const setResult = await client.query(
-      `INSERT INTO card_sets (name, code, type, wave, active, og_release_date)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO card_sets (name, code, type, wave, og_release_date)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [name, code, setType, wave ?? 0, active ?? false, og_release_date ?? null]
+      [name, code, setType, wave ?? 0, og_release_date ?? null]
     );
 
     // Auto-create default shop_set_config based on set type

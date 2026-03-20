@@ -153,14 +153,14 @@ export async function fetchSetDetail(setName: string, token: string): Promise<Se
 /**
  * Buys a single booster pack from a set.
  */
-export async function buyPack(setName: string, token: string): Promise<BuyResult> {
+export async function buyPack(setName: string, token: string, quantity: number = 1): Promise<BuyResult> {
   const response = await fetch(`${env.api.baseUrl}/shop/buy`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ productId: setName, productType: 'booster' }),
+    body: JSON.stringify({ productId: setName, productType: 'booster', quantity }),
   });
 
   const data = await response.json();

@@ -25,7 +25,7 @@ shopRouter.get('/products', async (_req, res) => {
         cs.name        AS "setName",
         cs.code,
         cs.wave,
-        cs.active,
+        COALESCE(sc.shop_active, FALSE) AS "active",
         sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
         sc.pack_size   AS "packSize",
@@ -54,7 +54,7 @@ shopRouter.get('/products', async (_req, res) => {
         cs.name        AS "setName",
         cs.code,
         cs.wave,
-        cs.active,
+        COALESCE(sc.shop_active, FALSE) AS "active",
         sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
         sc.pack_size   AS "packSize",
@@ -130,6 +130,7 @@ shopRouter.get('/products', async (_req, res) => {
     }
 
     // Displays: independent products from shop_displays table
+    // shop_active = purchasable in shop
     const displaysResult = await pool.query(`
       SELECT
         d.id, d.name, d.price,
@@ -138,7 +139,8 @@ shopRouter.get('/products', async (_req, res) => {
         COALESCE(d.showcase_animated, FALSE) AS "showcaseAnimated",
         d.ig_release_date AS "igReleaseDate",
         COALESCE(d.is_event, FALSE) AS "isEvent",
-        d.active, d.wave, d.sort_order AS "sortOrder",
+        COALESCE(d.shop_active, FALSE) AS "active",
+        d.wave, d.sort_order AS "sortOrder",
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
          FROM shop_display_contents dc WHERE dc.display_id = d.id) AS "totalPacks",
         (SELECT COALESCE(SUM(cnt.card_count), 0)::int
@@ -256,13 +258,13 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
   const userId = req.user!.userId;
 
   try {
-    // Set info + config
+    // Set info + config (shop_active = purchasable)
     const setResult = await pool.query(`
       SELECT
         cs.name        AS "setName",
         cs.code,
         cs.wave,
-        cs.active,
+        COALESCE(sc.shop_active, FALSE) AS "active",
         sc.product_type AS "productType",
         sc.price_pack  AS "pricePack",
         sc.pack_size   AS "packSize",
@@ -327,7 +329,8 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
 // productId is the set_name (for packs/starters) or item_id (for cosmetics).
 // ---------------------------------------------------------------------------
 shopRouter.post('/buy', requireAuth, async (req, res) => {
-  const { productId, productType } = req.body;
+  const { productId, productType, quantity: rawQty } = req.body;
+  const quantity = productType === 'booster' ? Math.max(1, Math.floor(Number(rawQty) || 1)) : 1;
   const userId = req.user!.userId;
 
   if (!productId || !productType) {
@@ -432,7 +435,7 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
       }
 
       const displayResult = await client.query(
-        'SELECT id, price, active FROM shop_displays WHERE id = $1',
+        'SELECT id, price, shop_active FROM shop_displays WHERE id = $1',
         [displayId]
       );
       if (displayResult.rows.length === 0) {
@@ -442,7 +445,7 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
       }
 
       const display = displayResult.rows[0];
-      if (!display.active) {
+      if (!display.shop_active) {
         await client.query('ROLLBACK');
         res.status(400).json({ error: 'Display nicht verfuegbar' });
         return;
@@ -493,9 +496,8 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
     }
 
     // --- Pack / starter purchase ---
-    // Load config from shop_set_config
     const configResult = await client.query(
-      `SELECT product_type, price_pack, pack_size
+      `SELECT product_type, price_pack, pack_size, shop_active
        FROM shop_set_config
        WHERE set_name = $1`,
       [productId]
@@ -508,9 +510,17 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
     }
 
     const config = configResult.rows[0];
-    const price: number = config.price_pack;
 
-    if (currentDp < price) {
+    if (!config.shop_active) {
+      await client.query('ROLLBACK');
+      res.status(400).json({ error: 'Produkt nicht verfuegbar' });
+      return;
+    }
+
+    const price: number = config.price_pack;
+    const totalCost = price * quantity;
+
+    if (currentDp < totalCost) {
       await client.query('ROLLBACK');
       res.status(400).json({ error: 'Nicht genug DP' });
       return;
@@ -519,7 +529,7 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
     // Deduct DP
     await client.query(
       'UPDATE users SET dp = dp - $1 WHERE id = $2',
-      [price, userId]
+      [totalCost, userId]
     );
 
     let pulledCards: PulledCard[];
@@ -528,9 +538,14 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
       // Starter deck: give ALL cards in the set
       pulledCards = await getStarterDeckCards(client, productId);
     } else {
-      // Single booster pack
+      // Booster packs: open N packs
       const packSize = config.pack_size ?? 5;
-      pulledCards = await openBoosterPack(client, productId, packSize);
+      const allPulled: PulledCard[] = [];
+      for (let i = 0; i < quantity; i++) {
+        const pack = await openBoosterPack(client, productId, packSize);
+        allPulled.push(...pack);
+      }
+      pulledCards = allPulled;
     }
 
     // Add cards to user collection + unlock artworks
@@ -543,7 +558,7 @@ shopRouter.post('/buy', requireAuth, async (req, res) => {
       type: productType,
       cards: pulledCards.map((c) => c.cardId),
       pulledCards,
-      dpRemaining: currentDp - price,
+      dpRemaining: currentDp - totalCost,
     });
   } catch (err) {
     await client.query('ROLLBACK');

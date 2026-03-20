@@ -79,7 +79,6 @@ export interface CachedSet {
   type: string;
   wave: number;
   active: boolean;
-  available_via_display?: boolean;
   image_path: string | null;
   card_count: number;
 }

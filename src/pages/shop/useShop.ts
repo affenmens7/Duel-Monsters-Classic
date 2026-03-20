@@ -20,7 +20,6 @@ import {
   type DisplayDetail,
   type BuyResult,
 } from '../../services/shopApi';
-import { RARITY_ORDER } from '../../utils/rarity';
 
 type ViewMode = 'storefront' | 'detail' | 'display-detail';
 
@@ -136,8 +135,8 @@ export function useShop() {
     }
   }
 
-  const handleBuyPack = useCallback(() =>
-    handlePurchase(() => buyPack(selectedSetName!, token!)),
+  const handleBuyPack = useCallback((quantity: number = 1) =>
+    handlePurchase(() => buyPack(selectedSetName!, token!, quantity)),
     [token, user, selectedSetName, buying]);
 
   const handleBuyStarter = useCallback((setName: string) =>
@@ -148,24 +147,10 @@ export function useShop() {
     handlePurchase(() => buyDisplay(selectedDisplayId!, token!), true),
     [token, user, selectedDisplayId, buying]);
 
-  const sortedDetailCards = useMemo(() => {
-    if (!setDetail) return [];
-    return [...setDetail.cards].sort((a, b) =>
-      (RARITY_ORDER[a.rarity] ?? 5) - (RARITY_ORDER[b.rarity] ?? 5)
-    );
-  }, [setDetail]);
-
   const ownedCount = useMemo(() => {
     if (!setDetail) return 0;
     return setDetail.cards.filter((c) => c.owned > 0).length;
   }, [setDetail]);
-
-  const sortedDisplayCards = useMemo(() => {
-    if (!displayDetail) return [];
-    return [...displayDetail.cards].sort((a, b) =>
-      (RARITY_ORDER[a.rarity] ?? 5) - (RARITY_ORDER[b.rarity] ?? 5)
-    );
-  }, [displayDetail]);
 
   const displayOwnedCount = useMemo(() => {
     if (!displayDetail) return 0;
@@ -179,8 +164,7 @@ export function useShop() {
     buying, error, buyResult, setBuyResult,
     popupCardId, setPopupCardId,
     dp, user, selectedSetName, selectedDisplayId,
-    sortedDetailCards, ownedCount,
-    sortedDisplayCards, displayOwnedCount,
+    ownedCount, displayOwnedCount,
     // Actions
     openDetail, openDisplayDetail, goBack,
     handleBuyPack, handleBuyStarter, handleBuyDisplay,

@@ -1,0 +1,29 @@
+.sortSelect {
+  margin-left: auto;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--orichalcos-faint);
+  color: var(--text-secondary);
+  font-family: var(--font-heading);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.sortSelect:hover,
+.sortSelect:focus {
+  outline: none;
+  border-color: var(--orichalcos-subtle);
+  color: var(--orichalcos-light);
+}
+
+.sortSelect option {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  text-transform: none;
+  font-size: 0.85rem;
+  letter-spacing: 0;
+}

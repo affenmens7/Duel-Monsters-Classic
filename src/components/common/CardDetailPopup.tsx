@@ -105,6 +105,10 @@ export function CardDetailPopup({
   // Find the currently previewed artwork info
   const activeArtwork = artworks?.find((a) => a.artworkId === artId);
 
+  // Auto-calculate greyed state: if ownedArtworkIds provided and current artwork is not owned
+  const isCurrentArtworkLocked = ownedArtworkIds ? !ownedArtworkIds.includes(artId) : false;
+  const shouldGreyImage = isPreviewGreyed || isCurrentArtworkLocked;
+
   const displayName = isEn ? card.nameEn : card.nameDe;
   const secondaryName = isEn ? card.nameDe : card.nameEn;
   const desc = isEn
@@ -116,7 +120,7 @@ export function CardDetailPopup({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <button className={styles.close} onClick={onClose}>x</button>
         <div className={styles.content}>
-          <div className={`${styles.imageCol} ${isPreviewGreyed ? styles.imageGreyed : ''}`}>
+          <div className={`${styles.imageCol} ${shouldGreyImage ? styles.imageGreyed : ''}`}>
             <img src={getCardImageUrl(card.id, 'full', artId)} alt={displayName} />
           </div>
           <div className={styles.infoCol}>

@@ -29,7 +29,7 @@ export interface AdminSetRow {
   code: string;
   type: string;
   wave: number;
-  active: boolean;
+  shop_active: boolean;      // shop_set_config.shop_active — purchasable in shop
   og_release_date: string | null;
   product_type: string;
   price_pack: number;
@@ -57,9 +57,10 @@ export interface AdminDisplayRow {
   desc_en: string | null;
   showcase_card_ids: number[] | null;
   showcase_animated: boolean;
+  og_release_date: string | null;
   ig_release_date: string | null;
   is_event: boolean;
-  active: boolean;
+  shop_active: boolean;      // shop_displays.shop_active — purchasable in shop
   shop_visible: boolean;
   wave: number;
   sort_order: number;

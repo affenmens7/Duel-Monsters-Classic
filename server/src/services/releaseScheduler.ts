@@ -3,18 +3,18 @@
  * Generic: works with any product_type in shop_release_windows.
  *
  * Product type -> table mapping:
- *   'booster' | 'starter' -> card_sets (name = product_id, active column)
- *   'display' -> shop_displays (id = product_id::int, active column)
+ *   'booster' | 'starter' -> shop_set_config (set_name = product_id, shop_active column)
+ *   'display' -> shop_displays (id = product_id::int, shop_active column)
  *   Future types: add to PRODUCT_TABLE_MAP
  */
 
 import { pool } from '../config/db.js';
 import { bumpDataVersion } from './versionService.js';
 
-/** Maps product_type to its backing DB table, ID column, and ID type. */
+/** Maps product_type to its shop table, ID column, active column, and ID type. */
 const PRODUCT_TABLE_MAP: Record<string, { table: string; idColumn: string; idType: 'text' | 'int' }> = {
-  booster: { table: 'card_sets', idColumn: 'name', idType: 'text' },
-  starter: { table: 'card_sets', idColumn: 'name', idType: 'text' },
+  booster: { table: 'shop_set_config', idColumn: 'set_name', idType: 'text' },
+  starter: { table: 'shop_set_config', idColumn: 'set_name', idType: 'text' },
   display: { table: 'shop_displays', idColumn: 'id', idType: 'int' },
 };
 
@@ -70,21 +70,21 @@ export async function reschedule(): Promise<void> {
 async function processOverdueEvents(): Promise<void> {
   let changed = false;
 
-  // --- Overdue activations ---
+  // --- Overdue activations (shop_active) ---
   for (const [productType, mapping] of Object.entries(PRODUCT_TABLE_MAP)) {
     const idCast = mapping.idType === 'int' ? `rw.product_id::int` : `rw.product_id`;
     const result = await pool.query(`
-      UPDATE ${mapping.table} t SET active = TRUE
+      UPDATE ${mapping.table} t SET shop_active = TRUE
       FROM shop_release_windows rw
       WHERE rw.product_type = $1
         AND ${idCast} = t.${mapping.idColumn}
         AND rw.start_date <= CURRENT_DATE
         AND (rw.end_date IS NULL OR rw.end_date > CURRENT_DATE)
-        AND t.active = FALSE
+        AND t.shop_active = FALSE
     `, [productType]);
 
     if (result.rowCount && result.rowCount > 0) {
-      console.log(`[RELEASE-SCHEDULER] Activated ${result.rowCount} ${productType}(s)`);
+      console.log(`[RELEASE-SCHEDULER] Shop-activated ${result.rowCount} ${productType}(s)`);
       changed = true;
     }
   }
@@ -116,13 +116,13 @@ async function processOverdueEvents(): Promise<void> {
   for (const [productType, mapping] of Object.entries(PRODUCT_TABLE_MAP)) {
     const idCast = mapping.idType === 'int' ? `rw.product_id::int` : `rw.product_id`;
     const result = await pool.query(`
-      UPDATE ${mapping.table} t SET active = FALSE
+      UPDATE ${mapping.table} t SET shop_active = FALSE
       FROM shop_release_windows rw
       WHERE rw.product_type = $1
         AND ${idCast} = t.${mapping.idColumn}
         AND rw.end_date IS NOT NULL
         AND rw.end_date < CURRENT_DATE
-        AND t.active = TRUE
+        AND t.shop_active = TRUE
         AND NOT EXISTS (
           SELECT 1 FROM shop_release_windows rw2
           WHERE rw2.product_type = rw.product_type
@@ -133,7 +133,7 @@ async function processOverdueEvents(): Promise<void> {
     `, [productType]);
 
     if (result.rowCount && result.rowCount > 0) {
-      console.log(`[RELEASE-SCHEDULER] Deactivated ${result.rowCount} ${productType}(s)`);
+      console.log(`[RELEASE-SCHEDULER] Shop-deactivated ${result.rowCount} ${productType}(s)`);
       changed = true;
     }
   }

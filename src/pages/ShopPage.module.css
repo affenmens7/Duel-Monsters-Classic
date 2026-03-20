@@ -416,6 +416,16 @@
 .heroInfo {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
 }
 
 .heroSetName {
@@ -424,7 +434,7 @@
   font-weight: 700;
   color: var(--orichalcos-light);
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  margin: 0;
 }
 
 .heroWave {
@@ -552,6 +562,46 @@
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+}
+
+.packStepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--orichalcos-faint);
+}
+
+.stepperBtn {
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: var(--orichalcos-light);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.stepperBtn:hover:not(:disabled) {
+  background: rgba(0, 200, 160, 0.08);
+}
+
+.stepperBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.stepperValue {
+  width: 36px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-left: 1px solid var(--orichalcos-faint);
+  border-right: 1px solid var(--orichalcos-faint);
+  padding: 6px 0;
 }
 
 .buyBtn {
@@ -704,17 +754,11 @@
   position: relative;
   aspect-ratio: 59 / 86;
   overflow: hidden;
-  border: 2px solid transparent;
   cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.cardCell:hover {
-  border-color: var(--orichalcos-subtle, rgba(0,220,168,0.2));
+  transition: opacity 0.15s;
 }
 
 .cardCellOwned {
-  border-color: var(--orichalcos-dim);
 }
 
 .cardCellNotOwned {

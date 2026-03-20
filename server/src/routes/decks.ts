@@ -272,13 +272,12 @@ decksRouter.put('/:id/cards', async (req, res) => {
       return;
     }
 
-    // Verify all cards exist and are from active sets
+    // Verify all cards exist and are assigned to at least one set
     const cardIds = [...new Set(allCopies.map((c) => c.cardId))];
     const cardsResult = await pool.query(
       `SELECT DISTINCT c.id, c.frame_type FROM cards c
        JOIN card_set_entries cse ON cse.card_id = c.id
-       JOIN card_sets cs ON cs.name = cse.set_name
-       WHERE c.id = ANY($1) AND cs.active = TRUE`,
+       WHERE c.id = ANY($1)`,
       [cardIds]
     );
 

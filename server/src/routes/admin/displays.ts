@@ -21,9 +21,9 @@ displaysRouter.get('/', async (req, res) => {
         d.desc_de, d.desc_en,
         d.showcase_card_ids,
         COALESCE(d.showcase_animated, FALSE) AS showcase_animated,
-        d.ig_release_date,
+        d.og_release_date, d.ig_release_date,
         COALESCE(d.is_event, FALSE) AS is_event,
-        d.active, d.shop_visible, d.wave,
+        COALESCE(d.shop_active, FALSE) AS shop_active, d.shop_visible, d.wave,
         d.sort_order, d.created_at,
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
          FROM shop_display_contents dc WHERE dc.display_id = d.id) AS total_packs,
@@ -87,7 +87,7 @@ displaysRouter.get('/search-boosters', async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT cs.name, cs.code
+      `SELECT cs.name, cs.code, cs.og_release_date
        FROM card_sets cs
        JOIN shop_set_config sc ON sc.set_name = cs.name
        WHERE sc.product_type = 'booster' AND cs.name ILIKE $1
@@ -118,9 +118,9 @@ displaysRouter.get('/:idOrName', async (req, res) => {
         d.desc_de, d.desc_en,
         d.showcase_card_ids,
         COALESCE(d.showcase_animated, FALSE) AS showcase_animated,
-        d.ig_release_date,
+        d.og_release_date, d.ig_release_date,
         COALESCE(d.is_event, FALSE) AS is_event,
-        d.active, d.shop_visible, d.wave,
+        COALESCE(d.shop_active, FALSE) AS shop_active, d.shop_visible, d.wave,
         d.sort_order, d.created_at,
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
          FROM shop_display_contents dc WHERE dc.display_id = d.id) AS total_packs,
@@ -171,8 +171,8 @@ displaysRouter.post('/', async (req, res) => {
 
   try {
     const {
-      name, code, price, desc_de, desc_en, wave, sort_order, active, shop_visible,
-      ig_release_date, showcase_card_ids, showcase_animated, contents, is_event,
+      name, code, price, desc_de, desc_en, wave, sort_order, shop_active, shop_visible,
+      og_release_date, ig_release_date, showcase_card_ids, showcase_animated, contents, is_event,
     } = req.body;
 
     if (!name) {
@@ -185,9 +185,9 @@ displaysRouter.post('/', async (req, res) => {
 
     const displayResult = await client.query(
       `INSERT INTO shop_displays (name, code, price, desc_de, desc_en, wave, sort_order,
-                                   active, shop_visible, ig_release_date,
+                                   shop_active, shop_visible, og_release_date, ig_release_date,
                                    showcase_card_ids, showcase_animated, is_event)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [
         name,
@@ -197,8 +197,9 @@ displaysRouter.post('/', async (req, res) => {
         desc_en ?? null,
         wave ?? 0,
         sort_order ?? 0,
-        active ?? false,
+        shop_active ?? false,
         shop_visible ?? true,
+        og_release_date ?? null,
         ig_release_date || null,
         Array.isArray(showcase_card_ids) ? showcase_card_ids : null,
         showcase_animated ?? false,
@@ -252,8 +253,8 @@ displaysRouter.put('/:id', async (req, res) => {
 
   try {
     const {
-      name, code, price, desc_de, desc_en, wave, sort_order, active, shop_visible,
-      ig_release_date, showcase_card_ids, showcase_animated, contents, is_event,
+      name, code, price, desc_de, desc_en, wave, sort_order, shop_active, shop_visible,
+      og_release_date, ig_release_date, showcase_card_ids, showcase_animated, contents, is_event,
     } = req.body;
 
     await client.query('BEGIN');
@@ -270,8 +271,12 @@ displaysRouter.put('/:id', async (req, res) => {
     if (desc_en !== undefined) { updates.push(`desc_en = $${idx++}`); params.push(desc_en); }
     if (wave !== undefined) { updates.push(`wave = $${idx++}`); params.push(Number(wave)); }
     if (sort_order !== undefined) { updates.push(`sort_order = $${idx++}`); params.push(Number(sort_order)); }
-    if (active !== undefined) { updates.push(`active = $${idx++}`); params.push(Boolean(active)); }
+    if (shop_active !== undefined) { updates.push(`shop_active = $${idx++}`); params.push(Boolean(shop_active)); }
     if (shop_visible !== undefined) { updates.push(`shop_visible = $${idx++}`); params.push(Boolean(shop_visible)); }
+    if (og_release_date !== undefined) {
+      updates.push(`og_release_date = $${idx++}`);
+      params.push(og_release_date === null || og_release_date === '' ? null : String(og_release_date));
+    }
     if (ig_release_date !== undefined) {
       updates.push(`ig_release_date = $${idx++}`);
       params.push(ig_release_date === null || ig_release_date === '' ? null : String(ig_release_date));

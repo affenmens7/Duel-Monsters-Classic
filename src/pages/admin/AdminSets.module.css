@@ -308,6 +308,25 @@
   background: rgba(100, 90, 70, 0.12);
 }
 
+.statusPlanned {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  color: #c8a830;
+  border: 1px solid rgba(200, 168, 48, 0.3);
+  background: rgba(200, 168, 48, 0.08);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.statusPlanned:hover {
+  background: rgba(200, 168, 48, 0.15);
+}
+
 /* ---- Type Badges ---- */
 
 .badge {
@@ -671,4 +690,73 @@
   opacity: 1;
   border-color: var(--orichalcos-light);
   transform: scale(1.08);
+}
+
+/* ---- Inline editable number in table ---- */
+
+.inlineNumber {
+  width: 70px;
+  padding: 4px 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  -moz-appearance: textfield;
+}
+
+.inlineNumber::-webkit-outer-spin-button,
+.inlineNumber::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inlineNumber:focus::-webkit-outer-spin-button,
+.inlineNumber:focus::-webkit-inner-spin-button {
+  -webkit-appearance: auto;
+  opacity: 0.6;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.inlineNumber:hover {
+  border-color: var(--orichalcos-faint);
+}
+
+.inlineNumber:focus {
+  outline: none;
+  background: var(--bg-input);
+  border-color: var(--orichalcos-subtle);
+  -moz-appearance: auto;
+}
+
+.inlineNumberFlat {
+  width: 70px;
+  padding: 4px 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  -moz-appearance: textfield;
+}
+
+.inlineNumberFlat::-webkit-outer-spin-button,
+.inlineNumberFlat::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inlineNumberFlat:hover {
+  border-color: var(--orichalcos-faint);
+}
+
+.inlineNumberFlat:focus {
+  outline: none;
+  background: var(--bg-input);
+  border-color: var(--orichalcos-subtle);
 }

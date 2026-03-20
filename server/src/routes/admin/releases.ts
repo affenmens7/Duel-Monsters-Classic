@@ -11,10 +11,10 @@ import { reschedule } from '../../services/releaseScheduler.js';
 
 export const releasesRouter = Router();
 
-/** Known product types and their backing tables. */
+/** Known product types and their backing tables (shop_active column). */
 const PRODUCT_TABLE_MAP: Record<string, { table: string; idColumn: string; idType: 'text' | 'int' }> = {
-  booster: { table: 'card_sets', idColumn: 'name', idType: 'text' },
-  starter: { table: 'card_sets', idColumn: 'name', idType: 'text' },
+  booster: { table: 'shop_set_config', idColumn: 'set_name', idType: 'text' },
+  starter: { table: 'shop_set_config', idColumn: 'set_name', idType: 'text' },
   display: { table: 'shop_displays', idColumn: 'id', idType: 'int' },
 };
 
@@ -119,7 +119,7 @@ releasesRouter.post('/', async (req, res) => {
       const mapping = PRODUCT_TABLE_MAP[product_type];
       const idValue = mapping.idType === 'int' ? parseInt(product_id, 10) : product_id;
       await pool.query(
-        `UPDATE ${mapping.table} SET active = TRUE WHERE ${mapping.idColumn} = $1`,
+        `UPDATE ${mapping.table} SET shop_active = TRUE WHERE ${mapping.idColumn} = $1`,
         [idValue],
       );
     }
@@ -274,14 +274,14 @@ releasesRouter.post('/activate', async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const shouldActivateNow = ig_release_date <= today;
 
-    // Set ig_release_date on the product config table
+    // Set ig_release_date and shop_active on the product config table
     if (product_type === 'booster' || product_type === 'starter') {
       await pool.query(
         `UPDATE shop_set_config SET ig_release_date = $1 WHERE set_name = $2`,
         [ig_release_date, product_id],
       );
       if (shouldActivateNow) {
-        await pool.query(`UPDATE card_sets SET active = TRUE WHERE name = $1`, [product_id]);
+        await pool.query(`UPDATE shop_set_config SET shop_active = TRUE WHERE set_name = $1`, [product_id]);
       }
     } else if (product_type === 'display') {
       await pool.query(
@@ -289,18 +289,23 @@ releasesRouter.post('/activate', async (req, res) => {
         [ig_release_date, idValue],
       );
       if (shouldActivateNow) {
-        await pool.query(`UPDATE shop_displays SET active = TRUE WHERE id = $1`, [idValue]);
+        await pool.query(`UPDATE shop_displays SET shop_active = TRUE WHERE id = $1`, [idValue]);
       }
     }
 
-    // Create history entry in release windows
-    if (shouldActivateNow) {
-      await pool.query(
-        `INSERT INTO shop_release_windows (product_type, product_id, start_date)
-         VALUES ($1, $2, $3)`,
-        [product_type, product_id, ig_release_date],
-      );
-    }
+    // Remove any existing future windows for this product (overwrite, not duplicate)
+    await pool.query(
+      `DELETE FROM shop_release_windows
+       WHERE product_type = $1 AND product_id = $2 AND start_date > CURRENT_DATE`,
+      [product_type, product_id],
+    );
+
+    // Create release window entry
+    await pool.query(
+      `INSERT INTO shop_release_windows (product_type, product_id, start_date)
+       VALUES ($1, $2, $3)`,
+      [product_type, product_id, ig_release_date],
+    );
 
     await bumpDataVersion();
     await reschedule();
@@ -334,9 +339,9 @@ releasesRouter.post('/reactivate', async (req, res) => {
     const idValue = mapping.idType === 'int' ? parseInt(product_id, 10) : product_id;
     const today = new Date().toISOString().slice(0, 10);
 
-    // Activate the product
+    // Reactivate the product in the shop
     await pool.query(
-      `UPDATE ${mapping.table} SET active = TRUE WHERE ${mapping.idColumn} = $1`,
+      `UPDATE ${mapping.table} SET shop_active = TRUE WHERE ${mapping.idColumn} = $1`,
       [idValue],
     );
 
@@ -376,10 +381,10 @@ releasesRouter.post('/deactivate', async (req, res) => {
   }
 
   try {
-    // Deactivate the product
+    // Deactivate the product in the shop
     const idValue = mapping.idType === 'int' ? parseInt(product_id, 10) : product_id;
     await pool.query(
-      `UPDATE ${mapping.table} SET active = FALSE WHERE ${mapping.idColumn} = $1`,
+      `UPDATE ${mapping.table} SET shop_active = FALSE WHERE ${mapping.idColumn} = $1`,
       [idValue],
     );
 
@@ -402,5 +407,81 @@ releasesRouter.post('/deactivate', async (req, res) => {
   } catch (err) {
     console.error('Failed to deactivate product:', err);
     res.status(500).json({ error: 'Produkt konnte nicht deaktiviert werden' });
+  }
+});
+
+// -------------------------------------------------------------------------
+// POST /api/admin/releases/clear-history — delete all release windows for a product
+// Body: { product_type, product_id }
+// -------------------------------------------------------------------------
+releasesRouter.post('/clear-history', async (req, res) => {
+  const { product_type, product_id } = req.body;
+
+  if (!product_type || !product_id) {
+    res.status(400).json({ error: 'product_type and product_id required' });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM shop_release_windows
+       WHERE product_type = $1 AND product_id = $2`,
+      [product_type, product_id],
+    );
+
+    // Also clear ig_release_date
+    if (product_type === 'booster' || product_type === 'starter') {
+      await pool.query(`UPDATE shop_set_config SET ig_release_date = NULL WHERE set_name = $1`, [product_id]);
+    } else if (product_type === 'display') {
+      await pool.query(`UPDATE shop_displays SET ig_release_date = NULL WHERE id = $1::int`, [product_id]);
+    }
+
+    console.log(`[ADMIN] Cleared ${result.rowCount} release windows for ${product_type}:${product_id}`);
+
+    await bumpDataVersion();
+    await reschedule();
+
+    res.json({ success: true, deleted: result.rowCount });
+  } catch (err) {
+    console.error('Failed to clear release history:', err);
+    res.status(500).json({ error: 'Release-Verlauf konnte nicht geloescht werden' });
+  }
+});
+
+// -------------------------------------------------------------------------
+// POST /api/admin/releases/cancel-planned — cancel a planned future release
+// Deletes future windows + clears ig_release_date. Does NOT change shop_active.
+// Body: { product_type, product_id }
+// -------------------------------------------------------------------------
+releasesRouter.post('/cancel-planned', async (req, res) => {
+  const { product_type, product_id } = req.body;
+
+  if (!product_type || !product_id) {
+    res.status(400).json({ error: 'product_type and product_id required' });
+    return;
+  }
+
+  try {
+    // Delete future windows only
+    await pool.query(
+      `DELETE FROM shop_release_windows
+       WHERE product_type = $1 AND product_id = $2 AND start_date > CURRENT_DATE`,
+      [product_type, product_id],
+    );
+
+    // Clear ig_release_date
+    if (product_type === 'booster' || product_type === 'starter') {
+      await pool.query(`UPDATE shop_set_config SET ig_release_date = NULL WHERE set_name = $1`, [product_id]);
+    } else if (product_type === 'display') {
+      await pool.query(`UPDATE shop_displays SET ig_release_date = NULL WHERE id = $1::int`, [product_id]);
+    }
+
+    await bumpDataVersion();
+    await reschedule();
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Failed to cancel planned release:', err);
+    res.status(500).json({ error: 'Geplanter Release konnte nicht abgebrochen werden' });
   }
 });

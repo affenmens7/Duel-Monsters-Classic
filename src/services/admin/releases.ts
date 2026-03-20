@@ -94,3 +94,29 @@ export async function deactivateProduct(
   });
   return handleResponse<{ success: boolean }>(response);
 }
+
+export async function clearReleaseHistory(
+  token: string,
+  productType: string,
+  productId: string,
+): Promise<{ success: boolean; deleted: number }> {
+  const response = await fetch(`${env.api.baseUrl}/admin/releases/clear-history`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ product_type: productType, product_id: productId }),
+  });
+  return handleResponse<{ success: boolean; deleted: number }>(response);
+}
+
+export async function cancelPlannedRelease(
+  token: string,
+  productType: string,
+  productId: string,
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${env.api.baseUrl}/admin/releases/cancel-planned`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ product_type: productType, product_id: productId }),
+  });
+  return handleResponse<{ success: boolean }>(response);
+}

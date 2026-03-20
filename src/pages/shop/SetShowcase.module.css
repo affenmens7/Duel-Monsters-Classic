@@ -27,9 +27,9 @@
 /* ================================================== */
 /* BOOSTER STATIC: Cascade Stack (3 cards)            */
 /* ================================================== */
-.boosterCascade .c0 { left: 8%;  top: 8%;  z-index: 1; filter: brightness(0.35); }
-.boosterCascade .c1 { left: 22%; top: 16%; z-index: 2; filter: brightness(0.6); }
-.boosterCascade .c2 { left: 36%; top: 24%; z-index: 3; }
+.boosterCascade .c0 { left: 10%; top: 10%; z-index: 1; filter: brightness(0.35); }
+.boosterCascade .c1 { left: 28%; top: 18%; z-index: 2; filter: brightness(0.6); }
+.boosterCascade .c2 { left: 46%; top: 26%; z-index: 3; }
 
 /* ================================================== */
 /* BOOSTER ANIMATED: Deal Out (3 cards)               */
@@ -46,36 +46,36 @@
 .boosterDealAnim .c2 { animation: deal3-2 9s ease-in-out 3s infinite; }
 
 @keyframes deal3-0 {
-  0%   { left: 22%; top: 16%; opacity: 0; filter: brightness(0.35); z-index: 1; }
-  8%   { left: 8%;  top: 8%;  opacity: 1; filter: brightness(0.35); z-index: 1; }
-  60%  { left: 8%;  top: 8%;  opacity: 1; filter: brightness(0.35); z-index: 1; }
-  72%  { left: 22%; top: 16%; opacity: 0; filter: brightness(0.35); z-index: 1; }
-  100% { left: 22%; top: 16%; opacity: 0; filter: brightness(0.35); z-index: 1; }
+  0%   { left: 28%; top: 18%; opacity: 0; filter: brightness(0.35); z-index: 1; }
+  6%   { left: 10%; top: 10%; opacity: 1; filter: brightness(0.35); z-index: 1; }
+  78%  { left: 10%; top: 10%; opacity: 1; filter: brightness(0.35); z-index: 1; }
+  88%  { left: 28%; top: 18%; opacity: 0; filter: brightness(0.35); z-index: 1; }
+  100% { left: 28%; top: 18%; opacity: 0; filter: brightness(0.35); z-index: 1; }
 }
 @keyframes deal3-1 {
-  0%   { left: 22%; top: 16%; opacity: 0; filter: brightness(0.6); z-index: 2; }
-  8%   { left: 22%; top: 16%; opacity: 1; filter: brightness(0.6); z-index: 2; }
-  60%  { left: 22%; top: 16%; opacity: 1; filter: brightness(0.6); z-index: 2; }
-  72%  { left: 22%; top: 16%; opacity: 0; filter: brightness(0.6); z-index: 2; }
-  100% { left: 22%; top: 16%; opacity: 0; filter: brightness(0.6); z-index: 2; }
+  0%   { left: 28%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 2; }
+  6%   { left: 28%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 2; }
+  78%  { left: 28%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 2; }
+  88%  { left: 28%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 2; }
+  100% { left: 28%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 2; }
 }
 @keyframes deal3-2 {
-  0%   { left: 22%; top: 16%; opacity: 0; z-index: 3; }
-  8%   { left: 36%; top: 24%; opacity: 1; z-index: 3; }
-  60%  { left: 36%; top: 24%; opacity: 1; z-index: 3; }
-  72%  { left: 22%; top: 16%; opacity: 0; z-index: 3; }
-  100% { left: 22%; top: 16%; opacity: 0; z-index: 3; }
+  0%   { left: 28%; top: 18%; opacity: 0; z-index: 3; }
+  6%   { left: 46%; top: 26%; opacity: 1; z-index: 3; }
+  78%  { left: 46%; top: 26%; opacity: 1; z-index: 3; }
+  88%  { left: 28%; top: 18%; opacity: 0; z-index: 3; }
+  100% { left: 28%; top: 18%; opacity: 0; z-index: 3; }
 }
 
 /* ================================================== */
 /* DISPLAY STATIC: Tight Stack (5 cards)              */
 /* ================================================== */
 .displayStack img { width: 35%; }
-.displayStack .c0 { left: 8%;  top: 6%;  z-index: 1; filter: brightness(0.25); }
-.displayStack .c1 { left: 15%; top: 12%; z-index: 2; filter: brightness(0.4); }
-.displayStack .c2 { left: 22%; top: 18%; z-index: 3; filter: brightness(0.6); }
-.displayStack .c3 { left: 29%; top: 24%; z-index: 4; filter: brightness(0.8); }
-.displayStack .c4 { left: 36%; top: 30%; z-index: 5; }
+.displayStack .c0 { left: 12%; top: 6%;  z-index: 1; filter: brightness(0.25); }
+.displayStack .c1 { left: 21%; top: 12%; z-index: 2; filter: brightness(0.4); }
+.displayStack .c2 { left: 30%; top: 18%; z-index: 3; filter: brightness(0.6); }
+.displayStack .c3 { left: 39%; top: 24%; z-index: 4; filter: brightness(0.8); }
+.displayStack .c4 { left: 48%; top: 30%; z-index: 5; }
 
 /* ================================================== */
 /* DISPLAY ANIMATED: Deal Out (5 cards)               */
@@ -96,64 +96,64 @@
 .displayDealAnim .c4 { animation: deal5-4 15s ease-in-out 6s infinite; }
 
 @keyframes deal5-0 {
-  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
-  5%   { left: 8%;  top: 6%;  opacity: 1; filter: brightness(0.25); z-index: 1; }
-  55%  { left: 8%;  top: 6%;  opacity: 1; filter: brightness(0.25); z-index: 1; }
-  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
-  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
+  0%   { left: 30%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
+  5%   { left: 12%; top: 6%;  opacity: 1; filter: brightness(0.25); z-index: 1; }
+  55%  { left: 12%; top: 6%;  opacity: 1; filter: brightness(0.25); z-index: 1; }
+  65%  { left: 30%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
+  100% { left: 30%; top: 18%; opacity: 0; filter: brightness(0.25); z-index: 1; }
 }
 @keyframes deal5-1 {
-  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
-  5%   { left: 15%; top: 12%; opacity: 1; filter: brightness(0.4); z-index: 2; }
-  55%  { left: 15%; top: 12%; opacity: 1; filter: brightness(0.4); z-index: 2; }
-  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
-  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
+  0%   { left: 30%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
+  5%   { left: 21%; top: 12%; opacity: 1; filter: brightness(0.4); z-index: 2; }
+  55%  { left: 21%; top: 12%; opacity: 1; filter: brightness(0.4); z-index: 2; }
+  65%  { left: 30%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
+  100% { left: 30%; top: 18%; opacity: 0; filter: brightness(0.4); z-index: 2; }
 }
 @keyframes deal5-2 {
-  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
-  5%   { left: 22%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 3; }
-  55%  { left: 22%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 3; }
-  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
-  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
+  0%   { left: 30%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
+  5%   { left: 30%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 3; }
+  55%  { left: 30%; top: 18%; opacity: 1; filter: brightness(0.6); z-index: 3; }
+  65%  { left: 30%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
+  100% { left: 30%; top: 18%; opacity: 0; filter: brightness(0.6); z-index: 3; }
 }
 @keyframes deal5-3 {
-  0%   { left: 22%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
-  5%   { left: 29%; top: 24%; opacity: 1; filter: brightness(0.8); z-index: 4; }
-  55%  { left: 29%; top: 24%; opacity: 1; filter: brightness(0.8); z-index: 4; }
-  65%  { left: 22%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
-  100% { left: 22%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
+  0%   { left: 30%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
+  5%   { left: 39%; top: 24%; opacity: 1; filter: brightness(0.8); z-index: 4; }
+  55%  { left: 39%; top: 24%; opacity: 1; filter: brightness(0.8); z-index: 4; }
+  65%  { left: 30%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
+  100% { left: 30%; top: 18%; opacity: 0; filter: brightness(0.8); z-index: 4; }
 }
 @keyframes deal5-4 {
-  0%   { left: 22%; top: 18%; opacity: 0; z-index: 5; }
-  5%   { left: 36%; top: 30%; opacity: 1; z-index: 5; }
-  55%  { left: 36%; top: 30%; opacity: 1; z-index: 5; }
-  65%  { left: 22%; top: 18%; opacity: 0; z-index: 5; }
-  100% { left: 22%; top: 18%; opacity: 0; z-index: 5; }
+  0%   { left: 30%; top: 18%; opacity: 0; z-index: 5; }
+  5%   { left: 48%; top: 30%; opacity: 1; z-index: 5; }
+  55%  { left: 48%; top: 30%; opacity: 1; z-index: 5; }
+  65%  { left: 30%; top: 18%; opacity: 0; z-index: 5; }
+  100% { left: 30%; top: 18%; opacity: 0; z-index: 5; }
 }
 
 /* ================================================== */
 /* DECK STATIC: Pedestal (3 cards, 1 dominant center) */
 /* ================================================== */
-.deckPedestal .c0 { left: 6%;  top: 22%; z-index: 1; filter: brightness(0.5); transform: perspective(200px) rotateY(10deg) scale(0.85); }
-.deckPedestal .c1 { left: 30%; top: 12%; z-index: 3; }
-.deckPedestal .c2 { left: 54%; top: 22%; z-index: 1; filter: brightness(0.5); transform: perspective(200px) rotateY(-10deg) scale(0.85); }
+.deckPedestal .c0 { left: 6%;  top: 28%; z-index: 1; filter: brightness(0.5); transform: perspective(200px) rotateY(10deg) scale(0.85); }
+.deckPedestal .c1 { left: 30%; top: 18%; z-index: 3; }
+.deckPedestal .c2 { left: 54%; top: 28%; z-index: 1; filter: brightness(0.5); transform: perspective(200px) rotateY(-10deg) scale(0.85); }
 
 /* ================================================== */
 /* DECK ANIMATED: 3D Tilt (3 cards, 1 dominant)       */
 /* ================================================== */
 .deckTiltAnim .c0 {
-  left: 6%; top: 22%; z-index: 1;
+  left: 6%; top: 28%; z-index: 1;
   filter: brightness(0.5);
   transform: perspective(200px) rotateY(10deg);
   animation: tilt-flank 4s ease-in-out infinite;
   --ry: 10deg;
 }
 .deckTiltAnim .c1 {
-  left: 30%; top: 12%; z-index: 3;
+  left: 30%; top: 18%; z-index: 3;
   animation: deck-pulse 4s ease-in-out infinite;
 }
 .deckTiltAnim .c2 {
-  left: 54%; top: 22%; z-index: 1;
+  left: 54%; top: 28%; z-index: 1;
   filter: brightness(0.5);
   transform: perspective(200px) rotateY(-10deg);
   animation: tilt-flank 4s ease-in-out infinite reverse;

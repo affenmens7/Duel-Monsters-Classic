@@ -125,7 +125,7 @@ export function SearchBar({
           <option value="all">{t('cards.allSets')}</option>
           {setsWithCards.map((s) => (
             <option key={s.name} value={s.name}>
-              {s.name} ({s.card_count}){(s.active || s.available_via_display) ? '' : ` - ${t('cards.locked')}`}
+              {s.name} ({s.card_count}){s.active ? '' : ` - ${t('cards.locked')}`}
             </option>
           ))}
         </select>

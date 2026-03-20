@@ -194,11 +194,13 @@ export function DeckbuilderPage() {
               } : undefined}
               artworkPrefs={deck.userPrefs}
               setFilter={setFilter}
+              ignoreAvailability
             />
           ) : (
             <CardTable
               cards={filteredPool}
               onCardClick={openPoolPopup}
+              onCardDragStart={drag.startDrag}
               isCardMaxed={(id) => deck.getAvailable(id) <= 0}
             />
           )}

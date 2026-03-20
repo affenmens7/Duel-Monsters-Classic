@@ -28,7 +28,6 @@ const schema = `
     code        VARCHAR(32),
     type        VARCHAR(32) DEFAULT 'booster',
     wave        INTEGER DEFAULT 0,
-    active      BOOLEAN DEFAULT FALSE,
     og_release_date VARCHAR(32),
     image_path  VARCHAR(255)
   );
@@ -455,6 +454,38 @@ const schema = `
   DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'code') THEN
       ALTER TABLE shop_displays ADD COLUMN code VARCHAR(32);
+    END IF;
+  END $$;
+
+  -- Add shop_active to shop_set_config (shop purchasability, separate from card_sets.active)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_set_config' AND column_name = 'shop_active') THEN
+      ALTER TABLE shop_set_config ADD COLUMN shop_active BOOLEAN NOT NULL DEFAULT FALSE;
+      -- Initialise: copy current card_sets.active value
+      UPDATE shop_set_config sc SET shop_active = cs.active
+      FROM card_sets cs WHERE cs.name = sc.set_name;
+    END IF;
+  END $$;
+
+  -- Rename shop_displays.active → shop_active (shop purchasability)
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'active')
+    AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'shop_active') THEN
+      ALTER TABLE shop_displays RENAME COLUMN active TO shop_active;
+    END IF;
+  END $$;
+
+  -- Drop card_sets.active (no longer used — availability comes from shop_active)
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_sets' AND column_name = 'active') THEN
+      ALTER TABLE card_sets DROP COLUMN active;
+    END IF;
+  END $$;
+
+  -- OG release date for displays (original real-world reference date)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'shop_displays' AND column_name = 'og_release_date') THEN
+      ALTER TABLE shop_displays ADD COLUMN og_release_date VARCHAR(32);
     END IF;
   END $$;
 

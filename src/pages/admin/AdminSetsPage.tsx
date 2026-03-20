@@ -36,7 +36,6 @@ import styles from './AdminSets.module.css';
 // ============================================================
 
 interface SetForm {
-  active: boolean;
   wave: number;
   releaseDate: string;
 }
@@ -94,13 +93,17 @@ export function AdminSetsPage() {
   const [showcaseCards, setShowcaseCards] = useState<number[]>([]);
   const [setCardOptions, setSetCardOptions] = useState<{ id: number; name_de: string; name_en: string }[]>([]);
 
+  // Inline pack_size + price editing
+  const [localPackSizes, setLocalPackSizes] = useState<Record<string, number>>({});
+  const [localPrices, setLocalPrices] = useState<Record<string, number>>({});
+
   // Release modal state
   const [releaseRow, setReleaseRow] = useState<AdminSetRow | null>(null);
 
   // Create modal state
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<'api' | 'custom'>('api');
-  const [createForm, setCreateForm] = useState({ name: '', code: '', type: routeFilter ?? 'booster', wave: 0, releaseDate: '', active: false });
+  const [createForm, setCreateForm] = useState({ name: '', code: '', type: routeFilter ?? 'booster', wave: 0, releaseDate: '' });
   const [apiSearch, setApiSearch] = useState('');
   const [apiDebouncedSearch, setApiDebouncedSearch] = useState('');
   const [apiResults, setApiResults] = useState<ApiSetResult[]>([]);
@@ -124,6 +127,42 @@ export function AdminSetsPage() {
   }, [token, t]);
 
   useEffect(() => { loadSets(); }, [loadSets]);
+
+  // Inline pack_size save on blur
+  const handlePackSizeSave = useCallback(async (setName: string) => {
+    const newSize = localPackSizes[setName];
+    if (newSize === undefined || !token) return;
+    const row = sets.find((s) => s.name === setName);
+    if (!row || newSize === row.pack_size) {
+      setLocalPackSizes((p) => { const next = { ...p }; delete next[setName]; return next; });
+      return;
+    }
+    try {
+      await updateSetConfig(token, setName, { pack_size: newSize });
+      await loadSets();
+    } catch { /* ignore */ }
+    finally {
+      setLocalPackSizes((p) => { const next = { ...p }; delete next[setName]; return next; });
+    }
+  }, [token, localPackSizes, sets, loadSets]);
+
+  // Inline price save on blur
+  const handlePriceSave = useCallback(async (setName: string) => {
+    const newPrice = localPrices[setName];
+    if (newPrice === undefined || !token) return;
+    const row = sets.find((s) => s.name === setName);
+    if (!row || newPrice === row.price_pack) {
+      setLocalPrices((p) => { const next = { ...p }; delete next[setName]; return next; });
+      return;
+    }
+    try {
+      await updateSetConfig(token, setName, { price_pack: newPrice });
+      await loadSets();
+    } catch { /* ignore */ }
+    finally {
+      setLocalPrices((p) => { const next = { ...p }; delete next[setName]; return next; });
+    }
+  }, [token, localPrices, sets, loadSets]);
 
   // API search debounce
   const handleApiSearchChange = useCallback((value: string) => {
@@ -150,7 +189,7 @@ export function AdminSetsPage() {
   const openCreateModal = () => {
     setCreateOpen(true);
     setCreateMode('api');
-    setCreateForm({ name: '', code: '', type: routeFilter ?? 'booster', wave: 0, releaseDate: '', active: false });
+    setCreateForm({ name: '', code: '', type: routeFilter ?? 'booster', wave: 0, releaseDate: '' });
     setApiSearch('');
     setApiDebouncedSearch('');
     setApiResults([]);
@@ -165,7 +204,6 @@ export function AdminSetsPage() {
       type: routeFilter ?? 'booster',
       wave: 0,
       releaseDate: result.tcg_date ?? '',
-      active: false,
     });
   };
 
@@ -192,7 +230,6 @@ export function AdminSetsPage() {
           code: createForm.code,
           type: createForm.type,
           wave: createForm.wave,
-          active: createForm.active,
           og_release_date: createForm.releaseDate || undefined,
         });
       }
@@ -257,7 +294,7 @@ export function AdminSetsPage() {
   const openModal = useCallback(async (row: AdminSetRow) => {
     setSaveResult(null);
     setModalRow(row);
-    setSetForm({ active: row.active, wave: row.wave, releaseDate: row.og_release_date ?? '' });
+    setSetForm({ wave: row.wave, releaseDate: row.og_release_date ?? '' });
     setConfigForm({
       pricePack: row.price_pack,
       packSize: row.pack_size,
@@ -357,7 +394,6 @@ export function AdminSetsPage() {
     const promises: Promise<unknown>[] = [];
     if (context === 'sets' && setForm) {
       promises.push(updateSet(token, modalRow.name, {
-        active: setForm.active,
         wave: setForm.wave,
         og_release_date: setForm.releaseDate || undefined,
       } as never));
@@ -371,7 +407,6 @@ export function AdminSetsPage() {
           desc_de: configForm.descDe,
           desc_en: configForm.descEn,
           sort_order: configForm.sortOrder,
-          shop_visible: configForm.shopVisible,
           showcase_animated: configForm.showcaseAnimated,
           showcase_card_ids: showcaseCards.length > 0 ? showcaseCards : null,
           ig_release_date: configForm.igReleaseDate || null,
@@ -415,13 +450,18 @@ export function AdminSetsPage() {
             <th className={styles.th}>{t('admin.name')}</th>
             <th className={styles.th}>{t('admin.code')}</th>
             <th className={styles.th}>{t('admin.wave')}</th>
-            <th className={styles.th}>{t('admin.release')}</th>
+            {context === 'sets' && (
+              <th className={styles.th}>{t('admin.ogRelease')}</th>
+            )}
+            {context === 'shop' && (
+              <th className={styles.th}>{t('admin.release')}</th>
+            )}
             <th className={styles.th}>{t('admin.cards')}</th>
             {context === 'shop' && routeFilter === 'booster' && (
-              <th className={styles.th}>{t('admin.packPrice')}</th>
+              <th className={styles.th}>{t('admin.packSize')}</th>
             )}
-            {context === 'shop' && routeFilter === 'starter' && (
-              <th className={styles.th}>{t('admin.deckPrice')}</th>
+            {context === 'shop' && (routeFilter === 'booster' || routeFilter === 'starter') && (
+              <th className={styles.th}>{routeFilter === 'starter' ? t('admin.deckPrice') : t('admin.packPrice')}</th>
             )}
             {context === 'shop' && (
               <th className={styles.th}>{t('admin.shopVisibility')}</th>
@@ -441,24 +481,55 @@ export function AdminSetsPage() {
               </td>
               <td className={styles.tdCode}>{row.code}</td>
               <td className={styles.td}>{row.wave}</td>
-              <td
-                className={styles.td}
-                style={{ cursor: 'pointer' }}
-                onClick={(e) => { e.stopPropagation(); setReleaseRow(row); }}
-              >
-                <span className={row.active ? styles.statusActive : styles.statusInactive}>
-                  {row.active ? t('admin.releaseActive') : t('admin.inactive')}
-                </span>
-              </td>
-              <td className={styles.td}>{row.card_count}</td>
-              {context === 'shop' && routeFilter === 'booster' && (
-                <td className={styles.td}>{row.price_pack} DP</td>
-              )}
-              {context === 'shop' && routeFilter === 'starter' && (
-                <td className={styles.td}>{row.price_pack} DP</td>
+              {context === 'sets' && (
+                <td className={styles.td}>{row.og_release_date ?? '—'}</td>
               )}
               {context === 'shop' && (
+                <td
+                  className={styles.td}
+                  style={{ cursor: 'pointer' }}
+                  onClick={(e) => { e.stopPropagation(); setReleaseRow(row); }}
+                >
+                  <span className={row.shop_active ? styles.statusActive : row.next_release_start ? styles.statusPlanned : styles.statusInactive}>
+                    {row.shop_active ? t('admin.releaseActive') : row.next_release_start ? t('admin.releasePlannedLabel') : t('admin.inactive')}
+                  </span>
+                </td>
+              )}
+              <td className={styles.td}>{row.card_count}</td>
+              {context === 'shop' && routeFilter === 'booster' && (
                 <td className={styles.td}>
+                  <input
+                    type="number"
+                    min={1}
+                    className={styles.inlineNumber}
+                    value={localPackSizes[row.name] ?? row.pack_size}
+                    onChange={(e) => setLocalPackSizes((p) => ({ ...p, [row.name]: parseInt(e.target.value, 10) || 1 }))}
+                    onBlur={() => handlePackSizeSave(row.name)}
+                  />
+                </td>
+              )}
+              {context === 'shop' && (routeFilter === 'booster' || routeFilter === 'starter') && (
+                <td className={styles.td}>
+                  <input
+                    type="number"
+                    min={0}
+                    className={styles.inlineNumberFlat}
+                    value={localPrices[row.name] ?? row.price_pack}
+                    onChange={(e) => setLocalPrices((p) => ({ ...p, [row.name]: parseInt(e.target.value, 10) || 0 }))}
+                    onBlur={() => handlePriceSave(row.name)}
+                  />
+                </td>
+              )}
+              {context === 'shop' && (
+                <td
+                  className={styles.td}
+                  style={{ cursor: 'pointer' }}
+                  onClick={async () => {
+                    if (!token) return;
+                    await updateSetConfig(token, row.name, { shop_visible: !row.shop_visible });
+                    await loadSets();
+                  }}
+                >
                   <span className={row.shop_visible ? styles.statusActive : styles.statusInactive}>
                     {row.shop_visible ? t('admin.shopVisible') : t('admin.shopHidden')}
                   </span>
@@ -498,19 +569,6 @@ export function AdminSetsPage() {
         {context === 'sets' && setForm && (
           <>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.active')}</span>
-              <div className={ms.statusRow}>
-                <button
-                  className={`${ms.statusBtn} ${setForm.active ? ms.statusBtnActive : ''}`}
-                  onClick={() => setSetForm((p) => p ? { ...p, active: true } : p)}
-                >{t('admin.statusActive')}</button>
-                <button
-                  className={`${ms.statusBtn} ${!setForm.active ? ms.statusBtnInactive : ''}`}
-                  onClick={() => setSetForm((p) => p ? { ...p, active: false } : p)}
-                >{t('admin.statusInactive')}</button>
-              </div>
-            </div>
-            <div className={ms.fieldRow}>
               <span className={ms.fieldLabel}>{t('admin.wave')}</span>
               <input
                 className={ms.fieldInput}
@@ -521,7 +579,7 @@ export function AdminSetsPage() {
               />
             </div>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.release')}</span>
+              <span className={ms.fieldLabel}>{t('admin.ogRelease')}</span>
               <input
                 className={ms.fieldInput}
                 type="date"
@@ -575,18 +633,6 @@ export function AdminSetsPage() {
         {context === 'shop' && configForm && (
           <>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{routeFilter === 'starter' ? t('admin.deckPrice') : t('admin.packPrice')}</span>
-              <input className={ms.fieldInput} type="number" min={0} value={configForm.pricePack}
-                onChange={(e) => setConfigForm((p) => p ? { ...p, pricePack: Number(e.target.value) } : p)} />
-            </div>
-            {routeFilter === 'booster' && (
-              <div className={ms.fieldRow}>
-                <span className={ms.fieldLabel}>{t('admin.packSize')}</span>
-                <input className={ms.fieldInput} type="number" min={1} value={configForm.packSize}
-                  onChange={(e) => setConfigForm((p) => p ? { ...p, packSize: Number(e.target.value) } : p)} />
-              </div>
-            )}
-            <div className={ms.fieldRow}>
               <span className={ms.fieldLabel}>{t('admin.descDe')}</span>
               <textarea className={`${ms.fieldInput} ${ms.fieldTextarea}`} rows={3} value={configForm.descDe}
                 onChange={(e) => setConfigForm((p) => p ? { ...p, descDe: e.target.value } : p)} />
@@ -606,95 +652,6 @@ export function AdminSetsPage() {
               <input className={ms.fieldInput} type="date" value={configForm.igReleaseDate}
                 onChange={(e) => setConfigForm((p) => p ? { ...p, igReleaseDate: e.target.value } : p)} />
             </div>
-            <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.shopVisibility')}</span>
-              <div className={ms.statusRow}>
-                <button
-                  className={`${ms.statusBtn} ${configForm.shopVisible ? ms.statusBtnActive : ''}`}
-                  onClick={() => setConfigForm((p) => p ? { ...p, shopVisible: true } : p)}
-                >{t('admin.shopVisible')}</button>
-                <button
-                  className={`${ms.statusBtn} ${!configForm.shopVisible ? ms.statusBtnInactive : ''}`}
-                  onClick={() => setConfigForm((p) => p ? { ...p, shopVisible: false } : p)}
-                >{t('admin.shopHidden')}</button>
-              </div>
-            </div>
-            <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.showcaseStyle')}</span>
-              <div className={ms.statusRow}>
-                <button
-                  className={`${ms.statusBtn} ${!configForm.showcaseAnimated ? ms.statusBtnActive : ''}`}
-                  onClick={() => setConfigForm((p) => p ? { ...p, showcaseAnimated: false } : p)}
-                >{t('admin.showcaseStatic')}</button>
-                <button
-                  className={`${ms.statusBtn} ${configForm.showcaseAnimated ? ms.statusBtnActive : ''}`}
-                  onClick={() => setConfigForm((p) => p ? { ...p, showcaseAnimated: true } : p)}
-                >{t('admin.showcaseAnimated')}</button>
-              </div>
-            </div>
-
-            {/* Showcase Card Picker */}
-            {setCardOptions.length > 0 && (() => {
-              const maxSlots = routeFilter === 'starter' ? 3 : routeFilter === 'booster' ? 3 : 5;
-              const slotLabel = (i: number) =>
-                routeFilter === 'starter' && maxSlots === 3
-                  ? (i === 1 ? t('admin.showcaseBoss') : t('admin.showcaseFlank'))
-                  : `Slot ${i + 1}`;
-
-              return (
-                <div style={{ marginTop: 8, borderTop: '1px solid var(--orichalcos-faint)', paddingTop: 14 }}>
-                  <span className={ms.fieldLabel} style={{ display: 'block', marginBottom: 8 }}>
-                    {t('admin.showcaseCards')} ({showcaseCards.length}/{maxSlots})
-                  </span>
-
-                  {/* Selected slots */}
-                  <div className={styles.showcaseSlots}>
-                    {Array.from({ length: maxSlots }).map((_, i) => {
-                      const cardId = showcaseCards[i];
-                      const card = cardId ? setCardOptions.find((c) => c.id === cardId) : null;
-                      return (
-                        <div key={i} className={styles.showcaseSlot}>
-                          {cardId ? (
-                            <>
-                              <img
-                                className={styles.showcaseSlotImg}
-                                src={getCardImageUrl(cardId, 'small')}
-                                alt=""
-                              />
-                              <button
-                                className={styles.showcaseSlotRemove}
-                                onClick={() => setShowcaseCards((prev) => prev.filter((_, j) => j !== i))}
-                              >x</button>
-                            </>
-                          ) : (
-                            <span className={styles.showcaseSlotEmpty}>{slotLabel(i)}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Card grid to pick from */}
-                  {showcaseCards.length < maxSlots && (
-                    <div className={styles.showcaseGrid}>
-                      {setCardOptions
-                        .filter((c) => !showcaseCards.includes(c.id))
-                        .map((card) => (
-                          <img
-                            key={card.id}
-                            className={styles.showcaseGridImg}
-                            src={getCardImageUrl(card.id, 'small')}
-                            alt={card.name_de}
-                            title={card.name_de}
-                            onClick={() => setShowcaseCards((prev) => [...prev, card.id].slice(0, maxSlots))}
-                          />
-                        ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
           </>
         )}
       </SettingsModal>
@@ -792,18 +749,9 @@ export function AdminSetsPage() {
             onChange={(e) => setCreateForm((p) => ({ ...p, wave: Number(e.target.value) }))} />
         </div>
         <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.release')}</span>
+          <span className={ms.fieldLabel}>{t('admin.ogRelease')}</span>
           <input className={ms.fieldInput} type="date" value={createForm.releaseDate}
             onChange={(e) => setCreateForm((p) => ({ ...p, releaseDate: e.target.value }))} />
-        </div>
-        <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.status')}</span>
-          <div className={ms.statusRow}>
-            <button className={`${ms.statusBtn} ${createForm.active ? ms.statusBtnActive : ''}`}
-              onClick={() => setCreateForm((p) => ({ ...p, active: true }))}>{t('admin.statusActive')}</button>
-            <button className={`${ms.statusBtn} ${!createForm.active ? ms.statusBtnInactive : ''}`}
-              onClick={() => setCreateForm((p) => ({ ...p, active: false }))}>{t('admin.statusInactive')}</button>
-          </div>
         </div>
       </SettingsModal>
 
@@ -866,7 +814,7 @@ export function AdminSetsPage() {
           ogReleaseDate={releaseRow.og_release_date}
           igReleaseDate={releaseRow.ig_release_date}
           isEvent={releaseRow.is_event ?? false}
-          active={releaseRow.active}
+          active={releaseRow.shop_active}
           token={token}
           onChanged={() => loadSets()}
         />

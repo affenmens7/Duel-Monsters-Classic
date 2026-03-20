@@ -86,6 +86,16 @@ export function CardDetail({ card, setFilter, onClose }: CardDetailProps) {
           ? card.sets?.find((s) => s.name === setFilter)?.artworkId ?? card.artworkIds?.[0] ?? null
           : card.artworkIds?.[0] ?? null
       }
+      ownedArtworkIds={artworks.length > 0
+        ? artworks.filter((a) => {
+            if (!a.availableIn) return false;
+            // Check if any set containing this artwork is purchasable (active badge)
+            const setNames = a.availableIn.split(', ').map((s) => s.trim());
+            return setNames.some((sn) => card.sets?.find((s) => s.name === sn)?.active);
+          }).map((a) => a.artworkId)
+        : undefined
+      }
+      isPreviewGreyed={!card.available}
       onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
     />
   );

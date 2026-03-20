@@ -16,7 +16,6 @@ import {
   type AdminDisplayRow,
 } from '../../services/admin';
 import { SettingsModal, settingsModalStyles as ms } from '../../components/admin/SettingsModal';
-import { ReleaseModal } from '../../components/admin/ReleaseModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import styles from './AdminDisplays.module.css';
 
@@ -33,6 +32,7 @@ interface DisplayForm {
   wave: number;
   sortOrder: number;
   shopVisible: boolean;
+  ogReleaseDate: string;
 }
 
 interface ContentEntry {
@@ -75,11 +75,8 @@ export function AdminDisplaysPage() {
   // Booster search state (for create modal)
   const [boosterSearch, setBoosterSearch] = useState('');
   const [boosterDebouncedSearch, setBoosterDebouncedSearch] = useState('');
-  const [boosterResults, setBoosterResults] = useState<{ name: string; code: string }[]>([]);
+  const [boosterResults, setBoosterResults] = useState<{ name: string; code: string; og_release_date?: string }[]>([]);
   const boosterDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Release modal state
-  const [releaseRow, setReleaseRow] = useState<AdminDisplayRow | null>(null);
 
   // Delete confirm state
   const [deleteRow, setDeleteRow] = useState<AdminDisplayRow | null>(null);
@@ -123,7 +120,7 @@ export function AdminDisplaysPage() {
   // ---- Create flow ----
   const openCreateModal = () => {
     setCreateOpen(true);
-    setCreateForm({ name: '', price: 0, descDe: '', descEn: '', wave: 0, sortOrder: 0, shopVisible: true });
+    setCreateForm({ name: '', codeSuffix: '', price: 0, descDe: '', descEn: '', wave: 0, sortOrder: 0, shopVisible: true, ogReleaseDate: '' });
     setCreateContents([]);
     setCreateResult(null);
     setBoosterSearch('');
@@ -131,10 +128,17 @@ export function AdminDisplaysPage() {
     setBoosterResults([]);
   };
 
-  const handleAddBooster = (booster: { name: string; code: string }) => {
+  const handleAddBooster = (booster: { name: string; code: string; og_release_date?: string }) => {
     // Avoid duplicates
     if (createContents.some((c) => c.boosterSetName === booster.name)) return;
     setCreateContents((prev) => [...prev, { boosterSetName: booster.name, packCount: 24 }]);
+    // Auto-fill name, code + OG release from each added booster
+    setCreateForm((p) => ({
+      ...p,
+      name: `${booster.code ?? booster.name} Display`,
+      codeSuffix: booster.code ?? p.codeSuffix,
+      ogReleaseDate: booster.og_release_date ?? p.ogReleaseDate,
+    }));
     setBoosterSearch('');
     setBoosterDebouncedSearch('');
     setBoosterResults([]);
@@ -166,8 +170,9 @@ export function AdminDisplaysPage() {
         desc_en: createForm.descEn || undefined,
         wave: createForm.wave,
         sort_order: createForm.sortOrder,
-        active: false,
+        shop_active: false,
         shop_visible: createForm.shopVisible,
+        og_release_date: createForm.ogReleaseDate || undefined,
         contents: createContents,
       });
       setCreateOpen(false);
@@ -197,6 +202,7 @@ export function AdminDisplaysPage() {
       wave: row.wave,
       sortOrder: row.sort_order,
       shopVisible: row.shop_visible,
+      ogReleaseDate: row.og_release_date ?? '',
     });
   };
 
@@ -212,12 +218,10 @@ export function AdminDisplaysPage() {
     try {
       await updateDisplay(token, editRow.id, {
         name: editForm.name,
-        price: editForm.price,
+        wave: editForm.wave,
+        og_release_date: editForm.ogReleaseDate || null,
         desc_de: editForm.descDe,
         desc_en: editForm.descEn,
-        wave: editForm.wave,
-        sort_order: editForm.sortOrder,
-        shop_visible: editForm.shopVisible,
       });
       setSaveResult({ ok: true, msg: t('admin.saved') });
       await loadDisplays();
@@ -272,7 +276,7 @@ export function AdminDisplaysPage() {
               <th className={styles.th}>{t('admin.name')}</th>
               <th className={styles.th}>{t('admin.code')}</th>
               <th className={styles.th}>{t('admin.wave')}</th>
-              <th className={styles.th}>{t('admin.release')}</th>
+              <th className={styles.th}>{t('admin.ogRelease')}</th>
               <th className={styles.th}>{t('admin.displayContentsCol')}</th>
               <th className={styles.th}>{t('admin.displayTotalPacks')}</th>
               <th className={styles.th}>{t('admin.cards')}</th>
@@ -291,15 +295,7 @@ export function AdminDisplaysPage() {
                 </td>
                 <td className={styles.td}>{row.code ?? '—'}</td>
                 <td className={styles.td}>{row.wave}</td>
-                <td
-                  className={styles.td}
-                  style={{ cursor: 'pointer' }}
-                  onClick={(e) => { e.stopPropagation(); setReleaseRow(row); }}
-                >
-                  <span className={row.active ? styles.statusActive : styles.statusInactive}>
-                    {row.active ? t('admin.releaseActive') : t('admin.inactive')}
-                  </span>
-                </td>
+                <td className={styles.td}>{row.og_release_date ?? '—'}</td>
                 <td className={styles.td} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }} onClick={() => setCardBreakdownRow(row)}>{row.contents.length} Booster</td>
                 <td className={styles.td} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }} onClick={() => setCardBreakdownRow(row)}>{row.total_packs} Booster</td>
                 <td className={styles.td} style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationColor: 'var(--orichalcos-faint)' }} onClick={() => setCardBreakdownRow(row)}>{row.card_count}</td>
@@ -346,16 +342,6 @@ export function AdminDisplaysPage() {
               />
             </div>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.active')}</span>
-              <div className={ms.statusRow}>
-                <button
-                  className={`${ms.statusBtn} ${editRow?.active ? ms.statusBtnActive : ''}`}
-                  onClick={() => setEditForm((p) => p ? { ...p, shopVisible: true } : p)}
-                  disabled
-                >{editRow?.active ? t('admin.statusActive') : t('admin.statusInactive')}</button>
-              </div>
-            </div>
-            <div className={ms.fieldRow}>
               <span className={ms.fieldLabel}>{t('admin.wave')}</span>
               <input
                 className={ms.fieldInput}
@@ -366,27 +352,23 @@ export function AdminDisplaysPage() {
               />
             </div>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.sortOrder')}</span>
+              <span className={ms.fieldLabel}>{t('admin.ogRelease')}</span>
               <input
                 className={ms.fieldInput}
-                type="number"
-                min={0}
-                value={editForm.sortOrder}
-                onChange={(e) => setEditForm((p) => p ? { ...p, sortOrder: Number(e.target.value) } : p)}
+                type="date"
+                value={editForm.ogReleaseDate}
+                onChange={(e) => setEditForm((p) => p ? { ...p, ogReleaseDate: e.target.value } : p)}
               />
             </div>
             <div className={ms.fieldRow}>
-              <span className={ms.fieldLabel}>{t('admin.shopVisibility')}</span>
-              <div className={ms.statusRow}>
-                <button
-                  className={`${ms.statusBtn} ${editForm.shopVisible ? ms.statusBtnActive : ''}`}
-                  onClick={() => setEditForm((p) => p ? { ...p, shopVisible: true } : p)}
-                >{t('admin.shopVisible')}</button>
-                <button
-                  className={`${ms.statusBtn} ${!editForm.shopVisible ? ms.statusBtnInactive : ''}`}
-                  onClick={() => setEditForm((p) => p ? { ...p, shopVisible: false } : p)}
-                >{t('admin.shopHidden')}</button>
-              </div>
+              <span className={ms.fieldLabel}>{t('admin.descDe')}</span>
+              <textarea className={`${ms.fieldInput} ${ms.fieldTextarea}`} rows={3} value={editForm.descDe}
+                onChange={(e) => setEditForm((p) => p ? { ...p, descDe: e.target.value } : p)} />
+            </div>
+            <div className={ms.fieldRow}>
+              <span className={ms.fieldLabel}>{t('admin.descEn')}</span>
+              <textarea className={`${ms.fieldInput} ${ms.fieldTextarea}`} rows={3} value={editForm.descEn}
+                onChange={(e) => setEditForm((p) => p ? { ...p, descEn: e.target.value } : p)} />
             </div>
           </>
         )}
@@ -428,34 +410,6 @@ export function AdminDisplaysPage() {
           </div>
         </div>
         <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.displayPrice')}</span>
-          <input
-            className={ms.fieldInput}
-            type="number"
-            min={0}
-            value={createForm.price}
-            onChange={(e) => setCreateForm((p) => ({ ...p, price: Number(e.target.value) }))}
-          />
-        </div>
-        <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.descDe')}</span>
-          <textarea
-            className={`${ms.fieldInput} ${ms.fieldTextarea}`}
-            rows={2}
-            value={createForm.descDe}
-            onChange={(e) => setCreateForm((p) => ({ ...p, descDe: e.target.value }))}
-          />
-        </div>
-        <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.descEn')}</span>
-          <textarea
-            className={`${ms.fieldInput} ${ms.fieldTextarea}`}
-            rows={2}
-            value={createForm.descEn}
-            onChange={(e) => setCreateForm((p) => ({ ...p, descEn: e.target.value }))}
-          />
-        </div>
-        <div className={ms.fieldRow}>
           <span className={ms.fieldLabel}>{t('admin.wave')}</span>
           <input
             className={ms.fieldInput}
@@ -466,27 +420,13 @@ export function AdminDisplaysPage() {
           />
         </div>
         <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.sortOrder')}</span>
+          <span className={ms.fieldLabel}>{t('admin.ogRelease')}</span>
           <input
             className={ms.fieldInput}
-            type="number"
-            min={0}
-            value={createForm.sortOrder}
-            onChange={(e) => setCreateForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
+            type="date"
+            value={createForm.ogReleaseDate}
+            onChange={(e) => setCreateForm((p) => ({ ...p, ogReleaseDate: e.target.value }))}
           />
-        </div>
-        <div className={ms.fieldRow}>
-          <span className={ms.fieldLabel}>{t('admin.shopVisibility')}</span>
-          <div className={ms.statusRow}>
-            <button
-              className={`${ms.statusBtn} ${createForm.shopVisible ? ms.statusBtnActive : ''}`}
-              onClick={() => setCreateForm((p) => ({ ...p, shopVisible: true }))}
-            >{t('admin.shopVisible')}</button>
-            <button
-              className={`${ms.statusBtn} ${!createForm.shopVisible ? ms.statusBtnInactive : ''}`}
-              onClick={() => setCreateForm((p) => ({ ...p, shopVisible: false }))}
-            >{t('admin.shopHidden')}</button>
-          </div>
         </div>
 
         {/* Booster contents editor */}
@@ -558,22 +498,6 @@ export function AdminDisplaysPage() {
           <strong>{deleteRow?.name}</strong> — {t('admin.deleteDisplayConfirm')}
         </p>
       </ConfirmModal>
-
-      {/* Release Modal */}
-      {token && releaseRow && (
-        <ReleaseModal
-          open={releaseRow !== null}
-          onClose={() => setReleaseRow(null)}
-          productType="display"
-          productId={String(releaseRow.id)}
-          productName={releaseRow.name}
-          igReleaseDate={releaseRow.ig_release_date}
-          isEvent={releaseRow.is_event ?? false}
-          active={releaseRow.active}
-          token={token}
-          onChanged={() => loadDisplays()}
-        />
-      )}
 
       {/* Breakdown Modal (Style A) */}
       {cardBreakdownRow && (

@@ -22,51 +22,50 @@ interface SetDef {
   code: string;
   type: 'starter' | 'booster';
   wave: number;
-  active: boolean;
 }
 
 const TARGET_SETS: SetDef[] = [
   // Wave 0 — Starter Decks (initial)
-  { name: 'Starter Deck: Yugi', code: 'SDY', type: 'starter', wave: 0, active: true },
-  { name: 'Starter Deck: Kaiba', code: 'SDK', type: 'starter', wave: 0, active: true },
+  { name: 'Starter Deck: Yugi', code: 'SDY', type: 'starter', wave: 0 },
+  { name: 'Starter Deck: Kaiba', code: 'SDK', type: 'starter', wave: 0 },
 
   // Wave 1 — Early DM
-  { name: 'Legend of Blue Eyes White Dragon', code: 'LOB', type: 'booster', wave: 1, active: true },
-  { name: 'Metal Raiders', code: 'MRD', type: 'booster', wave: 1, active: true },
-  { name: 'Starter Deck: Joey', code: 'SDJ', type: 'starter', wave: 1, active: false },
+  { name: 'Legend of Blue Eyes White Dragon', code: 'LOB', type: 'booster', wave: 1 },
+  { name: 'Metal Raiders', code: 'MRD', type: 'booster', wave: 1 },
+  { name: 'Starter Deck: Joey', code: 'SDJ', type: 'starter', wave: 1 },
 
   // Wave 2 — Duelist Kingdom
-  { name: 'Spell Ruler', code: 'SRL', type: 'booster', wave: 2, active: false },
-  { name: 'Pharaoh\'s Servant', code: 'PSV', type: 'booster', wave: 2, active: false },
-  { name: 'Starter Deck: Pegasus', code: 'SDP', type: 'starter', wave: 2, active: false },
+  { name: 'Spell Ruler', code: 'SRL', type: 'booster', wave: 2 },
+  { name: 'Pharaoh\'s Servant', code: 'PSV', type: 'booster', wave: 2 },
+  { name: 'Starter Deck: Pegasus', code: 'SDP', type: 'starter', wave: 2 },
 
   // Wave 3 — Battle City
-  { name: 'Labyrinth of Nightmare', code: 'LON', type: 'booster', wave: 3, active: false },
-  { name: 'Legacy of Darkness', code: 'LOD', type: 'booster', wave: 3, active: false },
-  { name: 'Pharaonic Guardian', code: 'PGD', type: 'booster', wave: 3, active: false },
-  { name: 'Starter Deck: Yugi Evolution', code: 'SYE', type: 'starter', wave: 3, active: false },
-  { name: 'Starter Deck: Kaiba Evolution', code: 'SKE', type: 'starter', wave: 3, active: false },
+  { name: 'Labyrinth of Nightmare', code: 'LON', type: 'booster', wave: 3 },
+  { name: 'Legacy of Darkness', code: 'LOD', type: 'booster', wave: 3 },
+  { name: 'Pharaonic Guardian', code: 'PGD', type: 'booster', wave: 3 },
+  { name: 'Starter Deck: Yugi Evolution', code: 'SYE', type: 'starter', wave: 3 },
+  { name: 'Starter Deck: Kaiba Evolution', code: 'SKE', type: 'starter', wave: 3 },
 
   // Wave 4 — Battle City Finals
-  { name: 'Magician\'s Force', code: 'MFC', type: 'booster', wave: 4, active: false },
-  { name: 'Dark Crisis', code: 'DCR', type: 'booster', wave: 4, active: false },
+  { name: 'Magician\'s Force', code: 'MFC', type: 'booster', wave: 4 },
+  { name: 'Dark Crisis', code: 'DCR', type: 'booster', wave: 4 },
 
   // Wave 5 — Post-Battle City
-  { name: 'Invasion of Chaos', code: 'IOC', type: 'booster', wave: 5, active: false },
-  { name: 'Ancient Sanctuary', code: 'AST', type: 'booster', wave: 5, active: false },
+  { name: 'Invasion of Chaos', code: 'IOC', type: 'booster', wave: 5 },
+  { name: 'Ancient Sanctuary', code: 'AST', type: 'booster', wave: 5 },
 
   // Wave 6 — Late DM
-  { name: 'Soul of the Duelist', code: 'SOD', type: 'booster', wave: 6, active: false },
-  { name: 'Rise of Destiny', code: 'RDS', type: 'booster', wave: 6, active: false },
-  { name: 'Flaming Eternity', code: 'FET', type: 'booster', wave: 6, active: false },
+  { name: 'Soul of the Duelist', code: 'SOD', type: 'booster', wave: 6 },
+  { name: 'Rise of Destiny', code: 'RDS', type: 'booster', wave: 6 },
+  { name: 'Flaming Eternity', code: 'FET', type: 'booster', wave: 6 },
 
   // Wave 7 — Early GX
-  { name: 'The Lost Millennium', code: 'TLM', type: 'booster', wave: 7, active: false },
-  { name: 'Cybernetic Revolution', code: 'CRV', type: 'booster', wave: 7, active: false },
-  { name: 'Elemental Energy', code: 'EEN', type: 'booster', wave: 7, active: false },
-  { name: 'Shadow of Infinity', code: 'SOI', type: 'booster', wave: 7, active: false },
-  { name: 'Starter Deck: Jaden Yuki', code: 'YSDJ', type: 'starter', wave: 7, active: false },
-  { name: 'Starter Deck: Syrus Truesdale', code: 'YSDS', type: 'starter', wave: 7, active: false },
+  { name: 'The Lost Millennium', code: 'TLM', type: 'booster', wave: 7 },
+  { name: 'Cybernetic Revolution', code: 'CRV', type: 'booster', wave: 7 },
+  { name: 'Elemental Energy', code: 'EEN', type: 'booster', wave: 7 },
+  { name: 'Shadow of Infinity', code: 'SOI', type: 'booster', wave: 7 },
+  { name: 'Starter Deck: Jaden Yuki', code: 'YSDJ', type: 'starter', wave: 7 },
+  { name: 'Starter Deck: Syrus Truesdale', code: 'YSDS', type: 'starter', wave: 7 },
 ];
 
 const ALLOWED_FRAMES = new Set(['normal', 'effect', 'ritual', 'fusion', 'spell', 'trap']);
@@ -113,12 +112,11 @@ async function main() {
   console.log('Registering sets...');
   for (const set of TARGET_SETS) {
     await pool.query(
-      `INSERT INTO card_sets (name, code, type, wave, active)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO card_sets (name, code, type, wave)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (name) DO UPDATE SET
-         code = EXCLUDED.code, type = EXCLUDED.type, wave = EXCLUDED.wave,
-         active = EXCLUDED.active`,
-      [set.name, set.code, set.type, set.wave, set.active]
+         code = EXCLUDED.code, type = EXCLUDED.type, wave = EXCLUDED.wave`,
+      [set.name, set.code, set.type, set.wave]
     );
   }
 

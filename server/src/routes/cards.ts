@@ -1,6 +1,7 @@
 /**
  * Card routes — serves card data from our own database.
- * By default only returns cards from active sets.
+ * Availability = card is assigned to at least one set.
+ * Badge color (active) = set is purchasable via shop_active or in an active display.
  */
 
 import { Router } from 'express';
@@ -23,23 +24,23 @@ cardsRouter.get('/count', async (_req, res) => {
 /**
  * GET /api/cards/browse
  * Returns ALL cards in the database — for the public card browser.
- * Includes availability flag (true if card is in any active set).
+ * available = card is obtainable via a purchasable product (shop_active).
+ * Badge active = set has shop_active OR is in an active display.
  */
 cardsRouter.get('/browse', async (_req, res) => {
   try {
     const result = await pool.query(`
-      WITH sets_in_active_displays AS (
-        SELECT DISTINCT sdc.booster_set_name
-        FROM shop_display_contents sdc
-        JOIN shop_displays sd ON sd.id = sdc.display_id
-        WHERE sd.active = TRUE
+      WITH purchasable_sets AS (
+        SELECT sc.set_name FROM shop_set_config sc WHERE sc.shop_active = TRUE
+        UNION
+        SELECT sdc.booster_set_name FROM shop_display_contents sdc
+        JOIN shop_displays sd ON sd.id = sdc.display_id WHERE sd.shop_active = TRUE
       )
       SELECT c.*,
         EXISTS(
           SELECT 1 FROM card_set_entries cse
-          JOIN card_sets cs ON cs.name = cse.set_name
           WHERE cse.card_id = c.id
-            AND (cs.active = TRUE OR cs.name IN (SELECT booster_set_name FROM sets_in_active_displays))
+            AND cse.set_name IN (SELECT set_name FROM purchasable_sets)
         ) AS available,
         COALESCE(
           (SELECT ARRAY_AGG(ca.artwork_id ORDER BY ca.is_default DESC, ca.artwork_id)
@@ -49,9 +50,9 @@ cardsRouter.get('/browse', async (_req, res) => {
         COALESCE(
           (SELECT JSON_AGG(JSON_BUILD_OBJECT(
              'name', cs.name, 'code', cs.code,
-             'active', (cs.active OR cs.name IN (SELECT booster_set_name FROM sets_in_active_displays)),
+             'active', (cse.set_name IN (SELECT set_name FROM purchasable_sets)),
              'artworkId', cse.artwork_id
-           ) ORDER BY cs.active DESC, cs.wave, cs.name)
+           ) ORDER BY (cse.set_name IN (SELECT set_name FROM purchasable_sets)) DESC, cs.wave, cs.name)
            FROM card_set_entries cse
            JOIN card_sets cs ON cs.name = cse.set_name
            WHERE cse.card_id = c.id),
@@ -68,18 +69,20 @@ cardsRouter.get('/browse', async (_req, res) => {
 
 /**
  * GET /api/cards/sets/all
- * Returns all sets with card count, wave, active status and image.
+ * Returns all sets with card count, wave, and purchasable status.
  */
 cardsRouter.get('/sets/all', async (_req, res) => {
   try {
     const result = await pool.query(`
-      SELECT cs.name, cs.code, cs.type, cs.wave, cs.active,
-             COUNT(cse.card_id) as card_count,
-             EXISTS(
-               SELECT 1 FROM shop_display_contents sdc
-               JOIN shop_displays sd ON sd.id = sdc.display_id
-               WHERE sdc.booster_set_name = cs.name AND sd.active = TRUE
-             ) AS available_via_display
+      WITH purchasable_sets AS (
+        SELECT sc.set_name FROM shop_set_config sc WHERE sc.shop_active = TRUE
+        UNION
+        SELECT sdc.booster_set_name FROM shop_display_contents sdc
+        JOIN shop_displays sd ON sd.id = sdc.display_id WHERE sd.shop_active = TRUE
+      )
+      SELECT cs.name, cs.code, cs.type, cs.wave,
+             (cs.name IN (SELECT set_name FROM purchasable_sets)) AS active,
+             COUNT(cse.card_id) as card_count
       FROM card_sets cs
       LEFT JOIN card_set_entries cse ON cse.set_name = cs.name
       GROUP BY cs.id

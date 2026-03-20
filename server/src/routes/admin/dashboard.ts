@@ -17,7 +17,7 @@ dashboardRouter.get('/stats', async (req, res) => {
       SELECT
         (SELECT COUNT(*)::int FROM users) AS "totalUsers",
         (SELECT COUNT(*)::int FROM cards) AS "totalCards",
-        (SELECT COUNT(*)::int FROM card_sets WHERE active = TRUE) AS "activeSets",
+        (SELECT COUNT(*)::int FROM shop_set_config WHERE shop_active = TRUE) AS "activeSets",
         (SELECT COALESCE(SUM(dp), 0)::bigint FROM users) AS "totalDp",
         (SELECT COUNT(*)::int FROM users WHERE created_at >= NOW() - INTERVAL '7 days') AS "recentUsers7d"
     `);

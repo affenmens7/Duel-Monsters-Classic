@@ -66,11 +66,11 @@ export async function deleteDisplay(token: string, id: number): Promise<void> {
 export async function searchBoosters(
   token: string,
   search: string,
-): Promise<{ name: string; code: string }[]> {
+): Promise<{ name: string; code: string; og_release_date?: string }[]> {
   const params = new URLSearchParams({ search });
   const response = await fetch(
     `${env.api.baseUrl}/admin/displays/search-boosters?${params.toString()}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  return handleResponse<{ name: string; code: string }[]>(response);
+  return handleResponse<{ name: string; code: string; og_release_date?: string }[]>(response);
 }

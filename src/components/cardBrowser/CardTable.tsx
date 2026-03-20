@@ -16,13 +16,14 @@ const PAGE_SIZE = 50;
 interface CardTableProps {
   cards: Card[];
   onCardClick: (card: Card) => void;
+  onCardDragStart?: (cardId: number, e: React.MouseEvent) => void;
   setFilter?: string;
   isCardMaxed?: (cardId: number) => boolean;
 }
 
 type SortKey = 'name' | 'type' | 'atk' | 'level' | 'attribute' | 'banStatus';
 
-export function CardTable({ cards, onCardClick, setFilter, isCardMaxed }: CardTableProps) {
+export function CardTable({ cards, onCardClick, onCardDragStart, setFilter, isCardMaxed }: CardTableProps) {
   const { t, i18n } = useTranslation();
   const isEn = i18n.language === 'en';
   const { localize } = useCardLocale();
@@ -111,16 +112,23 @@ export function CardTable({ cards, onCardClick, setFilter, isCardMaxed }: CardTa
         <tbody>
           {sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((card) => {
             const loc = localize(card);
-            const artworkId = setFilter && setFilter !== 'all'
-              ? card.sets?.find((s) => s.name === setFilter)?.artworkId ?? card.artworkIds?.[0]
+            const setEntry = setFilter && setFilter !== 'all'
+              ? card.sets?.find((s) => s.name === setFilter)
+              : undefined;
+            const artworkId = setEntry
+              ? setEntry.artworkId ?? card.artworkIds?.[0]
               : card.artworkIds?.[0];
+            const isArtworkUnavailable = setEntry
+              ? !(card.sets?.some((s) => s.artworkId === artworkId && s.active !== false) ?? false)
+              : false;
             const banKey = (card.banStatus ?? 'Unlimited').replace('-', '');
 
             return (
               <tr
                 key={card.id}
-                className={`${styles.tr} ${card.available === false || isCardMaxed?.(card.id) ? styles.trLocked : ''}`}
+                className={`${styles.tr} ${card.available === false || isCardMaxed?.(card.id) ? styles.trLocked : ''} ${isArtworkUnavailable && card.available ? styles.trArtworkUnavailable : ''}`}
                 onClick={() => onCardClick(card)}
+                onMouseDown={onCardDragStart ? (e) => onCardDragStart(card.id, e) : undefined}
               >
                 <td className={styles.td}>
                   <img

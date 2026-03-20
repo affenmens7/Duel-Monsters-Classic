@@ -22,7 +22,7 @@ displaysRouter.get('/', async (_req, res) => {
         d.showcase_card_ids AS "showcaseCardIds",
         COALESCE(d.showcase_animated, FALSE) AS "showcaseAnimated",
         d.ig_release_date AS "igReleaseDate",
-        d.active, d.wave, d.sort_order AS "sortOrder",
+        COALESCE(d.shop_active, FALSE) AS "active", d.wave, d.sort_order AS "sortOrder",
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
          FROM shop_display_contents dc WHERE dc.display_id = d.id) AS "totalPacks",
         (SELECT COALESCE(SUM(cnt.card_count), 0)::int
@@ -85,7 +85,7 @@ displaysRouter.get('/:id', requireAuth, async (req, res) => {
         d.showcase_card_ids AS "showcaseCardIds",
         COALESCE(d.showcase_animated, FALSE) AS "showcaseAnimated",
         d.ig_release_date AS "igReleaseDate",
-        d.active, d.wave, d.sort_order AS "sortOrder",
+        COALESCE(d.shop_active, FALSE) AS "active", d.wave, d.sort_order AS "sortOrder",
         (SELECT COALESCE(SUM(dc.pack_count), 0)::int
          FROM shop_display_contents dc WHERE dc.display_id = d.id) AS "totalPacks",
         (SELECT COALESCE(SUM(cnt.card_count), 0)::int

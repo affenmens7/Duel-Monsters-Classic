@@ -132,16 +132,6 @@ export function AdminDisplayDetailPage() {
     }
   }, [display, authToken, loadDisplay, localPackCounts]);
 
-  const handleToggleActive = useCallback(async () => {
-    if (!display || !authToken) return;
-    setSaving(true);
-    try {
-      await updateDisplay(authToken, display.id, { active: !display.active });
-      await loadDisplay();
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
-  }, [display, authToken, loadDisplay]);
-
   if (loading) return <div className={styles.page}><p>{t('admin.loading')}</p></div>;
   if (!display) return <div className={styles.page}><p>Display not found</p></div>;
 
@@ -158,14 +148,6 @@ export function AdminDisplayDetailPage() {
         <span className={styles.badge}>{display.price} DP</span>
         <span className={styles.badge}>Wave {display.wave}</span>
         <span className={styles.badge}>{display.total_packs} Packs</span>
-        <span
-          className={`${styles.badge} ${display.active ? styles.badgeActive : styles.badgeInactive}`}
-          onClick={handleToggleActive}
-          title={display.active ? t('admin.deactivate') : t('admin.activate')}
-          style={{ cursor: 'pointer' }}
-        >
-          {display.active ? t('admin.statusActive') : t('admin.statusInactive')}
-        </span>
       </div>
 
       {/* Add booster search */}

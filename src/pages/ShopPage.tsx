@@ -45,7 +45,6 @@ export function ShopPage() {
     return (
       <DisplayDetailView
         displayDetail={shop.displayDetail}
-        sortedDetailCards={shop.sortedDisplayCards}
         ownedCount={shop.displayOwnedCount}
         dp={shop.dp}
         buying={shop.buying}
@@ -85,7 +84,6 @@ export function ShopPage() {
     return (
       <ShopDetailView
         setDetail={shop.setDetail}
-        sortedDetailCards={shop.sortedDetailCards}
         ownedCount={shop.ownedCount}
         dp={shop.dp}
         buying={shop.buying}

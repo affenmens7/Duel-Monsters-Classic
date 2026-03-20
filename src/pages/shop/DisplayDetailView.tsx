@@ -7,12 +7,15 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { useAppData } from '../../store/AppDataContext';
+import { useSession } from '../../store/SessionContext';
 import { useCardLocale } from '../../hooks/useCardLocale';
 import { getCardImageUrl } from '../../services/cardApi';
 import { updateDisplay } from '../../services/admin/displays';
 import { getRarityTier } from '../../utils/rarity';
+import { sortSetCards, type CardSortKey } from '../../utils/cardSort';
 import { localizeBilingual } from '../../utils/localize';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
+import { SortDropdown } from '../../components/common/SortDropdown';
 import { Modal } from '../../components/common/Modal';
 import { SetShowcase } from './SetShowcase';
 import type { DisplayDetail, BuyResult } from '../../services/shopApi';
@@ -21,7 +24,6 @@ import cardStyles from './ProductRow.module.css';
 
 interface DisplayDetailViewProps {
   displayDetail: DisplayDetail;
-  sortedDetailCards: DisplayDetail['cards'];
   ownedCount: number;
   dp: number;
   buying: boolean;
@@ -38,7 +40,7 @@ interface DisplayDetailViewProps {
 }
 
 export function DisplayDetailView({
-  displayDetail, sortedDetailCards, ownedCount, dp, buying, error,
+  displayDetail, ownedCount, dp, buying, error,
   buyResult, popupCardId, detailLoading, user, isEn,
   onBack, onBuyDisplay, onSetBuyResult, onSetPopupCardId,
 }: DisplayDetailViewProps) {
@@ -46,11 +48,27 @@ export function DisplayDetailView({
   const navigate = useNavigate();
   const { user: authUser, token } = useAuth();
   const { cards: allCards } = useAppData();
+  const { inventory } = useSession();
   const { localize } = useCardLocale();
 
   const { display, rarityRates, cards } = displayDetail;
   const canBuy = user && (dp >= display.price) && display.active;
   const isAdmin = authUser?.role === 'admin';
+
+  // Helper: check if user owns the specific artwork
+  const ownsCardArtwork = useCallback((card: { cardId: number; artworkId: number | null }) => {
+    const inv = inventory.get(card.cardId);
+    return card.artworkId
+      ? inv?.unlockedArtworks?.includes(card.artworkId) ?? false
+      : (inv?.quantity ?? 0) > 0;
+  }, [inventory]);
+
+  // Card sort
+  const [sortKey, setSortKey] = useState<CardSortKey>('type');
+  const sortedCards = useMemo(
+    () => sortSetCards(cards, sortKey, allCards),
+    [cards, sortKey, allCards],
+  );
 
   // Showcase editor state (admin only)
   const [editingShowcase, setEditingShowcase] = useState(false);
@@ -106,6 +124,17 @@ export function DisplayDetailView({
 
       {error && <div className={styles.error}>{error}</div>}
 
+      {/* Title + Buy Button */}
+      <div className={styles.titleRow}>
+        <h1 className={styles.heroSetName}>{display.name}</h1>
+        <div className={styles.buyRow}>
+          <button className={`${styles.buyBtn} ${styles.buyBtnDisplay}`} onClick={onBuyDisplay} disabled={!canBuy || buying}>
+            {buying ? '...' : t('shop.buyDisplay')}
+            <span className={styles.buyPrice}>({display.price} DP)</span>
+          </button>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className={styles.hero}>
         <div className={`${cardStyles.card} ${display.active ? cardStyles.cardActive : cardStyles.cardInactive} ${styles.detailCard}`}>
@@ -141,42 +170,41 @@ export function DisplayDetailView({
           </div>
         </div>
         <div className={styles.heroInfo}>
-          <h1 className={styles.heroSetName}>{display.name}</h1>
-          <div className={styles.heroWave}>{t('shop.wave', { wave: display.wave })}</div>
+          <div>
+            <div className={styles.statsRow}>
+              <div className={styles.statBox}>
+                <span className={styles.statValue}>{display.totalPacks}</span>
+                <span className={styles.statLabel}>{t('shop.totalPacks')}</span>
+              </div>
+              <div className={styles.statBox}>
+                <span className={styles.statValue}>{display.cardCount}</span>
+                <span className={styles.statLabel}>{t('shop.uniqueCards')}</span>
+              </div>
+              <div className={styles.statBox}>
+                <span className={styles.statValue}>{cards.filter(ownsCardArtwork).length}</span>
+                <span className={styles.statLabel}>{t('inventory.owned')}</span>
+              </div>
+            </div>
 
-          <div className={styles.statsRow}>
-            <div className={styles.statBox}>
-              <span className={styles.statValue}>{display.totalPacks}</span>
-              <span className={styles.statLabel}>{t('shop.totalPacks')}</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statValue}>{display.cardCount}</span>
-              <span className={styles.statLabel}>{t('shop.uniqueCards')}</span>
-            </div>
-            <div className={styles.statBox}>
-              <span className={styles.statValue}>{ownedCount}</span>
-              <span className={styles.statLabel}>{t('inventory.owned')}</span>
-            </div>
+            {/* Content Breakdown */}
+            {display.contents && display.contents.length > 0 && (
+              <div className={styles.displayContents}>
+                <div className={styles.rarityTitle}>{t('shop.displayContents')}</div>
+                {display.contents.map((entry) => (
+                  <div key={entry.boosterSetName} className={styles.displayContentItem}>
+                    <span className={styles.displayContentCount}>{entry.packCount}x</span>{' '}
+                    {entry.boosterSetName}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-
-          {/* Content Breakdown */}
-          {display.contents && display.contents.length > 0 && (
-            <div className={styles.displayContents}>
-              <div className={styles.rarityTitle}>{t('shop.displayContents')}</div>
-              {display.contents.map((entry) => (
-                <div key={entry.boosterSetName} className={styles.displayContentItem}>
-                  <span className={styles.displayContentCount}>{entry.packCount}x</span>{' '}
-                  {entry.boosterSetName}
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Rarity Distribution */}
           {rarityRates.length > 0 && (
             <div className={styles.raritySection}>
               <div className={styles.rarityTitle}>{t('shop.rarityDistribution')}</div>
-              {rarityRates.map((rate) => {
+              {rarityRates.filter((r) => parseFloat(r.ratePct) > 0).map((rate) => {
                 const pct = parseFloat(rate.ratePct);
                 const colorSuffix = getRarityTier(rate.rarity);
                 return (
@@ -192,58 +220,54 @@ export function DisplayDetailView({
             </div>
           )}
 
-          {/* Buy Button */}
-          <div className={styles.buyRow}>
-            <button className={`${styles.buyBtn} ${styles.buyBtnDisplay}`} onClick={onBuyDisplay} disabled={!canBuy || buying}>
-              {buying ? '...' : t('shop.buyDisplay')}
-              <span className={styles.buyPrice}>({display.price} DP)</span>
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Admin Showcase Controls */}
-      {isAdmin && (
-        <div className={styles.showcaseAdminRow}>
-          {!editingShowcase ? (
-            <button className={styles.buyBtn} onClick={startEditing}>
-              {t('admin.editShowcase')}
-            </button>
-          ) : (
-            <>
-              <button className={styles.buyBtn} onClick={saveShowcase} disabled={savingShowcase}>
-                {savingShowcase ? '...' : t('common.save')}
+      {/* Admin Showcase Controls + Sort Dropdown */}
+      <div className={styles.showcaseAdminRow}>
+        {isAdmin && (
+          <>
+            {!editingShowcase ? (
+              <button className={styles.buyBtn} onClick={startEditing}>
+                {t('admin.editShowcase')}
               </button>
-              <button className={`${styles.buyBtn} ${styles.buyBtnDisplay}`} onClick={() => setEditingShowcase(false)}>
-                {t('common.cancel')}
-              </button>
-              <span className={styles.showcaseSlotInfo}>{editCards.length}/{maxSlots}</span>
-            </>
-          )}
-          <button
-            className={`${styles.buyBtn} ${!(editingShowcase ? editAnimated : display.showcaseAnimated) ? '' : styles.buyBtnDisplay}`}
-            onClick={() => editingShowcase ? setEditAnimated(false) : undefined}
-            disabled={!editingShowcase}
-          >{t('admin.showcaseStatic')}</button>
-          <button
-            className={`${styles.buyBtn} ${(editingShowcase ? editAnimated : display.showcaseAnimated) ? '' : styles.buyBtnDisplay}`}
-            onClick={() => editingShowcase ? setEditAnimated(true) : undefined}
-            disabled={!editingShowcase}
-          >{t('admin.showcaseAnimated')}</button>
-        </div>
-      )}
+            ) : (
+              <>
+                <button className={styles.buyBtn} onClick={saveShowcase} disabled={savingShowcase}>
+                  {savingShowcase ? '...' : t('common.save')}
+                </button>
+                <button className={`${styles.buyBtn} ${styles.buyBtnDisplay}`} onClick={() => setEditingShowcase(false)}>
+                  {t('common.cancel')}
+                </button>
+                <span className={styles.showcaseSlotInfo}>{editCards.length}/{maxSlots}</span>
+              </>
+            )}
+            <button
+              className={`${styles.buyBtn} ${!(editingShowcase ? editAnimated : display.showcaseAnimated) ? '' : styles.buyBtnDisplay}`}
+              onClick={() => editingShowcase ? setEditAnimated(false) : undefined}
+              disabled={!editingShowcase}
+            >{t('admin.showcaseStatic')}</button>
+            <button
+              className={`${styles.buyBtn} ${(editingShowcase ? editAnimated : display.showcaseAnimated) ? '' : styles.buyBtnDisplay}`}
+              onClick={() => editingShowcase ? setEditAnimated(true) : undefined}
+              disabled={!editingShowcase}
+            >{t('admin.showcaseAnimated')}</button>
+          </>
+        )}
+        <SortDropdown value={sortKey} onChange={setSortKey} />
+      </div>
 
       {/* Card Set Preview — grouped by booster */}
       <div className={styles.cardPreview}>
         <div className={styles.cardPreviewHeader}>
           <span className={styles.cardPreviewTitle}>{t('shop.setPreview')}</span>
-          <span className={styles.cardPreviewProgress}>{ownedCount}/{cards.length} {t('shop.owned')}</span>
+          <span className={styles.cardPreviewProgress}>{cards.filter(ownsCardArtwork).length}/{cards.length} {t('shop.owned')}</span>
         </div>
 
         {/* Group cards by setName (booster), preserving order from API */}
         {(() => {
-          const groups: { setName: string; cards: typeof sortedDetailCards }[] = [];
-          for (const card of sortedDetailCards) {
+          const groups: { setName: string; cards: typeof sortedCards }[] = [];
+          for (const card of sortedCards) {
             const name = card.setName ?? 'Unknown';
             let group = groups.find((g) => g.setName === name);
             if (!group) {
@@ -257,22 +281,24 @@ export function DisplayDetailView({
             <div key={group.setName}>
               <div className={styles.boosterGroupHeader}>
                 <span className={styles.boosterGroupName}>{group.setName}</span>
-                <span className={styles.boosterGroupCount}>{group.cards.filter((c) => c.owned > 0).length}/{group.cards.length}</span>
+                <span className={styles.boosterGroupCount}>{group.cards.filter(ownsCardArtwork).length}/{group.cards.length}</span>
               </div>
               <div className={styles.cardGrid}>
                 {group.cards.map((card) => {
-                  const colorSuffix = getRarityTier(card.rarity ?? 'Common');
                   const imgId = card.artworkId ?? card.cardId;
                   const isSelected = editingShowcase && editCards.includes(imgId);
                   const slotIndex = editingShowcase ? editCards.indexOf(imgId) : -1;
+                  const invEntry = inventory.get(card.cardId);
+                  const ownsArtwork = card.artworkId
+                    ? invEntry?.unlockedArtworks?.includes(card.artworkId) ?? false
+                    : (invEntry?.quantity ?? 0) > 0;
                   return (
                     <div
                       key={`${group.setName}-${card.cardId}`}
-                      className={`${styles.cardCell} ${card.owned > 0 ? styles.cardCellOwned : styles.cardCellNotOwned} ${isSelected ? styles.cardCellSelected : ''}`}
+                      className={`${styles.cardCell} ${ownsArtwork ? styles.cardCellOwned : styles.cardCellNotOwned} ${isSelected ? styles.cardCellSelected : ''}`}
                       onClick={() => editingShowcase ? toggleCardInShowcase(imgId) : onSetPopupCardId(card.cardId)}
                     >
                       <img className={styles.cardCellImg} src={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)} alt="" loading="lazy" />
-                      <span className={`${styles.rarityDot} ${styles[`rarityDot${colorSuffix}`] ?? styles.rarityDotDefault}`} />
                       {isSelected && <span className={styles.cardCellSlot}>{slotIndex + 1}</span>}
                     </div>
                   );
@@ -288,6 +314,8 @@ export function DisplayDetailView({
           const setEntry = displayDetail?.cards.find((c) => c.cardId === popupCardId);
           if (!cardData) return null;
           const loc = localize(cardData);
+          const invEntry = inventory.get(popupCardId);
+          const artworkIds = cardData.artworkIds ?? [];
           return (
             <CardDetailPopup
               card={{
@@ -299,10 +327,26 @@ export function DisplayDetailView({
               }}
               onClose={() => onSetPopupCardId(null)}
               onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
+              currentArtworkId={setEntry?.artworkId ?? artworkIds[0] ?? null}
+              artworks={artworkIds.length > 1
+                ? artworkIds.map((aId, i) => ({
+                    artworkId: aId,
+                    label: i === 0 ? 'Original' : `Artwork ${i + 1}`,
+                    imagePath: `/images/cards/${aId}.jpg`,
+                    isDefault: i === 0,
+                    availableIn: cardData.sets
+                      ?.filter((s) => s.artworkId === aId)
+                      .map((s) => s.name)
+                      .join(', ') || null,
+                  }))
+                : undefined
+              }
+              ownedArtworkIds={invEntry?.unlockedArtworks}
+              isPreviewGreyed={!invEntry}
             >
               {setEntry && (
                 <div className={styles.popupOwnership}>
-                  {setEntry.owned > 0 ? `${t('inventory.owned')}: ${setEntry.owned}` : t('inventory.notOwned')}
+                  {(invEntry?.quantity ?? 0) > 0 ? `${t('inventory.owned')}: ${invEntry!.quantity}` : t('inventory.notOwned')}
                 </div>
               )}
             </CardDetailPopup>

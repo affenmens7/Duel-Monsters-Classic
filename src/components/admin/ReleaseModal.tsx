@@ -15,6 +15,8 @@ import {
   deactivateProduct,
   activateProduct,
   reactivateProduct,
+  clearReleaseHistory,
+  cancelPlannedRelease,
 } from '../../services/admin/releases';
 import type { ReleaseWindow } from '../../services/admin/types';
 import styles from './ReleaseModal.module.css';
@@ -33,9 +35,9 @@ interface ReleaseModalProps {
   onChanged: () => void;
 }
 
-function formatDate(dateStr: string, isEn: boolean): string {
+function formatDate(dateStr: string): string {
   try {
-    return new Date(dateStr).toLocaleDateString(isEn ? 'en-US' : 'de-DE');
+    return new Date(dateStr).toLocaleDateString('de-DE');
   } catch {
     return dateStr;
   }
@@ -54,8 +56,7 @@ export function ReleaseModal({
   open, onClose, productType, productId, productName,
   ogReleaseDate, igReleaseDate, isEvent, active, token, onChanged,
 }: ReleaseModalProps) {
-  const { t, i18n } = useTranslation();
-  const isEn = i18n.language === 'en';
+  const { t } = useTranslation();
 
   const [windows, setWindows] = useState<ReleaseWindow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ export function ReleaseModal({
   const [planStart, setPlanStart] = useState('');
   const [planEnd, setPlanEnd] = useState('');
   const [saving, setSaving] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [localActive, setLocalActive] = useState(active);
 
   const loadWindows = useCallback(async () => {
@@ -96,44 +98,47 @@ export function ReleaseModal({
   const handleActivateNormal = useCallback(async () => {
     if (!planStart) return;
     setSaving(true);
+    setActionError('');
     try {
       await activateProduct(token, productType, productId, planStart);
-      await loadWindows();
       onChanged();
-      setShowPlanForm(false);
-      setPlanStart('');
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Aktivierung fehlgeschlagen');
+    } finally { setSaving(false); }
   }, [token, productType, productId, planStart, loadWindows, onChanged]);
 
   // Normal product: reactivate after deactivation
   const handleReactivate = useCallback(async () => {
     setSaving(true);
+    setActionError('');
     try {
       await reactivateProduct(token, productType, productId);
-      setLocalActive(true);
-      await loadWindows();
       onChanged();
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Reaktivierung fehlgeschlagen');
+    } finally { setSaving(false); }
   }, [token, productType, productId, loadWindows, onChanged]);
 
   // Deactivate any product
   const handleDeactivate = useCallback(async () => {
     setSaving(true);
+    setActionError('');
     try {
       await deactivateProduct(token, productType, productId);
-      setLocalActive(false);
-      await loadWindows();
       onChanged();
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Deaktivierung fehlgeschlagen');
+    } finally { setSaving(false); }
   }, [token, productType, productId, loadWindows, onChanged]);
 
   // Event product: create window with start + end
   const handleCreateEventWindow = useCallback(async () => {
     if (!planStart || !planEnd) return;
     setSaving(true);
+    setActionError('');
     try {
       await createReleaseWindow(token, {
         product_type: productType,
@@ -146,8 +151,9 @@ export function ReleaseModal({
       setShowPlanForm(false);
       setPlanStart('');
       setPlanEnd('');
-    } catch { /* ignore */ }
-    finally { setSaving(false); }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Fenster konnte nicht erstellt werden');
+    } finally { setSaving(false); }
   }, [token, productType, productId, planStart, planEnd, loadWindows, onChanged]);
 
   const handleDeleteWindow = useCallback(async (id: number) => {
@@ -160,14 +166,53 @@ export function ReleaseModal({
     finally { setSaving(false); }
   }, [token, loadWindows, onChanged]);
 
+  const handleClearHistory = useCallback(async () => {
+    setSaving(true);
+    setActionError('');
+    try {
+      await clearReleaseHistory(token, productType, productId);
+      onChanged();
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Verlauf konnte nicht geloescht werden');
+    } finally { setSaving(false); }
+  }, [token, productType, productId, loadWindows, onChanged]);
+
+  // Cancel a planned release (delete future windows + clear ig_release_date)
+  const handleCancelPlanned = useCallback(async () => {
+    setSaving(true);
+    setActionError('');
+    try {
+      await cancelPlannedRelease(token, productType, productId);
+      onChanged();
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Abbruch fehlgeschlagen');
+    } finally { setSaving(false); }
+  }, [token, productType, productId, onChanged, onClose]);
+
+  // Cancel planned + immediately activate
+  const handleCancelPlannedAndActivate = useCallback(async () => {
+    setSaving(true);
+    setActionError('');
+    try {
+      await cancelPlannedRelease(token, productType, productId);
+      await reactivateProduct(token, productType, productId);
+      onChanged();
+      onClose();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Aktivierung fehlgeschlagen');
+    } finally { setSaving(false); }
+  }, [token, productType, productId, onChanged, onClose]);
+
   if (!open) return null;
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Normal product states
-  const hasBeenReleased = !!igReleaseDate;
-  const isNormalUnreleased = !isEvent && !hasBeenReleased;
-  const isNormalInactiveAfterRelease = !isEvent && hasBeenReleased && !localActive;
+  // Determine current status from windows + shop_active
+  const hasFutureWindow = windows.some((w) => w.start_date.split('T')[0] > today);
+  const currentStatus: 'available' | 'planned' | 'unavailable' =
+    localActive ? 'available' : hasFutureWindow ? 'planned' : 'unavailable';
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -183,7 +228,7 @@ export function ReleaseModal({
           {ogReleaseDate && (
             <div className={styles.infoRow}>
               <span className={styles.infoLabel}>{t('admin.ogReleaseDate')}</span>
-              <span className={styles.infoValue}>{formatDate(ogReleaseDate, isEn)}</span>
+              <span className={styles.infoValue}>{formatDate(ogReleaseDate)}</span>
             </div>
           )}
 
@@ -191,46 +236,73 @@ export function ReleaseModal({
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>{t('admin.igReleaseDate')}</span>
             {igReleaseDate ? (
-              <span className={styles.infoValue}>{formatDate(igReleaseDate, isEn)}</span>
+              <span className={styles.infoValue}>
+                {formatDate(igReleaseDate)}
+                {igReleaseDate.split('T')[0] > today && (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: 6 }}>
+                    ({t('admin.releasePlannedLabel')})
+                  </span>
+                )}
+              </span>
             ) : (
               <span className={styles.infoValueMuted}>{t('admin.releaseNotSet')}</span>
             )}
           </div>
 
-          {/* Current Status + Actions */}
+          {/* Current Status — 3-way toggle */}
           <div className={styles.statusRow}>
             <span className={styles.infoLabel}>{t('admin.status')}</span>
-            <span className={localActive ? styles.badgeActive : styles.badgeInactive}>
-              {localActive ? t('admin.releaseActive') : t('admin.inactive')}
+
+            {/* Verfügbar */}
+            <span
+              className={currentStatus === 'available' ? styles.badgeActive : styles.actionBtn}
+              style={{ cursor: currentStatus === 'available' ? 'default' : 'pointer' }}
+              onClick={() => {
+                if (saving || currentStatus === 'available') return;
+                if (currentStatus === 'planned') handleCancelPlannedAndActivate();
+                else handleReactivate();
+              }}
+            >
+              {t('admin.releaseActive')}
             </span>
 
-            {/* Active → click to set Inactive */}
-            {localActive && (
-              <button
-                className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                disabled={saving}
-                onClick={handleDeactivate}
-              >
-                {t('admin.inactive')}
-              </button>
+            {/* Geplant — nur sichtbar wenn geplant */}
+            {currentStatus === 'planned' && (
+              <span className={styles.badgePlanned}>
+                {t('admin.releasePlannedLabel')}
+              </span>
             )}
 
-            {/* Inactive (has been released before) → click to set Active */}
-            {isNormalInactiveAfterRelease && (
-              <button
-                className={styles.actionBtn}
-                disabled={saving}
-                onClick={handleReactivate}
-              >
-                {t('admin.releaseActive')}
-              </button>
-            )}
+            {/* Nicht verfügbar */}
+            <span
+              className={currentStatus === 'unavailable' ? styles.badgeInactive : styles.actionBtn}
+              style={{ cursor: currentStatus === 'unavailable' ? 'default' : 'pointer' }}
+              onClick={() => {
+                if (saving || currentStatus === 'unavailable') return;
+                if (currentStatus === 'planned') handleCancelPlanned();
+                else handleDeactivate();
+              }}
+            >
+              {t('admin.inactive')}
+            </span>
           </div>
 
           <div className={styles.divider} />
 
-          {/* Release History (read-only for all products) */}
-          <span className={styles.sectionTitle}>{t('admin.releaseHistory')}</span>
+          {/* Release History */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className={styles.sectionTitle}>{t('admin.releaseHistory')}</span>
+            {windows.length > 0 && (
+              <button
+                className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                style={{ fontSize: '0.6rem', padding: '3px 8px' }}
+                disabled={saving}
+                onClick={handleClearHistory}
+              >
+                {t('admin.clearReleaseHistory')}
+              </button>
+            )}
+          </div>
 
           {loading ? (
             <span className={styles.emptyHistory}>{t('admin.loading')}</span>
@@ -240,8 +312,8 @@ export function ReleaseModal({
             <div className={styles.historyList}>
               {windows.map((w) => {
                 const status = getWindowStatus(w);
-                const startStr = formatDate(w.start_date, isEn);
-                const endStr = w.end_date ? formatDate(w.end_date, isEn) : t('admin.releaseUnlimited');
+                const startStr = formatDate(w.start_date);
+                const endStr = w.end_date ? formatDate(w.end_date) : t('admin.releaseUnlimited');
                 const isFuture = w.start_date.split('T')[0] > today;
 
                 const badgeClass =
@@ -281,14 +353,23 @@ export function ReleaseModal({
 
           <div className={styles.divider} />
 
-          {/* Normal product, unreleased: Plan Release (single date) */}
-          {isNormalUnreleased && !showPlanForm && (
+          {/* Action error message */}
+          {actionError && (
+            <div className={styles.infoRow}>
+              <span className={styles.badgeInactive} style={{ fontSize: '0.7rem' }}>
+                {actionError}
+              </span>
+            </div>
+          )}
+
+          {/* Normal product, not active: Plan Release (single date) */}
+          {!isEvent && !localActive && !showPlanForm && (
             <button className={styles.planToggle} onClick={() => setShowPlanForm(true)}>
               {t('admin.planReleaseDate')}
             </button>
           )}
 
-          {isNormalUnreleased && showPlanForm && (
+          {!isEvent && !localActive && showPlanForm && (
             <div className={styles.planForm}>
               <span className={styles.sectionTitle}>{t('admin.planReleaseDate')}</span>
               <div className={styles.fieldRow}>
