@@ -1,0 +1,259 @@
+/* === Card Effects — CSS extracted from animationen/card-finishes.html === */
+
+/* Base container */
+.container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Full-card overlay region */
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+/* === HOLO (Super/Ultra Rare) — 3D shimmer/emboss === */
+.holoSweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%, transparent 25%,
+    rgba(255,255,255,0.18) 38%,
+    rgba(255,255,255,0.25) 50%,
+    rgba(255,255,255,0.18) 62%,
+    transparent 75%, transparent 100%
+  );
+  background-size: 300% 100%;
+  mix-blend-mode: overlay;
+  animation: holoSweep 3s linear infinite;
+}
+@keyframes holoSweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -100% 0; }
+}
+.holoEmboss {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    145deg,
+    rgba(255,255,255,0.13) 0%,
+    transparent 50%,
+    rgba(0,0,0,0.13) 100%
+  );
+  mix-blend-mode: overlay;
+}
+.holoTint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    160deg,
+    rgba(100,180,255,0.13),
+    rgba(200,100,255,0.1),
+    rgba(255,200,100,0.13)
+  );
+  background-size: 300% 300%;
+  mix-blend-mode: color-dodge;
+  animation: holoTint 6s ease-in-out infinite alternate;
+}
+@keyframes holoTint {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+/* === RAINBOW (Secret Rare) — animated border + shimmer === */
+.rainbowBorder {
+  border-radius: 8px;
+  padding: 3px;
+  background: linear-gradient(
+    180deg,
+    #c45050, #c48040, #b8a848, #50a060, #4878a8, #6050a0, #985088, #c45050
+  );
+  background-size: 100% 400%;
+  animation: rainbowBorder 11s linear infinite;
+}
+.rainbowBorder img {
+  border-radius: 5px;
+}
+@keyframes rainbowBorder {
+  0%   { background-position: 0 0%; }
+  100% { background-position: 0 400%; }
+}
+.rainbowShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(196,80,80,0.2) 0%,
+    rgba(196,128,64,0.2) 14%,
+    rgba(184,168,72,0.2) 28%,
+    rgba(80,160,96,0.2) 42%,
+    rgba(72,120,168,0.2) 57%,
+    rgba(96,80,160,0.2) 71%,
+    rgba(152,80,136,0.2) 85%,
+    rgba(196,80,80,0.2) 100%
+  );
+  background-size: 100% 400%;
+  mix-blend-mode: color-dodge;
+  animation: rainbowShimmerFlow 3s linear infinite;
+}
+@keyframes rainbowShimmerFlow {
+  0%   { background-position: 0 0%; }
+  100% { background-position: 0 400%; }
+}
+
+/* === GHOST RARE — silver border + bleached pulse + shimmer === */
+.ghostBorder {
+  border-radius: 8px;
+  padding: 3px;
+  background: linear-gradient(
+    180deg,
+    #e8e8e8, #888888, #d0d0d0, #555555, #f0f0f0, #777777, #cccccc, #444444, #e8e8e8
+  );
+  background-size: 100% 400%;
+  animation: ghostBorder 11s linear infinite;
+}
+.ghostBorder img {
+  border-radius: 5px;
+}
+@keyframes ghostBorder {
+  0%   { background-position: 0 0%; }
+  100% { background-position: 0 400%; }
+}
+.ghostPulse {
+  animation: ghostPulse 10s cubic-bezier(0.45, 0, 0.55, 1) infinite !important;
+}
+@keyframes ghostPulse {
+  0%   { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+  30%  { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+  43%  { filter: saturate(0.5) brightness(1.2) contrast(0.75) invert(0.05); }
+  50%  { filter: saturate(0.8) brightness(1.05) contrast(0.9) invert(0); }
+  57%  { filter: saturate(0.5) brightness(1.2) contrast(0.75) invert(0.05); }
+  70%  { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+  100% { filter: saturate(0.15) brightness(1.4) contrast(0.55) invert(0.12); }
+}
+.ghostShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(196,80,80,0.2) 0%,
+    rgba(196,128,64,0.2) 14%,
+    rgba(184,168,72,0.2) 28%,
+    rgba(80,160,96,0.2) 42%,
+    rgba(72,120,168,0.2) 57%,
+    rgba(96,80,160,0.2) 71%,
+    rgba(152,80,136,0.2) 85%,
+    rgba(196,80,80,0.2) 100%
+  );
+  background-size: 100% 400%;
+  mix-blend-mode: color-dodge;
+  animation: rainbowShimmerFlow 10s linear infinite;
+}
+
+/* === MISPRINT — structural distortion layers === */
+.misprintShift {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.misprintShift img {
+  position: absolute;
+  top: var(--mp-shift-y, 3px);
+  left: var(--mp-shift-x, 4px);
+  width: 100%;
+  height: 100%;
+  opacity: var(--mp-shift-opacity, 0.3);
+  mix-blend-mode: multiply;
+  filter: hue-rotate(var(--mp-shift-hue, 15deg)) saturate(1.4);
+}
+.misprintInk {
+  position: absolute;
+  pointer-events: none;
+  width: var(--mp-ink-w, 60px);
+  height: var(--mp-ink-h, 80px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--mp-ink-color, rgba(200,200,255,0.2)) 0%, transparent 70%);
+  mix-blend-mode: color-dodge;
+  top: var(--mp-ink-y, 40%);
+  left: var(--mp-ink-x, 15%);
+  transform: rotate(var(--mp-ink-rot, -20deg));
+}
+.misprintScratch {
+  position: absolute;
+  pointer-events: none;
+  top: var(--mp-scratch-y, 20%);
+  left: 5%;
+  width: 90%;
+  height: var(--mp-scratch-h, 2px);
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.15) 70%, transparent 100%);
+  transform: rotate(var(--mp-scratch-rot, -5deg));
+  border-radius: 8px;
+}
+.misprintGhost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.misprintGhost img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: var(--mp-ghost-opacity, 0);
+  mix-blend-mode: screen;
+  filter: var(--mp-ghost-filter, none);
+  transform: var(--mp-ghost-transform, none);
+}
+.misprintFx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.misprintGlitch {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  top: var(--mp-glitch1-y, 0);
+  height: var(--mp-glitch1-h, 0);
+  background: var(--mp-glitch1-bg, transparent);
+  mix-blend-mode: var(--mp-glitch1-blend, screen);
+  opacity: var(--mp-glitch1-opacity, 0);
+  transform: skewX(var(--mp-glitch1-skew, 0deg));
+}
+.misprintGlitch2 {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  top: var(--mp-glitch2-y, 0);
+  height: var(--mp-glitch2-h, 0);
+  background: var(--mp-glitch2-bg, transparent);
+  mix-blend-mode: var(--mp-glitch2-blend, screen);
+  opacity: var(--mp-glitch2-opacity, 0);
+  transform: skewX(var(--mp-glitch2-skew, 0deg));
+}
+.misprintLines {
+  position: absolute;
+  inset: 0;
+  background: var(--mp-lines-bg, transparent);
+  mix-blend-mode: var(--mp-lines-blend, screen);
+  opacity: var(--mp-lines-opacity, 0);
+}
