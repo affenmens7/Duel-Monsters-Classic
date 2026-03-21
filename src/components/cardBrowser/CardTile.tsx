@@ -44,8 +44,11 @@ export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, fo
   const imageUrl = getCardImageUrl(card.id, 'small', artworkId);
 
   // When set filter active: check if this specific artwork is available in ANY active set
+  // If the set entry has no artworkId (NULL), use the set's own active status
   const isArtworkUnavailable = setEntry
-    ? !(card.sets?.some((s) => s.artworkId === artworkId && s.active !== false) ?? false)
+    ? (setEntry.artworkId == null
+      ? setEntry.active === false
+      : !(card.sets?.some((s) => s.artworkId === artworkId && s.active !== false) ?? false))
     : false;
 
   return (
@@ -63,8 +66,8 @@ export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, fo
             imageSrc={imageUrl}
             alt={loc.name}
             rarity={card.rarity}
-            isGhost={preferredEffect === 'ghost'}
-            isMisprint={preferredEffect === 'misprint'}
+            isGhost={preferredEffect === 'ghost' || preferredEffect === 'ghost_misprint'}
+            isMisprint={preferredEffect === 'misprint' || preferredEffect === 'ghost_misprint'}
           />
         </div>
         {/* Hidden img for onLoad detection */}

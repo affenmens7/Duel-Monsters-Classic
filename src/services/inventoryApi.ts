@@ -26,6 +26,10 @@ interface DbOwnedCard {
   used_in_decks: number;
   unlocked_artworks: number[];
   preferred_artwork_id: number | null;
+  artwork_variants: { artworkId: number; isGhost: boolean; isMisprint: boolean; misprintData?: Record<string, unknown> }[];
+  preferred_effect: string | null;
+  rarity: string | null;
+  rarity_code: string | null;
 }
 
 function dbToOwnedCard(db: DbOwnedCard): OwnedCard {

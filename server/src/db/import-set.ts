@@ -98,14 +98,30 @@ async function main() {
       cardId = artworkCheck.rows[0].card_id;
       cardsSkipped++;
     } else {
+      // Pick best rarity from card's set entries
+      const cardSetsAll = c.card_sets ?? [];
+      const RARITY_PRIORITY: Record<string, number> = {
+        'Secret Rare': 0, 'Ultra Rare': 1, 'Super Rare': 2,
+        'Rare': 3, 'Short Print': 4, 'Common': 5,
+      };
+      let bestRarity = 'Common';
+      let bestRarityCode = 'C';
+      for (const cs of cardSetsAll) {
+        if ((RARITY_PRIORITY[cs.set_rarity] ?? 99) < (RARITY_PRIORITY[bestRarity] ?? 99)) {
+          bestRarity = cs.set_rarity;
+          bestRarityCode = cs.set_rarity_code ?? 'C';
+        }
+      }
+
       const existing = await pool.query('SELECT id FROM cards WHERE id = $1', [cardId]);
       if (existing.rows.length === 0) {
         await pool.query(
-          `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+          `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, rarity, rarity_code, image_path, ban_status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
           [cardId, nameDe, nameEn, descDe, descEn, typeDe, typeEn, c.frameType,
            c.atk ?? null, c.def ?? null, c.level ?? null,
            raceDe, raceEn, c.attribute ?? null, c.archetype ?? null,
+           bestRarity, bestRarityCode,
            `/images/cards/${cardId}.jpg`, banStatus]
         );
         cardsInserted++;

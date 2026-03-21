@@ -104,11 +104,15 @@ export function DeckCardPopup({
         isMisprint: v.isMisprint,
         misprintData: v.misprintData as Record<string, unknown> | undefined,
       }))}
-      initialGhost={invEntry?.preferredEffect === 'ghost'}
-      initialMisprint={invEntry?.preferredEffect === 'misprint'}
+      initialGhost={invEntry?.preferredEffect === 'ghost' || invEntry?.preferredEffect === 'ghost_misprint'}
+      initialMisprint={invEntry?.preferredEffect === 'misprint' || invEntry?.preferredEffect === 'ghost_misprint'}
       onGhostChange={async (isGhost) => {
         if (!token) return;
-        const effect = isGhost ? 'ghost' : null;
+        const currentEffect = invEntry?.preferredEffect;
+        const hasMisprint = currentEffect === 'misprint' || currentEffect === 'ghost_misprint';
+        const effect = isGhost
+          ? (hasMisprint ? 'ghost_misprint' : 'ghost')
+          : (hasMisprint ? 'misprint' : null);
         setPreferredEffect(card.id, effect);
         fetch(`${env.api.baseUrl}/user/collection/${card.id}/effect`, {
           method: 'PATCH',
@@ -118,7 +122,11 @@ export function DeckCardPopup({
       }}
       onMisprintChange={async (isMisprint) => {
         if (!token) return;
-        const effect = isMisprint ? 'misprint' : null;
+        const currentEffect = invEntry?.preferredEffect;
+        const hasGhost = currentEffect === 'ghost' || currentEffect === 'ghost_misprint';
+        const effect = isMisprint
+          ? (hasGhost ? 'ghost_misprint' : 'misprint')
+          : (hasGhost ? 'ghost' : null);
         setPreferredEffect(card.id, effect);
         fetch(`${env.api.baseUrl}/user/collection/${card.id}/effect`, {
           method: 'PATCH',

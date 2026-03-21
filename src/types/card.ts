@@ -119,7 +119,9 @@ export interface OwnedCard extends Card {
   used_in_decks: number;
   unlockedArtworks: number[];
   unlockedArtworkDetails?: ArtworkVariant[];
+  artwork_variants?: ArtworkVariant[];
   preferredArtworkId: number | null;
+  preferred_effect?: string | null;
 }
 
 export interface CardApiResponse {

@@ -305,7 +305,8 @@ export function AdminSetsPage() {
       showcaseAnimated: row.showcase_animated ?? false,
       igReleaseDate: row.ig_release_date ? row.ig_release_date.split('T')[0] : '',
     });
-    if (token && context === 'sets') {
+    // Load rarity rates for boosters (both sets + shop context)
+    if (token && routeFilter === 'booster') {
       try {
         const [rates, rarities] = await Promise.all([
           fetchSetRates(token, row.name),
@@ -388,6 +389,16 @@ export function AdminSetsPage() {
   // Save
   const handleSave = useCallback(async () => {
     if (!token || !modalRow) return;
+
+    // Validate rarity rates: must sum to 100% if any rates exist
+    if (routeFilter === 'booster' && ratesForm.length > 0) {
+      const sum = ratesForm.reduce((s, r) => s + Number(r.ratePct), 0);
+      if (Math.abs(sum - 100) > 0.01) {
+        setSaveResult({ ok: false, msg: t('admin.rateSum', { sum: sum.toFixed(1) }) });
+        return;
+      }
+    }
+
     setSaving(true);
     setSaveResult(null);
 
@@ -397,7 +408,6 @@ export function AdminSetsPage() {
         wave: setForm.wave,
         og_release_date: setForm.releaseDate || undefined,
       } as never));
-      promises.push(updateSetRates(token, modalRow.name, ratesForm));
     }
     if (context === 'shop' && configForm) {
       promises.push(
@@ -413,6 +423,10 @@ export function AdminSetsPage() {
         }),
       );
     }
+    // Save rarity rates for boosters (both contexts)
+    if (routeFilter === 'booster' && ratesForm.length > 0) {
+      promises.push(updateSetRates(token, modalRow.name, ratesForm));
+    }
 
     const results = await Promise.allSettled(promises);
     const failed = results.filter((r) => r.status === 'rejected');
@@ -424,7 +438,7 @@ export function AdminSetsPage() {
       setSaveResult({ ok: false, msg: reason });
     }
     setSaving(false);
-  }, [token, modalRow, setForm, configForm, ratesForm, context, loadSets, t]);
+  }, [token, modalRow, setForm, configForm, ratesForm, routeFilter, context, loadSets, t, showcaseCards]);
 
   // Rarity rates helpers
   const ratesSum = ratesForm.reduce((sum, r) => sum + Number(r.ratePct), 0);

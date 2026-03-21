@@ -78,6 +78,8 @@ cardsRouter.get('/', async (req, res) => {
        FROM cards c ${whereClause} ORDER BY ${
         safeSort === 'ban_status'
           ? `CASE ban_status WHEN 'Forbidden' THEN 0 WHEN 'Limited' THEN 1 WHEN 'Semi-Limited' THEN 2 ELSE 3 END`
+          : safeSort === 'rarity'
+          ? `CASE rarity WHEN 'Secret Rare' THEN 0 WHEN 'Ultra Rare' THEN 1 WHEN 'Super Rare' THEN 2 WHEN 'Rare' THEN 3 ELSE 4 END`
           : safeSort
        } ${sortDir} NULLS LAST LIMIT $${idx} OFFSET $${idx + 1}`,
       dataParams
@@ -103,7 +105,7 @@ cardsRouter.get('/', async (req, res) => {
  */
 cardsRouter.post('/', async (req, res) => {
   try {
-    const { id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype } = req.body;
+    const { id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, rarity, rarity_code } = req.body;
 
     if (!id || !name_en || !frame_type) {
       res.status(400).json({ error: 'id, name_en und frame_type sind Pflichtfelder' });
@@ -111,10 +113,10 @@ cardsRouter.post('/', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, rarity, rarity_code, image_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
        RETURNING *`,
-      [id, name_de ?? name_en, name_en, desc_de ?? '', desc_en ?? '', type_de ?? '', type_en ?? '', frame_type, atk ?? null, def ?? null, level ?? null, race_de ?? '', race_en ?? '', attribute ?? null, archetype ?? null, `/images/cards/${id}.jpg`]
+      [id, name_de ?? name_en, name_en, desc_de ?? '', desc_en ?? '', type_de ?? '', type_en ?? '', frame_type, atk ?? null, def ?? null, level ?? null, race_de ?? '', race_en ?? '', attribute ?? null, archetype ?? null, rarity ?? 'Common', rarity_code ?? 'C', `/images/cards/${id}.jpg`]
     );
 
     console.log(`[ADMIN] user=${req.user!.userId} action=create_card target=${id}`);
@@ -440,10 +442,25 @@ cardsRouter.post('/import', async (req, res) => {
     const raceDe = deCard?.race ?? c.race;
     const banStatus = c.banlist_info?.ban_tcg ?? null;
 
+    // Pick the highest-priority rarity from the card's set entries
+    const RARITY_PRIORITY: Record<string, number> = {
+      'Secret Rare': 0, 'Ultra Rare': 1, 'Super Rare': 2,
+      'Rare': 3, 'Short Print': 4, 'Common': 5,
+    };
+    const cardSets = c.card_sets ?? [];
+    let bestRarity = 'Common';
+    let bestRarityCode = 'C';
+    for (const cs of cardSets) {
+      if ((RARITY_PRIORITY[cs.set_rarity] ?? 99) < (RARITY_PRIORITY[bestRarity] ?? 99)) {
+        bestRarity = cs.set_rarity;
+        bestRarityCode = cs.set_rarity_code ?? 'C';
+      }
+    }
+
     await pool.query(
-      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, image_path, ban_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-      [c.id, nameDe, c.name, descDe, c.desc, typeDe, c.type, c.frameType, c.atk ?? null, c.def ?? null, c.level ?? null, raceDe, c.race, c.attribute ?? null, c.archetype ?? null, `/images/cards/${c.id}.jpg`, banStatus]
+      `INSERT INTO cards (id, name_de, name_en, desc_de, desc_en, type_de, type_en, frame_type, atk, def, level, race_de, race_en, attribute, archetype, rarity, rarity_code, image_path, ban_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+      [c.id, nameDe, c.name, descDe, c.desc, typeDe, c.type, c.frameType, c.atk ?? null, c.def ?? null, c.level ?? null, raceDe, c.race, c.attribute ?? null, c.archetype ?? null, bestRarity, bestRarityCode, `/images/cards/${c.id}.jpg`, banStatus]
     );
 
     // Download all artworks
@@ -514,7 +531,8 @@ cardsRouter.get('/:id/artworks', async (req, res) => {
       `SELECT ca.artwork_id AS "artworkId", ca.label, ca.image_path AS "imagePath", ca.is_default AS "isDefault",
         (SELECT string_agg(cse.set_name, ', ')
          FROM card_set_entries cse
-         WHERE cse.card_id = ca.card_id AND cse.artwork_id = ca.artwork_id
+         WHERE cse.card_id = ca.card_id
+           AND (cse.artwork_id = ca.artwork_id OR (cse.artwork_id IS NULL AND ca.is_default = TRUE))
         ) AS "availableIn"
        FROM card_artworks ca
        WHERE ca.card_id = $1

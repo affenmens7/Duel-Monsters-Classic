@@ -167,7 +167,7 @@ userRouter.patch('/collection/:cardId/effect', requireAuth, async (req, res) => 
       return;
     }
 
-    const valid = [null, 'ghost', 'misprint'];
+    const valid = [null, 'ghost', 'misprint', 'ghost_misprint'];
     if (!valid.includes(effect)) {
       res.status(400).json({ error: 'Ungueltiger Effekt' });
       return;
@@ -183,8 +183,21 @@ userRouter.patch('/collection/:cardId/effect', requireAuth, async (req, res) => 
       return;
     }
 
-    // If setting ghost/misprint, verify the user owns that variant
-    if (effect) {
+    // If setting ghost/misprint, verify the user owns the required variant(s)
+    if (effect === 'ghost_misprint') {
+      const variants = await pool.query(
+        `SELECT
+           bool_or(is_ghost) as has_ghost,
+           bool_or(is_misprint) as has_misprint
+         FROM user_card_artworks
+         WHERE user_id = $1 AND card_id = $2`,
+        [userId, cardId]
+      );
+      if (!variants.rows[0]?.has_ghost || !variants.rows[0]?.has_misprint) {
+        res.status(400).json({ error: 'Effekt nicht freigeschaltet' });
+        return;
+      }
+    } else if (effect) {
       const variant = await pool.query(
         `SELECT id FROM user_card_artworks WHERE user_id = $1 AND card_id = $2
          AND ${effect === 'ghost' ? 'is_ghost = TRUE' : 'is_misprint = TRUE'}`,

@@ -172,7 +172,8 @@ cardsRouter.get('/:id', async (req, res) => {
       `SELECT ca.artwork_id AS "artworkId", ca.label, ca.image_path AS "imagePath", ca.is_default AS "isDefault",
         (SELECT string_agg(cse.set_name, ', ')
          FROM card_set_entries cse
-         WHERE cse.card_id = ca.card_id AND cse.artwork_id = ca.artwork_id
+         WHERE cse.card_id = ca.card_id
+           AND (cse.artwork_id = ca.artwork_id OR (cse.artwork_id IS NULL AND ca.is_default = TRUE))
         ) AS "availableIn"
        FROM card_artworks ca
        WHERE ca.card_id = $1
