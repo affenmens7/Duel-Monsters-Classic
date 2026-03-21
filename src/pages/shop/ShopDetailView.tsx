@@ -291,6 +291,8 @@ export function ShopDetailView({
                 <CardEffects
                   imageSrc={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)}
                   rarity={allCards.find((c) => c.id === card.cardId)?.rarity}
+                  isGhost={card.isGhost}
+                  isMisprint={card.isMisprint}
                   className={styles.cardCellImg}
                 />
                 {isSelected && <span className={styles.cardCellSlot}>{slotIndex + 1}</span>}

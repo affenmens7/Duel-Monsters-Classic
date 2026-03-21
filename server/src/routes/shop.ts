@@ -305,7 +305,9 @@ shopRouter.get('/products/:setName', requireAuth, async (req, res) => {
         c.rarity,
         c.rarity_code   AS "rarityCode",
         cse.artwork_id  AS "artworkId",
-        COALESCE(uc.quantity, 0)::int AS "owned"
+        COALESCE(uc.quantity, 0)::int AS "owned",
+        COALESCE(cse.is_ghost, FALSE) AS "isGhost",
+        COALESCE(cse.is_misprint, FALSE) AS "isMisprint"
       FROM card_set_entries cse
       JOIN cards c ON c.id = cse.card_id
       LEFT JOIN user_cards uc ON uc.card_id = cse.card_id AND uc.user_id = $2

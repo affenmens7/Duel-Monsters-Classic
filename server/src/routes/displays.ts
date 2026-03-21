@@ -142,7 +142,9 @@ displaysRouter.get('/:id', requireAuth, async (req, res) => {
              cse.set_name AS "setName",
              c.rarity,
              c.rarity_code AS "rarityCode",
-             COALESCE(uc.quantity, 0)::int AS owned
+             COALESCE(uc.quantity, 0)::int AS owned,
+             COALESCE(cse.is_ghost, FALSE) AS "isGhost",
+             COALESCE(cse.is_misprint, FALSE) AS "isMisprint"
       FROM card_set_entries cse
       JOIN cards c ON c.id = cse.card_id
       JOIN shop_display_contents dc ON dc.booster_set_name = cse.set_name

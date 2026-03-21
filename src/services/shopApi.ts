@@ -63,6 +63,8 @@ export interface SetCardEntry {
   artworkId: number | null;
   owned: number;
   setName?: string;
+  isGhost?: boolean;
+  isMisprint?: boolean;
 }
 
 export interface SetDetail {
