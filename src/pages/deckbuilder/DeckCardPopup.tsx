@@ -110,7 +110,7 @@ export function DeckCardPopup({
         if (!token) return;
         const effect = isGhost ? 'ghost' : null;
         setPreferredEffect(card.id, effect);
-        fetch(`${env.api.baseUrl}/user/collection${card.id}/effect`, {
+        fetch(`${env.api.baseUrl}/user/collection/${card.id}/effect`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ effect }),
@@ -120,7 +120,7 @@ export function DeckCardPopup({
         if (!token) return;
         const effect = isMisprint ? 'misprint' : null;
         setPreferredEffect(card.id, effect);
-        fetch(`${env.api.baseUrl}/user/collection${card.id}/effect`, {
+        fetch(`${env.api.baseUrl}/user/collection/${card.id}/effect`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ effect }),

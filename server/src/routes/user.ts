@@ -152,11 +152,11 @@ userRouter.patch('/collection/:cardId/artwork', requireAuth, async (req, res) =>
 });
 
 /**
- * PATCH /api/user/collection:cardId/effect
+ * PATCH /api/user/collection/:cardId/effect
  * Set preferred effect for a card in the user's collection.
  * Body: { effect: null | 'ghost' | 'misprint' }
  */
-userRouter.patch('/collection:cardId/effect', requireAuth, async (req, res) => {
+userRouter.patch('/collection/:cardId/effect', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.userId;
     const cardId = parseInt(req.params.cardId as string, 10);
