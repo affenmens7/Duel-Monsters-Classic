@@ -6,6 +6,7 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
+import { useSession } from '../../store/SessionContext';
 import { useCardLocale } from '../../hooks/useCardLocale';
 import { env } from '../../config/env';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
@@ -51,6 +52,8 @@ export function DeckCardPopup({
   const { localize } = useCardLocale();
 
   const ownedCard = collection.find((c) => c.id === card.id);
+  const { inventory } = useSession();
+  const invEntry = inventory.get(card.id);
   const inDeck = cardCounts.get(card.id) ?? 0;
 
   const isForbidden = card.banStatus === 'Forbidden';
@@ -95,7 +98,12 @@ export function DeckCardPopup({
           }))
         : undefined
       }
-      effectPreviewMode
+      artworkVariants={invEntry?.artworkVariants?.map((v) => ({
+        artworkId: v.artworkId,
+        isGhost: v.isGhost,
+        isMisprint: v.isMisprint,
+        misprintData: v.misprintData as Record<string, unknown> | undefined,
+      }))}
       isPreviewGreyed={
         popupPreviewArtId != null &&
         !(ownedCard?.unlockedArtworks?.includes(popupPreviewArtId) ?? false)

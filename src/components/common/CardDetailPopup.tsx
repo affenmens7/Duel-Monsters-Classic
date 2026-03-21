@@ -147,7 +147,7 @@ export function CardDetailPopup({
   const effectTier = getEffectTier(card.rarity ?? undefined);
   const canGhost = effectPreviewMode || hasGhostVariant;
   const canMisprint = effectPreviewMode || hasMisprintVariant;
-  const showEffectToggles = effectPreviewMode || (artworkVariants && artworkVariants.length > 0);
+  const showEffectToggles = effectPreviewMode || artworkVariants !== undefined;
   const ghostEligible = effectTier === 'holo' || effectTier === 'rainbow';
 
   // Find the currently previewed artwork info
