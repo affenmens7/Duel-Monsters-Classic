@@ -550,15 +550,15 @@
 /* ---- Inline Table Select (ban status) ---- */
 
 .inlineSelect {
+  padding: 3px 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
   font-family: var(--font-heading);
   font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--text-primary);
-  background: transparent;
-  border: none;
-  padding: 3px 4px;
   cursor: pointer;
   width: 100%;
   appearance: none;
@@ -567,20 +567,72 @@
 }
 
 .inlineSelect option {
-  background: var(--bg-card, #0a1a14);
+  background: var(--bg-input, rgba(0, 0, 0, 0.9));
   color: var(--text-primary, #d0d8d4);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  text-transform: none;
 }
 
 .inlineSelect:focus {
   outline: none;
 }
 
-/* Rarity colors for inline select */
-.rarityCommon { color: #9a9a9a; }
-.rarityRare { color: #4a90d9; }
-.raritySuperRare { color: #d4a44a; }
-.rarityUltraRare { color: #c44a6a; }
-.raritySecretRare { color: #cc44cc; }
+/* Rarity badge styles (matching CardDetailPopup badges) */
+.rarityCommon {
+  color: #9a9a9a;
+  border-color: rgba(154, 154, 154, 0.3);
+  background: rgba(154, 154, 154, 0.06);
+}
+.rarityRare {
+  color: #4a90d9;
+  border-color: rgba(74, 144, 217, 0.3);
+  background: rgba(74, 144, 217, 0.06);
+}
+.raritySuperRare {
+  color: #d4a44a;
+  border-color: rgba(212, 164, 74, 0.3);
+  background: rgba(212, 164, 74, 0.08);
+}
+.rarityUltraRare {
+  color: #c44a6a;
+  border-color: rgba(196, 74, 106, 0.3);
+  background: rgba(196, 74, 106, 0.08);
+}
+.raritySecretRare {
+  color: #d0d0d0;
+  background: linear-gradient(135deg, rgba(255,0,0,0.08), rgba(255,165,0,0.08), rgba(255,255,0,0.08), rgba(0,200,0,0.08), rgba(0,100,255,0.08), rgba(140,0,255,0.08));
+  border-image: linear-gradient(135deg, #ff4444, #ff9944, #eedd44, #44dd66, #4488ff, #aa44ff) 1;
+}
+
+.rarityBadgeSelect {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+}
+.rarityBadgeSelect select {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.rarityBadgeSelect select option {
+  background: var(--bg-input, rgba(0, 0, 0, 0.3));
+  color: var(--text-primary, #d0d8d4);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 4px 8px;
+}
 
 /* ---- Save / Delete Card ---- */
 

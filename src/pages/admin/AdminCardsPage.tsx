@@ -362,50 +362,54 @@ export function AdminCardsPage() {
                         : '\u2014'}
                   </td>
                   <td className={styles.td} onClick={(e) => e.stopPropagation()}>
-                    <select
-                      className={`${styles.inlineSelect} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}
-                      value={card.ban_status ?? ''}
-                      onChange={async (e) => {
-                        if (!token) return;
-                        const val = e.target.value || null;
-                        try {
-                          await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/ban`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ banStatus: val }),
-                          });
-                          loadCards();
-                        } catch { /* ignore */ }
-                      }}
-                    >
-                      <option value="">{t('banStatus.Unlimited')}</option>
-                      <option value="Semi-Limited">{t('banStatus.Semi-Limited')}</option>
-                      <option value="Limited">{t('banStatus.Limited')}</option>
-                      <option value="Forbidden">{t('banStatus.Forbidden')}</option>
-                    </select>
+                    <span className={`${styles.rarityBadgeSelect} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}>
+                      {t(`banStatus.${card.ban_status ?? 'Unlimited'}`)}
+                      <select
+                        value={card.ban_status ?? ''}
+                        onChange={async (e) => {
+                          if (!token) return;
+                          const val = e.target.value || null;
+                          try {
+                            await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/ban`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ banStatus: val }),
+                            });
+                            loadCards();
+                          } catch { /* ignore */ }
+                        }}
+                      >
+                        <option value="">{t('banStatus.Unlimited')}</option>
+                        <option value="Semi-Limited">{t('banStatus.Semi-Limited')}</option>
+                        <option value="Limited">{t('banStatus.Limited')}</option>
+                        <option value="Forbidden">{t('banStatus.Forbidden')}</option>
+                      </select>
+                    </span>
                   </td>
                   <td className={styles.td} onClick={(e) => e.stopPropagation()}>
-                    <select
-                      className={`${styles.inlineSelect} ${styles[`rarity${(card.rarity ?? 'Common').replace(/\s/g, '')}`]}`}
-                      value={card.rarity ?? 'Common'}
-                      onChange={async (e) => {
-                        if (!token) return;
-                        try {
-                          await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/rarity`, {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                            body: JSON.stringify({ rarity: e.target.value }),
-                          });
-                          loadCards();
-                        } catch { /* ignore */ }
-                      }}
-                    >
-                      <option value="Common">Common</option>
-                      <option value="Rare">Rare</option>
-                      <option value="Super Rare">Super Rare</option>
-                      <option value="Ultra Rare">Ultra Rare</option>
-                      <option value="Secret Rare">Secret Rare</option>
-                    </select>
+                    <span className={`${styles.rarityBadgeSelect} ${styles[`rarity${(card.rarity ?? 'Common').replace(/\s/g, '')}`]}`}>
+                      {card.rarity ?? 'Common'}
+                      <select
+                        value={card.rarity ?? 'Common'}
+                        onChange={async (e) => {
+                          if (!token) return;
+                          try {
+                            await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/rarity`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ rarity: e.target.value }),
+                            });
+                            loadCards();
+                          } catch { /* ignore */ }
+                        }}
+                      >
+                        <option value="Common">Common</option>
+                        <option value="Rare">Rare</option>
+                        <option value="Super Rare">Super Rare</option>
+                        <option value="Ultra Rare">Ultra Rare</option>
+                        <option value="Secret Rare">Secret Rare</option>
+                      </select>
+                    </span>
                   </td>
                 </tr>
               ))}

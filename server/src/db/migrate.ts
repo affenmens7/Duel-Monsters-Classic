@@ -70,6 +70,8 @@ const schema = `
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_card_set_entries_unique
     ON card_set_entries (card_id, set_name);
+  CREATE INDEX IF NOT EXISTS idx_card_set_entries_set_name
+    ON card_set_entries (set_name);
 
   -- Shop product config per set (prices, pack size, description)
   CREATE TABLE IF NOT EXISTS shop_set_config (
@@ -310,6 +312,12 @@ const schema = `
 
   CREATE INDEX IF NOT EXISTS idx_release_windows_product
     ON shop_release_windows(product_type, product_id);
+  CREATE INDEX IF NOT EXISTS idx_shop_display_contents_display
+    ON shop_display_contents(display_id);
+  CREATE INDEX IF NOT EXISTS idx_shop_display_contents_booster
+    ON shop_display_contents(booster_set_name);
+  CREATE INDEX IF NOT EXISTS idx_decks_user
+    ON decks(user_id);
 
   -- Auto-create missing shop_set_config for any card_sets without one
   INSERT INTO shop_set_config (set_name, product_type, price_pack, pack_size)

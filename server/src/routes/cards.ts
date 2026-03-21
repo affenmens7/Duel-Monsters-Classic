@@ -16,7 +16,8 @@ cardsRouter.get('/count', async (_req, res) => {
   try {
     const result = await pool.query('SELECT COUNT(*)::int AS count FROM cards');
     res.json({ count: result.rows[0].count });
-  } catch {
+  } catch (err) {
+    console.error('Card count failed:', err);
     res.status(500).json({ count: 0 });
   }
 });
@@ -29,40 +30,68 @@ cardsRouter.get('/count', async (_req, res) => {
  */
 cardsRouter.get('/browse', async (_req, res) => {
   try {
-    const result = await pool.query(`
-      WITH purchasable_sets AS (
-        SELECT sc.set_name FROM shop_set_config sc WHERE sc.shop_active = TRUE
-        UNION
-        SELECT sdc.booster_set_name FROM shop_display_contents sdc
-        JOIN shop_displays sd ON sd.id = sdc.display_id WHERE sd.shop_active = TRUE
-      )
-      SELECT c.*,
-        EXISTS(
-          SELECT 1 FROM card_set_entries cse
-          WHERE cse.card_id = c.id
-            AND cse.set_name IN (SELECT set_name FROM purchasable_sets)
-        ) AS available,
-        COALESCE(
-          (SELECT ARRAY_AGG(ca.artwork_id ORDER BY ca.is_default DESC, ca.artwork_id)
-           FROM card_artworks ca WHERE ca.card_id = c.id),
-          ARRAY[]::int[]
-        ) AS artwork_ids,
-        COALESCE(
-          (SELECT JSON_AGG(JSON_BUILD_OBJECT(
-             'name', cs.name, 'code', cs.code,
-             'active', (cse.set_name IN (SELECT set_name FROM purchasable_sets)),
-             'artworkId', cse.artwork_id
-           ) ORDER BY (cse.set_name IN (SELECT set_name FROM purchasable_sets)) DESC, cs.wave, cs.name)
-           FROM card_set_entries cse
-           JOIN card_sets cs ON cs.name = cse.set_name
-           WHERE cse.card_id = c.id),
-          '[]'::json
-        ) AS sets
-      FROM cards c
-      ORDER BY c.name_en
+    // Pre-compute purchasable sets once, then use in the main query
+    const psResult = await pool.query(`
+      SELECT sc.set_name FROM shop_set_config sc WHERE sc.shop_active = TRUE
+      UNION
+      SELECT sdc.booster_set_name FROM shop_display_contents sdc
+      JOIN shop_displays sd ON sd.id = sdc.display_id WHERE sd.shop_active = TRUE
     `);
-    res.json(result.rows);
-  } catch {
+    const purchasableSets = new Set(psResult.rows.map((r: { set_name: string }) => r.set_name));
+
+    // Main query: cards + artworks + set entries in two efficient queries
+    const [cardsResult, setsResult] = await Promise.all([
+      pool.query(`
+        SELECT c.*,
+          COALESCE(art.artwork_ids, ARRAY[]::int[]) AS artwork_ids
+        FROM cards c
+        LEFT JOIN LATERAL (
+          SELECT ARRAY_AGG(ca.artwork_id ORDER BY ca.is_default DESC, ca.artwork_id) AS artwork_ids
+          FROM card_artworks ca WHERE ca.card_id = c.id
+        ) art ON TRUE
+        ORDER BY c.name_en
+      `),
+      pool.query(`
+        SELECT cse.card_id, cse.set_name, cse.artwork_id, cs.code, cs.wave
+        FROM card_set_entries cse
+        JOIN card_sets cs ON cs.name = cse.set_name
+        ORDER BY cs.wave, cs.name
+      `),
+    ]);
+
+    // Build set entries map and availability in JS (much faster than per-row SQL)
+    const setsByCard = new Map<number, Array<{ name: string; code: string; active: boolean; artworkId: number | null }>>();
+    const availableCards = new Set<number>();
+
+    for (const row of setsResult.rows as any[]) {
+      const isActive = purchasableSets.has(row.set_name);
+      if (isActive) availableCards.add(row.card_id);
+
+      const list = setsByCard.get(row.card_id) ?? [];
+      list.push({
+        name: row.set_name,
+        code: row.code,
+        active: isActive,
+        artworkId: row.artwork_id ?? null,
+      });
+      setsByCard.set(row.card_id, list);
+    }
+
+    // Sort sets: active first, then by wave/name
+    for (const [, sets] of setsByCard) {
+      sets.sort((a, b) => (a.active === b.active ? 0 : a.active ? -1 : 1));
+    }
+
+    // Merge into card rows
+    const cards = cardsResult.rows.map((card: any) => ({
+      ...card,
+      available: availableCards.has(card.id),
+      sets: setsByCard.get(card.id) ?? [],
+    }));
+
+    res.json(cards);
+  } catch (err) {
+    console.error('Browse cards failed:', err);
     res.status(500).json({ error: 'Kartendaten konnten nicht geladen werden' });
   }
 });
@@ -89,7 +118,8 @@ cardsRouter.get('/sets/all', async (_req, res) => {
       ORDER BY cs.wave, cs.type DESC, cs.name
     `);
     res.json(result.rows);
-  } catch {
+  } catch (err) {
+    console.error('Load sets failed:', err);
     res.status(500).json({ error: 'Sets konnten nicht geladen werden' });
   }
 });
@@ -109,7 +139,8 @@ cardsRouter.get('/sets/:name', async (req, res) => {
       ORDER BY c.name_en
     `, [setName]);
     res.json(result.rows);
-  } catch {
+  } catch (err) {
+    console.error('Load set cards failed:', err);
     res.status(500).json({ error: 'Set-Karten konnten nicht geladen werden' });
   }
 });
@@ -150,7 +181,8 @@ cardsRouter.get('/:id', async (req, res) => {
     );
 
     res.json({ ...cardResult.rows[0], sets: setsResult.rows, artworks: artworksResult.rows });
-  } catch {
+  } catch (err) {
+    console.error('Load card failed:', err);
     res.status(500).json({ error: 'Karte konnte nicht geladen werden' });
   }
 });
