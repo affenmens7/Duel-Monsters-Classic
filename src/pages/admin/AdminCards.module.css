@@ -547,6 +547,41 @@
   border-color: var(--orichalcos-subtle);
 }
 
+/* ---- Inline Table Select (ban status) ---- */
+
+.inlineSelect {
+  font-family: var(--font-heading);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  padding: 3px 4px;
+  cursor: pointer;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.inlineSelect option {
+  background: var(--bg-card, #0a1a14);
+  color: var(--text-primary, #d0d8d4);
+}
+
+.inlineSelect:focus {
+  outline: none;
+}
+
+/* Rarity colors for inline select */
+.rarityCommon { color: #9a9a9a; }
+.rarityRare { color: #4a90d9; }
+.raritySuperRare { color: #d4a44a; }
+.rarityUltraRare { color: #c44a6a; }
+.raritySecretRare { color: #cc44cc; }
+
 /* ---- Delete Card ---- */
 
 .deleteCardBtn {

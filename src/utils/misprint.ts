@@ -143,3 +143,32 @@ export function misprintDataToCssVars(data: MisprintData): Record<string, string
 
   return vars;
 }
+
+/** Generate random misprint data for preview (client-side only, not stored). */
+export function generatePreviewMisprintData(): MisprintData {
+  const r = (min: number, max: number) => Math.random() * (max - min) + min;
+  const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+  const extras = ['print-lines', 'print-lines-cross', 'glitch-band', 'ink-bleed', 'scratch'];
+  const shuffled = extras.sort(() => Math.random() - 0.5);
+  const defects = ['heavy-shift', 'ghost-double', ...shuffled.slice(0, Math.floor(r(1, 4)))];
+
+  return {
+    defects,
+    baseHue: r(-8, 8), baseSat: r(0.85, 1.15), baseBrt: r(0.92, 1.08),
+    shiftX: r(-15, 15), shiftY: r(-12, 12), shiftOpacity: r(0.25, 0.55), shiftHue: r(-15, 15),
+    ghostOpacity: r(0.15, 0.4), ghostTranslateX: r(-18, 18), ghostTranslateY: r(-14, 14),
+    ghostScale: r(1.03, 1.12), ghostSkew: r(-8, 8), ghostRotate: r(-5, 5),
+    ghostBlur: r(0.5, 3), ghostBrt: r(1.0, 1.4), ghostCon: r(0.5, 0.9),
+    linesAngle: pick([0, 90, 45, -45, 30]), linesSpacing: r(6, 25), linesWidth: r(0.5, 3),
+    linesGlittery: Math.random() < 0.5, linesColorR: r(180, 255), linesColorG: r(180, 255),
+    linesColorB: r(200, 255), linesAlpha: r(0.06, 0.2), linesOpacity: r(0.6, 1),
+    glitch1Y: r(8, 80), glitch1H: r(3, 12),
+    glitch1Bg: pick(['rgba(255,255,255,0.2)', 'rgba(200,200,255,0.25)']),
+    glitch1Opacity: r(0.5, 1), glitch1Skew: r(-20, 20),
+    glitch2Y: r(15, 85), glitch2H: r(1, 8), glitch2Opacity: r(0.4, 0.9), glitch2Skew: r(-12, 12),
+    inkColor: pick(['rgba(200,200,255,0.3)', 'rgba(180,220,255,0.25)']),
+    inkW: r(50, 120), inkH: r(50, 140), inkX: r(5, 65), inkY: r(10, 70), inkRot: r(-45, 45),
+    scratchY: r(10, 80), scratchRot: r(-12, 12), scratchH: pick([1, 2, 3]),
+  };
+}

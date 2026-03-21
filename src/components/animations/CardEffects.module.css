@@ -3,9 +3,9 @@
 /* Base container */
 .container {
   position: relative;
-  border-radius: 8px;
   overflow: hidden;
 }
+
 .container img {
   width: 100%;
   height: 100%;
@@ -19,7 +19,6 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  border-radius: 8px;
 }
 
 /* === HOLO (Super/Ultra Rare) — 3D shimmer/emboss === */
@@ -29,9 +28,9 @@
   background: linear-gradient(
     110deg,
     transparent 0%, transparent 25%,
-    rgba(255,255,255,0.18) 38%,
-    rgba(255,255,255,0.25) 50%,
-    rgba(255,255,255,0.18) 62%,
+    rgba(255,255,255,0.35) 38%,
+    rgba(255,255,255,0.5) 50%,
+    rgba(255,255,255,0.35) 62%,
     transparent 75%, transparent 100%
   );
   background-size: 300% 100%;
@@ -47,9 +46,9 @@
   inset: 0;
   background: linear-gradient(
     145deg,
-    rgba(255,255,255,0.13) 0%,
+    rgba(255,255,255,0.25) 0%,
     transparent 50%,
-    rgba(0,0,0,0.13) 100%
+    rgba(0,0,0,0.25) 100%
   );
   mix-blend-mode: overlay;
 }
@@ -58,9 +57,9 @@
   inset: 0;
   background: linear-gradient(
     160deg,
-    rgba(100,180,255,0.13),
-    rgba(200,100,255,0.1),
-    rgba(255,200,100,0.13)
+    rgba(100,180,255,0.25),
+    rgba(200,100,255,0.2),
+    rgba(255,200,100,0.25)
   );
   background-size: 300% 300%;
   mix-blend-mode: color-dodge;
@@ -73,17 +72,20 @@
 
 /* === RAINBOW (Secret Rare) — animated border + shimmer === */
 .rainbowBorder {
-  border-radius: 8px;
-  padding: 3px;
+  position: relative;
+}
+.rainbowBorder::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 6px;
   background: linear-gradient(
     180deg,
     #c45050, #c48040, #b8a848, #50a060, #4878a8, #6050a0, #985088, #c45050
   );
   background-size: 100% 400%;
   animation: rainbowBorder 11s linear infinite;
-}
-.rainbowBorder img {
-  border-radius: 5px;
+  z-index: -1;
 }
 @keyframes rainbowBorder {
   0%   { background-position: 0 0%; }
@@ -94,14 +96,14 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(196,80,80,0.2) 0%,
-    rgba(196,128,64,0.2) 14%,
-    rgba(184,168,72,0.2) 28%,
-    rgba(80,160,96,0.2) 42%,
-    rgba(72,120,168,0.2) 57%,
-    rgba(96,80,160,0.2) 71%,
-    rgba(152,80,136,0.2) 85%,
-    rgba(196,80,80,0.2) 100%
+    rgba(196,80,80,0.35) 0%,
+    rgba(196,128,64,0.35) 14%,
+    rgba(184,168,72,0.35) 28%,
+    rgba(80,160,96,0.35) 42%,
+    rgba(72,120,168,0.35) 57%,
+    rgba(96,80,160,0.35) 71%,
+    rgba(152,80,136,0.35) 85%,
+    rgba(196,80,80,0.35) 100%
   );
   background-size: 100% 400%;
   mix-blend-mode: color-dodge;
@@ -114,17 +116,20 @@
 
 /* === GHOST RARE — silver border + bleached pulse + shimmer === */
 .ghostBorder {
-  border-radius: 8px;
-  padding: 3px;
+  position: relative;
+}
+.ghostBorder::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 6px;
   background: linear-gradient(
     180deg,
     #e8e8e8, #888888, #d0d0d0, #555555, #f0f0f0, #777777, #cccccc, #444444, #e8e8e8
   );
   background-size: 100% 400%;
   animation: ghostBorder 11s linear infinite;
-}
-.ghostBorder img {
-  border-radius: 5px;
+  z-index: -1;
 }
 @keyframes ghostBorder {
   0%   { background-position: 0 0%; }
@@ -167,7 +172,6 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  border-radius: 8px;
 }
 .misprintShift img {
   position: absolute;
@@ -200,14 +204,12 @@
   height: var(--mp-scratch-h, 2px);
   background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.15) 70%, transparent 100%);
   transform: rotate(var(--mp-scratch-rot, -5deg));
-  border-radius: 8px;
 }
 .misprintGhost {
   position: absolute;
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  border-radius: 8px;
 }
 .misprintGhost img {
   position: absolute;
@@ -224,7 +226,6 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
-  border-radius: 8px;
 }
 .misprintGlitch {
   position: absolute;

@@ -37,7 +37,7 @@ cardsRouter.get('/', async (req, res) => {
     const offset = (page - 1) * limit;
 
     // Whitelist sortable columns
-    const sortableColumns = ['name_en', 'name_de', 'frame_type', 'atk', 'def', 'level', 'attribute', 'id', 'ban_status'];
+    const sortableColumns = ['name_en', 'name_de', 'frame_type', 'atk', 'def', 'level', 'attribute', 'id', 'ban_status', 'rarity'];
     const safeSort = sortableColumns.includes(sortBy) ? sortBy : 'name_en';
 
     const conditions: string[] = [];
@@ -214,6 +214,50 @@ cardsRouter.patch('/:id/ban', async (req, res) => {
   } catch (err) {
     console.error('Set ban status failed:', err);
     res.status(500).json({ error: 'Ban-Status konnte nicht gesetzt werden' });
+  }
+});
+
+/**
+ * PATCH /api/admin/cards/:id/rarity
+ * Updates the rarity for a card.
+ * Body: { rarity: "Common" | "Rare" | "Super Rare" | "Ultra Rare" | "Secret Rare" }
+ */
+cardsRouter.patch('/:id/rarity', async (req, res) => {
+  try {
+    const cardId = parseInt(req.params.id, 10);
+    if (isNaN(cardId)) {
+      res.status(400).json({ error: 'Ungueltige Karten-ID' });
+      return;
+    }
+
+    const { rarity } = req.body;
+    const valid = ['Common', 'Rare', 'Super Rare', 'Ultra Rare', 'Secret Rare'];
+    if (!valid.includes(rarity)) {
+      res.status(400).json({ error: 'Ungueltige Rarity' });
+      return;
+    }
+
+    const codeMap: Record<string, string> = {
+      'Common': 'C', 'Rare': 'R', 'Super Rare': 'SR', 'Ultra Rare': 'UR', 'Secret Rare': 'ScR',
+    };
+
+    const result = await pool.query(
+      'UPDATE cards SET rarity = $1, rarity_code = $2 WHERE id = $3 RETURNING id, rarity, rarity_code',
+      [rarity, codeMap[rarity], cardId]
+    );
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Karte nicht gefunden' });
+      return;
+    }
+
+    console.log(`[ADMIN] user=${req.user!.userId} action=set_rarity target=${cardId} rarity=${rarity}`);
+
+    await bumpDataVersion();
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Set rarity failed:', err);
+    res.status(500).json({ error: 'Rarity konnte nicht gesetzt werden' });
   }
 });
 

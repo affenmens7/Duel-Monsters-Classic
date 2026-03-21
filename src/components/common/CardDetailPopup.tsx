@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
 import { getRarityTier, getEffectTier } from '../../utils/rarity';
 import { CardEffects } from '../animations/CardEffects';
-import type { MisprintData } from '../../utils/misprint';
+import { generatePreviewMisprintData, type MisprintData } from '../../utils/misprint';
 import type { ArtworkVariant } from '../../types/card';
 import styles from './CardDetailPopup.module.css';
 
@@ -105,6 +105,7 @@ export function CardDetailPopup({
   const [previewArtId, setPreviewArtId] = useState<number>(defaultArtId);
   const [previewGhost, setPreviewGhost] = useState(false);
   const [previewMisprint, setPreviewMisprint] = useState(false);
+  const [previewMisprintData, setPreviewMisprintData] = useState<MisprintData | null>(null);
 
   // Sync preview when card or default artwork changes
   useEffect(() => {
@@ -128,7 +129,9 @@ export function CardDetailPopup({
       ? ghostMisprintVariant.misprintData as MisprintData
       : previewMisprint && misprintVariant?.misprintData
         ? misprintVariant.misprintData as MisprintData
-        : null;
+        : previewMisprint && effectPreviewMode
+          ? previewMisprintData
+          : null;
 
   // Can the user toggle this effect?
   const effectTier = getEffectTier(card.rarity ?? undefined);
@@ -294,7 +297,7 @@ export function CardDetailPopup({
                   )}
                   <button
                     className={`${styles.effectToggle} ${previewMisprint && !previewGhost ? styles.effectActive : ''} ${!canMisprint && !effectPreviewMode ? styles.effectLocked : ''}`}
-                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(true); }}
+                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(true); if (effectPreviewMode) setPreviewMisprintData(generatePreviewMisprintData()); }}
                     title={!canMisprint && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
                   >
                     Misprint

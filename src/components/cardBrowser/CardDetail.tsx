@@ -32,18 +32,12 @@ export function CardDetail({ card, setFilter, onClose }: CardDetailProps) {
     setArtworks([]);
     const artworkIds = card.artworkIds ?? [];
 
-    // No multi-artworks — ready immediately
-    if (artworkIds.length <= 1) {
-      setLoading(false);
-      return;
-    }
-
-    // Fetch artwork details from API
+    // Fetch artwork details from API (always — even with 1 artwork for effect toggles)
     setLoading(true);
     fetch(`${env.api.baseUrl}/cards/${card.id}`)
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
-        if (data?.artworks?.length > 1) {
+        if (data?.artworks?.length > 0) {
           setArtworks(data.artworks);
         }
       })
@@ -97,6 +91,7 @@ export function CardDetail({ card, setFilter, onClose }: CardDetailProps) {
         : undefined
       }
       isPreviewGreyed={!card.available}
+      effectPreviewMode
       onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
     />
   );

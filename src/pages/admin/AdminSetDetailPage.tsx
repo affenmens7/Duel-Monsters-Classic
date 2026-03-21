@@ -1011,6 +1011,7 @@ export function AdminSetDetailPage() {
             }}
             onClose={() => setPopupCardId(null)}
             artworks={popupArtworks}
+            effectPreviewMode
             onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
             currentArtworkId={card.artwork_id}
             onArtworkChange={(artworkId) => handleArtworkChange(card.id, artworkId)}

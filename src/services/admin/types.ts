@@ -154,6 +154,8 @@ export interface AdminCardRow {
   image_path: string;
   default_artwork_id: number | null;
   ban_status: string | null;
+  rarity: string | null;
+  rarity_code: string | null;
 }
 
 export interface AdminCardPage {

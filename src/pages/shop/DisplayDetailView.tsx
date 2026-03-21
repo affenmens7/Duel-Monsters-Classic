@@ -299,7 +299,11 @@ export function DisplayDetailView({
                       className={`${styles.cardCell} ${ownsArtwork ? styles.cardCellOwned : styles.cardCellNotOwned} ${isSelected ? styles.cardCellSelected : ''}`}
                       onClick={() => editingShowcase ? toggleCardInShowcase(imgId) : onSetPopupCardId(card.cardId)}
                     >
-                      <img className={styles.cardCellImg} src={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)} alt="" loading="lazy" />
+                      <CardEffects
+                        imageSrc={getCardImageUrl(card.cardId, 'small', card.artworkId ?? undefined)}
+                        rarity={allCards.find((c) => c.id === card.cardId)?.rarity}
+                        className={styles.cardCellImg}
+                      />
                       {isSelected && <span className={styles.cardCellSlot}>{slotIndex + 1}</span>}
                     </div>
                   );
@@ -329,7 +333,7 @@ export function DisplayDetailView({
               onClose={() => onSetPopupCardId(null)}
               onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
               currentArtworkId={setEntry?.artworkId ?? artworkIds[0] ?? null}
-              artworks={artworkIds.length > 1
+              artworks={artworkIds.length > 0
                 ? artworkIds.map((aId, i) => ({
                     artworkId: aId,
                     label: i === 0 ? 'Original' : `Artwork ${i + 1}`,
@@ -342,6 +346,7 @@ export function DisplayDetailView({
                   }))
                 : undefined
               }
+              effectPreviewMode
               ownedArtworkIds={invEntry?.unlockedArtworks}
               isPreviewGreyed={!invEntry}
             >

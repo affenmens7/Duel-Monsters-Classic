@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Card } from '../../types/card';
 import { getCardImageUrl } from '../../services/cardApi';
 import { useCardLocale } from '../../hooks/useCardLocale';
+import { CardEffects } from '../animations/CardEffects';
 import styles from './CardTile.module.css';
 
 interface CardTileProps {
@@ -56,13 +57,20 @@ export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, fo
     >
       <div className={styles.imageWrapper}>
         {!imageLoaded && <div className={styles.placeholder} />}
+        <div style={{ opacity: imageLoaded ? 1 : 0 }}>
+          <CardEffects
+            imageSrc={imageUrl}
+            alt={loc.name}
+            rarity={card.rarity}
+          />
+        </div>
+        {/* Hidden img for onLoad detection */}
         <img
           src={imageUrl}
-          alt={loc.name}
-          className={styles.image}
+          alt=""
+          style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
           loading="lazy"
           onLoad={() => setImageLoaded(true)}
-          style={{ opacity: imageLoaded ? 1 : 0 }}
         />
       </div>
       <span className={styles.name}>{loc.name}</span>

@@ -82,7 +82,7 @@ export function DeckCardPopup({
       onClose={onClose}
       currentArtworkId={popupPreviewArtId ?? currentArtworkId}
       onSetClick={(setName) => navigate(`/app/cards?set=${encodeURIComponent(setName)}`)}
-      artworks={(card.artworkIds ?? []).length > 1
+      artworks={(card.artworkIds ?? []).length > 0
         ? (card.artworkIds ?? []).map((aId, i) => ({
             artworkId: aId,
             label: i === 0 ? 'Original' : `Artwork ${i + 1}`,
@@ -95,6 +95,7 @@ export function DeckCardPopup({
           }))
         : undefined
       }
+      effectPreviewMode
       isPreviewGreyed={
         popupPreviewArtId != null &&
         !(ownedCard?.unlockedArtworks?.includes(popupPreviewArtId) ?? false)

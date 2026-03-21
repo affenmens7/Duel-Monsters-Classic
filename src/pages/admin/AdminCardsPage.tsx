@@ -322,6 +322,9 @@ export function AdminCardsPage() {
                 <th className={styles.thSortable} onClick={() => handleSort('ban_status')}>
                   {t('admin.banStatus')}{sortArrow('ban_status')}
                 </th>
+                <th className={styles.thSortable} onClick={() => handleSort('rarity')}>
+                  Rarity{sortArrow('rarity')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -357,10 +360,51 @@ export function AdminCardsPage() {
                         ? t(`spellTrapType.${card.race_en}`, card.race_en)
                         : '\u2014'}
                   </td>
-                  <td className={styles.td}>
-                    <span className={`${styles.banBadge} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}>
-                      {t(`banStatus.${card.ban_status ?? 'Unlimited'}`)}
-                    </span>
+                  <td className={styles.td} onClick={(e) => e.stopPropagation()}>
+                    <select
+                      className={`${styles.inlineSelect} ${styles[`ban${(card.ban_status ?? 'Unlimited').replace('-', '')}`]}`}
+                      value={card.ban_status ?? ''}
+                      onChange={async (e) => {
+                        if (!token) return;
+                        const val = e.target.value || null;
+                        try {
+                          await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/ban`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ banStatus: val }),
+                          });
+                          loadCards();
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      <option value="">{t('banStatus.Unlimited')}</option>
+                      <option value="Semi-Limited">{t('banStatus.Semi-Limited')}</option>
+                      <option value="Limited">{t('banStatus.Limited')}</option>
+                      <option value="Forbidden">{t('banStatus.Forbidden')}</option>
+                    </select>
+                  </td>
+                  <td className={styles.td} onClick={(e) => e.stopPropagation()}>
+                    <select
+                      className={`${styles.inlineSelect} ${styles[`rarity${(card.rarity ?? 'Common').replace(/\s/g, '')}`]}`}
+                      value={card.rarity ?? 'Common'}
+                      onChange={async (e) => {
+                        if (!token) return;
+                        try {
+                          await fetch(`${env.api.baseUrl}/admin/cards/${card.id}/rarity`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                            body: JSON.stringify({ rarity: e.target.value }),
+                          });
+                          loadCards();
+                        } catch { /* ignore */ }
+                      }}
+                    >
+                      <option value="Common">Common</option>
+                      <option value="Rare">Rare</option>
+                      <option value="Super Rare">Super Rare</option>
+                      <option value="Ultra Rare">Ultra Rare</option>
+                      <option value="Secret Rare">Secret Rare</option>
+                    </select>
                   </td>
                 </tr>
               ))}
@@ -416,10 +460,12 @@ export function AdminCardsPage() {
             artworkId: popupCard.default_artwork_id,
             sets: cachedCards.find((c) => c.id === popupCard.id)?.sets,
             banStatus: popupCard.ban_status,
+            rarity: popupCard.rarity,
           }}
           onClose={() => { setPopupCard(null); setPopupArtworks([]); }}
           artworks={popupArtworks}
           onSetClick={(setName) => navigate(`/app/admin/sets/booster/${encodeURIComponent(setName)}`)}
+          effectPreviewMode
           currentArtworkId={popupCard.default_artwork_id}
           onArtworkChange={async (artworkId) => {
             if (!token || !popupCard) return;
@@ -435,31 +481,6 @@ export function AdminCardsPage() {
           }}
         >
           <div className={styles.popupActions}>
-            <div className={styles.banSelect}>
-              <span className={styles.banSelectLabel}>{t('admin.banStatus')}</span>
-              <select
-                className={styles.banSelectInput}
-                value={popupCard.ban_status ?? ''}
-                onChange={async (e) => {
-                  if (!token || !popupCard) return;
-                  const val = e.target.value || null;
-                  try {
-                    await fetch(`${env.api.baseUrl}/admin/cards/${popupCard.id}/ban`, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                      body: JSON.stringify({ banStatus: val }),
-                    });
-                    setPopupCard({ ...popupCard, ban_status: val });
-                    loadCards();
-                  } catch { /* ignore */ }
-                }}
-              >
-                <option value="">{t('banStatus.Unlimited')}</option>
-                <option value="Semi-Limited">{t('banStatus.Semi-Limited')}</option>
-                <option value="Limited">{t('banStatus.Limited')}</option>
-                <option value="Forbidden">{t('banStatus.Forbidden')}</option>
-              </select>
-            </div>
             <button
               className={styles.deleteCardBtn}
               onClick={() => { setDeleteConfirm(popupCard); setPopupCard(null); setPopupArtworks([]); }}
