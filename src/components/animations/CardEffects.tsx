@@ -7,6 +7,8 @@
  * - rainbow (Secret Rare): animated rainbow border + shimmer
  * - ghost: silver border + bleached pulse + rainbow shimmer (replaces base effect)
  * - misprint: structural distortions via CSS custom properties (combinable with any)
+ *
+ * Ghost + Misprint can be combined.
  */
 
 import { type CSSProperties } from 'react';
@@ -34,106 +36,87 @@ export function CardEffects({
   className,
 }: CardEffectsProps) {
   const effectTier = isGhost ? 'none' : getEffectTier(rarity);
-  const hasBorder = isGhost || effectTier === 'rainbow';
   const misprintVars = isMisprint && misprintData
     ? misprintDataToCssVars(misprintData) as unknown as CSSProperties
     : undefined;
 
-  // Ghost replaces the base rarity effect entirely
-  if (isGhost) {
-    return (
-      <div
-        className={`${styles.ghostBorder} ${isMisprint ? '' : ''} ${className ?? ''}`}
-        style={misprintVars}
-      >
-        <div className={styles.container}>
-          {isMisprint && <MisprintLayers imageSrc={imageSrc} />}
-          <img
-            src={imageSrc}
-            alt={alt}
-            className={`${styles.ghostPulse} ${isMisprint ? '' : ''}`}
-            style={isMisprint && misprintVars ? { filter: (misprintVars as Record<string, string>)['--mp-base-filter'] } : undefined}
-          />
-          <div className={styles.overlay}>
-            <div className={styles.ghostShimmer} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Build the inner card content
+  const imgFilter = isMisprint && misprintVars
+    ? { filter: (misprintVars as Record<string, string>)['--mp-base-filter'] }
+    : undefined;
 
-  // Rainbow (Secret Rare)
-  if (effectTier === 'rainbow') {
-    return (
-      <div
-        className={`${styles.rainbowBorder} ${className ?? ''}`}
-        style={misprintVars}
-      >
-        <div className={styles.container}>
-          {isMisprint && <MisprintLayers imageSrc={imageSrc} />}
-          <img
-            src={imageSrc}
-            alt={alt}
-            style={isMisprint && misprintVars ? { filter: (misprintVars as Record<string, string>)['--mp-base-filter'] } : undefined}
-          />
-          <div className={styles.overlay}>
-            <div className={styles.rainbowShimmer} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Holo (Super/Ultra Rare)
-  if (effectTier === 'holo') {
-    return (
-      <div
-        className={`${styles.container} ${className ?? ''}`}
-        style={misprintVars}
-      >
-        {isMisprint && <MisprintLayers imageSrc={imageSrc} />}
-        <img
-          src={imageSrc}
-          alt={alt}
-          style={isMisprint && misprintVars ? { filter: (misprintVars as Record<string, string>)['--mp-base-filter'] } : undefined}
-        />
+  const renderContent = () => (
+    <>
+      <img
+        src={imageSrc}
+        alt={alt}
+        className={isGhost ? styles.ghostPulse : undefined}
+        style={imgFilter}
+      />
+      {/* Rarity effect overlays */}
+      {effectTier === 'holo' && (
         <div className={styles.overlay}>
           <div className={styles.holoSweep} />
           <div className={styles.holoEmboss} />
           <div className={styles.holoTint} />
         </div>
+      )}
+      {effectTier === 'rainbow' && (
+        <div className={styles.overlay}>
+          <div className={styles.rainbowShimmer} />
+        </div>
+      )}
+      {isGhost && (
+        <div className={styles.overlay}>
+          <div className={styles.ghostShimmer} />
+        </div>
+      )}
+      {/* Misprint layers ON TOP of everything */}
+      {isMisprint && <MisprintLayers imageSrc={imageSrc} />}
+    </>
+  );
+
+  // Ghost or Rainbow: needs border wrapper
+  if (isGhost) {
+    return (
+      <div className={`${styles.ghostBorder} ${className ?? ''}`} style={misprintVars}>
+        <div className={styles.container}>
+          {renderContent()}
+        </div>
       </div>
     );
   }
 
-  // None (Common/Rare) — still can have misprint
+  if (effectTier === 'rainbow') {
+    return (
+      <div className={`${styles.rainbowBorder} ${className ?? ''}`} style={misprintVars}>
+        <div className={styles.container}>
+          {renderContent()}
+        </div>
+      </div>
+    );
+  }
+
+  // Holo or None: no border wrapper needed
   return (
-    <div
-      className={`${styles.container} ${className ?? ''}`}
-      style={misprintVars}
-    >
-      {isMisprint && <MisprintLayers imageSrc={imageSrc} />}
-      <img
-        src={imageSrc}
-        alt={alt}
-        style={isMisprint && misprintVars ? { filter: (misprintVars as Record<string, string>)['--mp-base-filter'] } : undefined}
-      />
+    <div className={`${styles.container} ${className ?? ''}`} style={misprintVars}>
+      {renderContent()}
     </div>
   );
 }
 
-/** Misprint overlay layers — rendered behind the main image effects */
+/** Misprint overlay layers — rendered ON TOP of card image and effects */
 function MisprintLayers({ imageSrc }: { imageSrc: string }) {
   return (
     <>
       <div className={styles.misprintShift}>
         <img src={imageSrc} alt="" />
       </div>
-      <div className={styles.misprintInk} />
-      <div className={styles.misprintScratch} />
       <div className={styles.misprintGhost}>
         <img src={imageSrc} alt="" />
       </div>
+      <div className={styles.misprintInk} />
+      <div className={styles.misprintScratch} />
       <div className={styles.misprintFx}>
         <div className={styles.misprintGlitch} />
         <div className={styles.misprintGlitch2} />

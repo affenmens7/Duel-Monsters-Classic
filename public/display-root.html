@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo D — Hybrid</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#060a0c;color:#d0d8d4;font-family:'Cinzel',serif;overflow:hidden}
+  canvas{display:block}
+  .title{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:1rem;color:#00dca8;letter-spacing:2px;z-index:10;text-shadow:0 0 20px rgba(0,220,168,0.3)}
+  .hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.45rem;color:#00dca8;letter-spacing:2px;text-transform:uppercase;opacity:0.5;z-index:10;transition:opacity 0.4s}
+  .counter{position:fixed;top:60px;left:50%;transform:translateX(-50%);font-size:0.6rem;color:#c8a830;letter-spacing:2px;z-index:10;opacity:0;transition:opacity 0.4s}
+  .summary{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;opacity:0;transition:opacity 0.6s;pointer-events:none}
+  .summary.show{opacity:1}
+  .summary img{width:50px;height:auto;border-radius:3px;border:1px solid rgba(0,220,168,0.2);opacity:0;transition:opacity 0.4s}
+  .summary img.revealed{opacity:1}
+
+  .open-all-btn{
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:20;
+    font-family:'Cinzel',serif;font-size:0.42rem;font-weight:700;
+    color:#c8a830;letter-spacing:1.5px;
+    background:rgba(200,168,48,0.08);
+    border:1px solid rgba(200,168,48,0.3);
+    border-radius:6px;padding:10px 20px;
+    cursor:pointer;opacity:0;pointer-events:none;
+    transition:opacity 0.4s,background 0.3s,border-color 0.3s,color 0.3s;
+    text-transform:uppercase;
+  }
+  .open-all-btn.show{opacity:1;pointer-events:all}
+  .open-all-btn:hover{background:rgba(200,168,48,0.15);border-color:rgba(200,168,48,0.6);color:#e0c040}
+
+  .result-overlay{position:fixed;inset:0;background:rgba(6,10,12,0.94);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;opacity:0;transform:translateY(40px);transition:opacity 0.6s ease,transform 0.6s ease;pointer-events:none;overflow-y:auto}
+  .result-overlay.show{opacity:1;transform:translateY(0);pointer-events:all}
+  .result-title{font-size:0.8rem;color:#00dca8;letter-spacing:3px;text-transform:uppercase;text-shadow:0 0 20px rgba(0,220,168,0.3);margin-bottom:20px;flex-shrink:0}
+  .result-scroll{width:100%;max-width:1200px;overflow-y:auto;flex:1}
+  .result-pack-group{margin-bottom:24px}
+  .result-pack-label{font-size:0.5rem;color:#c8a830;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase}
+  .result-cards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+  .result-cards img{width:100px;height:auto;border-radius:4px;border:1px solid rgba(200,168,48,0.3);opacity:0;transform:translateY(20px);transition:opacity 0.4s ease,transform 0.4s ease}
+  .result-cards img.show{opacity:1;transform:translateY(0)}
+  .result-hint{font-size:0.35rem;color:rgba(0,220,168,0.4);letter-spacing:2px;text-transform:uppercase;margin-top:20px;flex-shrink:0;cursor:pointer}
+
+  .skip-flash{position:fixed;inset:0;background:rgba(0,220,168,0.15);z-index:15;opacity:0;pointer-events:none;transition:opacity 0.15s}
+  .skip-flash.flash{opacity:1}
+  .shop-return{position:fixed;inset:0;background:#060a0c;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;opacity:0;pointer-events:none;transition:opacity 0.8s ease}
+  .shop-return.show{opacity:1;pointer-events:all}
+  .shop-return-text{font-size:0.7rem;color:#00dca8;letter-spacing:3px;text-transform:uppercase;text-shadow:0 0 20px rgba(0,220,168,0.3)}
+  .shop-return-sub{font-size:0.4rem;color:rgba(176,192,184,0.4);letter-spacing:2px}
+</style>
+</head>
+<body>
+<h1 class="title">Demo D — Hybrid</h1>
+<p class="hint" id="hint">Wische den Deckel nach oben</p>
+<p class="counter" id="counter"></p>
+<div class="summary" id="summary"></div>
+<button class="open-all-btn" id="openAllBtn">Alle oeffnen</button>
+<div class="skip-flash" id="skipFlash"></div>
+<div class="shop-return" id="shopReturn">
+  <p class="shop-return-text">Zurueck zum Shop</p>
+  <p class="shop-return-sub">Karten wurden deiner Sammlung hinzugefuegt</p>
+</div>
+<div class="result-overlay" id="resultOverlay">
+  <p class="result-title">Deine Karten</p>
+  <div class="result-scroll" id="resultScroll"></div>
+  <p class="result-hint" id="resultClose">Klicken zum Schliessen</p>
+</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const TOTAL_PACKS = 24;
+
+// ===== DISPLAY BOX CONFIG =====
+const BOX_W = 3.6;
+const BOX_D = 2.6;
+const BOX_H = 1.0;
+const WALL = 0.04;
+const CW = 1024;
+const CH = 512;
+
+const CARD_W = 80, CARD_H = 117, CARD_GAP = 6;
+
+const LID_THICKNESS = 0.03;
+const LID_MAX_ANGLE = -110 * (Math.PI / 180);
+const LID_SNAP_THRESHOLD = 0.4;
+
+// ===== BOOSTER PACK CONFIG =====
+const BP_PACK_W = 1.5, BP_PACK_H = 2.2, BP_PACK_D = 0.08, BP_CORNER_R = 0.04;
+const BP_CW = 1024, BP_CH = 1496, BP_SHOWCASE_H = 1040;
+const BP_CARD_W = 160, BP_CARD_H = 233, BP_CARD_GAP = 12;
+
+const BP_FOIL_MAT = { roughness: 0.35, metalness: 0.15, envMapIntensity: 1.5 };
+const BP_SIDE_MAT_PROPS = { roughness: 0.6, metalness: 0.05 };
+
+const PULL_CARD_IDS = ['89631139','74677425','70903634','8124921','44519536','6368038'];
+const BP_CARD_3D_W = 0.85, BP_CARD_3D_H = BP_CARD_3D_W * 86 / 59;
+
+// ===== GLOBAL STATE =====
+// Phases for the overall flow
+const MAIN_PHASE = {
+  LID_CLOSED: 0,      // user can swipe lid
+  LID_OPENING: 1,     // lid animation
+  PACK_EXTRACT: 2,    // pack rises out of box, centers
+  PACK_OPEN: 3,       // user swipes flap on pack
+  FLAP_ANIM: 4,       // flap slides off
+  PACK_FADE: 5,       // pack dissolves
+  CARDS_EMERGE: 6,    // cards stack appears
+  CARD_VIEW: 7,       // user swipes through cards
+  NEXT_PACK: 8,       // transition to next pack
+  SKIPPING: 9,        // fast-skip remaining packs
+  DONE: 10,           // all done, show overlay
+};
+
+let mainPhase = MAIN_PHASE.LID_CLOSED;
+let phaseTime = 0;
+let currentPackIdx = 0;
+let swipeDir = 1;
+
+// All cards collected: array of arrays (one per pack)
+const allPackCards = [];
+for (let i = 0; i < TOTAL_PACKS; i++) {
+  allPackCards.push([...PULL_CARD_IDS]);
+}
+
+// Card swiping state
+let currentCardIdx = 0;
+let draggingCard = false;
+let dragStartX = 0;
+let cardSwiping = false;
+let cardSwipeTime = 0;
+let cardSwipeDir = 1;
+
+// Flap swiping state
+let swipingFlap = false;
+let swipeStartX = 0;
+
+// Skip/fast-open state
+let skipPackIdx = 0;
+let skipTimer = 0;
+let fastOpenPack = null; // the pack mesh currently animating
+let fastOpenPhase = 0;   // 0=rise, 1=flap-off, 2=fade-out
+let fastOpenTime = 0;
+
+// ===== SCENE =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x060a0c);
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 4.5, 11);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+// ===== CONTROLS =====
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.15;
+controls.minDistance = 6;
+controls.maxDistance = 25;
+controls.rotateSpeed = 1.5;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1.5;
+controls.target.set(0, 0.3, 0);
+renderer.domElement.addEventListener('pointerdown', () => { controls.autoRotate = false; }, { once: true });
+
+// ===== LIGHTING =====
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+const addLight = (color, intensity, pos) => {
+  const l = new THREE.DirectionalLight(color, intensity);
+  l.position.set(...pos);
+  scene.add(l);
+};
+addLight(0xffffff, 1.0, [3, 5, 4]);
+addLight(0x00dca8, 0.3, [-3, 3, -3]);
+addLight(0xc8a830, 0.2, [0, -2, -4]);
+addLight(0xffffff, 0.8, [-3, 4, -5]);
+
+const pl = new THREE.PointLight(0x00dca8, 0.4, 10);
+pl.position.set(0, 2, 3);
+scene.add(pl);
+
+// ===== ENV MAP =====
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene();
+envScene.background = new THREE.Color(0x0a1a14);
+const envL1 = new THREE.PointLight(0x00dca8, 2, 10); envL1.position.set(2, 2, 2); envScene.add(envL1);
+const envL2 = new THREE.PointLight(0xc8a830, 1, 10); envL2.position.set(-2, -1, -2); envScene.add(envL2);
+scene.environment = pmrem.fromScene(envScene).texture;
+
+// ===== IMAGE LOADER =====
+function loadImages(ids) {
+  const imgs = new Array(ids.length);
+  ids.forEach((id, i) => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => { imgs[i] = img; };
+    img.src = `/images/cards/${id}.jpg`;
+  });
+  return imgs;
+}
+
+function padArray(arr, minLen) {
+  if (arr.length >= minLen) return arr;
+  const result = [...arr];
+  while (result.length < minLen) result.push(...arr);
+  return result.slice(0, minLen);
+}
+
+const showcaseImgs = loadImages(['74677425','36996508','89631140']);
+const bgImgs = loadImages(['39004808','73134081','84686841','93553943','12580477','43500484','1435851','10202894','85705804','77027445']);
+
+const backItemImgs = loadImages(['92731455','76103675','4206964']);
+const rareImgs = loadImages(['4206964','91152256','66889139','53129443','74677425','6368038','54652250','33396948','12580477','72302403']);
+const monsterImgs = loadImages(['91152256','53153481','63308047','36121917','53375573','15025844','76211194','93553943','39111158','57305373']);
+const spellImgs = loadImages(['51482758','91595718','46009906','51267887','4614116','46130346','12580477','72302403','86318356','82542267']);
+const trapImgs = loadImages(padArray(['83887306','50045299','4206964'], 10));
+
+const boosterShowcasePos = [
+  { x: 160, y: 200, w: 280, h: 408 },
+  { x: 370, y: 300, w: 280, h: 408 },
+  { x: 580, y: 400, w: 280, h: 408 },
+];
+
+// ===== DISPLAY BOX CANVAS TEXTURES =====
+function makeCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+// ----- FRONT PANEL -----
+const frontCanvas = makeCanvas(CW, CH);
+const frontTex = new THREE.CanvasTexture(frontCanvas);
+frontTex.colorSpace = THREE.SRGBColorSpace;
+frontTex.anisotropy = maxAniso;
+
+function drawScrollRows(ctx, canvasW, t, rows) {
+  ctx.globalAlpha = 0.08;
+  const filtered = bgImgs.filter(Boolean);
+  if (!filtered.length) { ctx.globalAlpha = 1; return; }
+  const trackW = filtered.length * (CARD_W + CARD_GAP);
+  rows.forEach(row => {
+    const offset = t * row.speed * row.dir;
+    for (let i = 0; i < filtered.length; i++) {
+      let x = i * (CARD_W + CARD_GAP) + offset;
+      x = ((x % trackW) + trackW) % trackW - CARD_W;
+      if (x > -CARD_W && x < canvasW) ctx.drawImage(filtered[i], x, row.y, CARD_W, CARD_H);
+      const x2 = x + trackW;
+      if (x2 > -CARD_W && x2 < canvasW) ctx.drawImage(filtered[i], x2, row.y, CARD_W, CARD_H);
+    }
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawFrontPanel(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, CW, CH);
+  g.addColorStop(0, '#082a22'); g.addColorStop(0.5, '#0d3c30'); g.addColorStop(1, '#082a22');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+
+  drawScrollRows(ctx, CW, t, [
+    { y: 100, speed: 20, dir: 1 },
+    { y: 295, speed: 25, dir: -1 },
+  ]);
+
+  const overlay = ctx.createLinearGradient(0, 0, 0, CH);
+  overlay.addColorStop(0, 'rgba(4,14,10,0.6)');
+  overlay.addColorStop(0.5, 'rgba(4,14,10,0.2)');
+  overlay.addColorStop(1, 'rgba(4,14,10,0.7)');
+  ctx.fillStyle = overlay; ctx.fillRect(0, 0, CW, CH);
+
+  // Set name centered
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 36px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('Legend of Blue Eyes', CW/2, CH/2 - 10);
+  ctx.fillText('White Dragon', CW/2, CH/2 + 30);
+
+  ctx.strokeStyle = 'rgba(0,220,168,0.2)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(80, 30); ctx.lineTo(CW - 80, 30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(80, CH - 20); ctx.lineTo(CW - 80, CH - 20); ctx.stroke();
+}
+
+// ----- BACK PANEL -----
+const backCanvas = makeCanvas(CW, CH);
+const backTex = new THREE.CanvasTexture(backCanvas);
+backTex.colorSpace = THREE.SRGBColorSpace;
+backTex.anisotropy = maxAniso;
+
+function drawBackPanel(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, CW, CH);
+  g.addColorStop(0, '#071e18'); g.addColorStop(0.5, '#0a2e24'); g.addColorStop(1, '#071e18');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+
+  drawScrollRows(ctx, CW, t, [
+    { y: 100, speed: 20, dir: 1 },
+    { y: 295, speed: 25, dir: -1 },
+  ]);
+
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 28px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('Legend of Blue Eyes White Dragon', CW/2, 80);
+
+  ctx.fillStyle = 'rgba(176,192,184,0.5)'; ctx.font = '500 18px Cinzel, serif';
+  ctx.fillText('126 Karten \u00B7 24 Packs \u00B7 6 Karten pro Pack', CW/2, 120);
+
+  const rarities = [
+    { text: '2 Secret Rare', color: 'rainbow' },
+    { text: '8 Ultra Rare',  color: '#c44a6a' },
+    { text: '15 Super Rare', color: '#d4a44a' },
+    { text: '32 Rare',       color: '#4a90d9' },
+    { text: '69 Common',     color: '#9a9a9a' },
+  ];
+  rarities.forEach((r, i) => {
+    ctx.font = '600 16px Cinzel, serif';
+    const y = 170 + i * 28;
+    if (r.color === 'rainbow') {
+      const rg = ctx.createLinearGradient(CW/2 - 80, 0, CW/2 + 80, 0);
+      rg.addColorStop(0, '#ff4444'); rg.addColorStop(0.2, '#ff9944'); rg.addColorStop(0.4, '#eedd44');
+      rg.addColorStop(0.6, '#44dd66'); rg.addColorStop(0.8, '#4488ff'); rg.addColorStop(1, '#aa44ff');
+      ctx.fillStyle = rg;
+    } else {
+      ctx.fillStyle = r.color;
+    }
+    ctx.fillText(r.text, CW/2, y);
+  });
+
+  ctx.fillStyle = 'rgba(0,220,168,0.3)'; ctx.font = '700 18px Cinzel, serif';
+  ctx.fillText('Duel Monsters Classic', CW/2, CH - 40);
+
+  ctx.strokeStyle = 'rgba(0,220,168,0.15)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(40, 20, CW - 80, CH - 40, 4); ctx.stroke();
+}
+
+// ----- SIDE PANEL -----
+// Side canvas matches same proportions as front (CW:CH) for consistent card sizes
+const sideCanvas = makeCanvas(CW, CH);
+const sideTex = new THREE.CanvasTexture(sideCanvas);
+sideTex.colorSpace = THREE.SRGBColorSpace;
+sideTex.anisotropy = maxAniso;
+
+function drawSidePanel(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, CW, CH);
+  g.addColorStop(0, '#0a2e24'); g.addColorStop(1, '#071e18');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+
+  drawScrollRows(ctx, CW, t, [
+    { y: 100, speed: 15, dir: 1 },
+    { y: 295, speed: 20, dir: -1 },
+  ]);
+
+  ctx.fillStyle = 'rgba(0,220,168,0.15)'; ctx.font = '700 18px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('LOB', CW/2, CH/2 - 10);
+  ctx.font = '500 12px Cinzel, serif';
+  ctx.fillText('Legend of Blue Eyes', CW/2, CH/2 + 15);
+  ctx.fillText('White Dragon', CW/2, CH/2 + 35);
+}
+
+// ----- BOTTOM PANEL -----
+const bottomCanvas = makeCanvas(CW, 512);
+const bottomTex = new THREE.CanvasTexture(bottomCanvas);
+bottomTex.colorSpace = THREE.SRGBColorSpace;
+bottomTex.anisotropy = maxAniso;
+
+(function drawBottomPanel() {
+  const ctx = bottomCanvas.getContext('2d');
+  const w = CW, h = 512;
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#061a14'); g.addColorStop(1, '#071e18');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  // Diagonal repeating "Duel Monsters Classic"
+  ctx.save();
+  ctx.translate(w/2, h/2);
+  ctx.rotate(-Math.PI / 6); // ~30 degrees
+  ctx.fillStyle = 'rgba(0,220,168,0.06)';
+  ctx.font = '600 22px Cinzel, serif';
+  ctx.textAlign = 'center';
+  for (let row = -8; row <= 8; row++) {
+    for (let col = -3; col <= 3; col++) {
+      ctx.fillText('Duel Monsters Classic', col * 380, row * 40);
+    }
+  }
+  ctx.restore();
+})();
+
+// ----- LID TOP TEXTURE -----
+// Lid canvas matches box aspect ratio (BOX_W:BOX_D) for correct proportions
+const LID_CW = 1440, LID_CH = Math.round(1440 * (BOX_D / BOX_W));
+const lidTopCanvas = makeCanvas(LID_CW, LID_CH);
+const lidTopTex = new THREE.CanvasTexture(lidTopCanvas);
+lidTopTex.colorSpace = THREE.SRGBColorSpace;
+lidTopTex.anisotropy = maxAniso;
+
+function drawLidTop() {
+  const ctx = lidTopCanvas.getContext('2d');
+  const w = LID_CW, h = LID_CH;
+
+  // Background
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#061e18'); g.addColorStop(0.5, '#0d3c30'); g.addColorStop(1, '#061e18');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  const rg = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.4);
+  rg.addColorStop(0, 'rgba(0,220,168,0.06)'); rg.addColorStop(1, 'rgba(0,220,168,0)');
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, w, h);
+
+  // Borders
+  ctx.strokeStyle = 'rgba(0,220,168,0.25)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(30, 20, w - 60, h - 40, 8); ctx.stroke();
+  ctx.strokeStyle = 'rgba(200,168,48,0.15)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(50, 40, w - 100, h - 80, 6); ctx.stroke();
+
+  // Corner accents
+  ctx.strokeStyle = 'rgba(0,220,168,0.35)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(50, 65); ctx.lineTo(50, 40); ctx.lineTo(75, 40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w-75, 40); ctx.lineTo(w-50, 40); ctx.lineTo(w-50, 65); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(50, h-65); ctx.lineTo(50, h-40); ctx.lineTo(75, h-40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w-75, h-40); ctx.lineTo(w-50, h-40); ctx.lineTo(w-50, h-65); ctx.stroke();
+
+  // Set title above boosters (same as front)
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 36px Cinzel, serif';
+  ctx.fillText('Legend of Blue Eyes', w/2, 160);
+  ctx.fillText('White Dragon', w/2, 200);
+
+  // Dynamic booster packs fanned on the lid based on TOTAL_PACKS
+  const maxPacks = Math.min(TOTAL_PACKS, 7); // show up to 7 on lid
+  const packW = Math.min(250, (w - 200) / maxPacks);
+  const packH = packW * 1.46;
+  const spacing = Math.min(200, (w - 200) / maxPacks);
+  const mid = (maxPacks - 1) / 2;
+  for (let i = 0; i < maxPacks; i++) {
+    ctx.save();
+    const cx = w/2 + (i - mid) * spacing;
+    const cy = h/2 + Math.abs(i - mid) * 20;
+    ctx.translate(cx, cy);
+    ctx.rotate((i - mid) * 0.06);
+    ctx.drawImage(bp_frontCanvas, -packW/2, -packH/2, packW, packH);
+    ctx.restore();
+  }
+
+  // "Duel Monsters Classic" top center
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(200,168,48,0.25)'; ctx.font = '600 22px Cinzel, serif';
+  ctx.fillText('Duel Monsters Classic', w/2, 70);
+
+  // Wave badge top right
+  ctx.fillStyle = 'rgba(0,220,168,0.12)'; ctx.strokeStyle = 'rgba(0,220,168,0.3)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(w - 210, 80, 120, 32, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#00dca8'; ctx.font = '600 16px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('WAVE 1', w - 150, 102);
+
+  // Pack info below the booster images
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(176,192,184,0.4)'; ctx.font = '500 18px Cinzel, serif';
+  ctx.fillText(`${TOTAL_PACKS} Booster \u00B7 ${PULL_CARD_IDS.length} Karten pro Booster`, w/2, h - 130);
+  ctx.fillText(`Insgesamt ${TOTAL_PACKS * PULL_CARD_IDS.length} Karten`, w/2, h - 105);
+
+  lidTopTex.needsUpdate = true;
+}
+
+// Retry until images loaded
+let lidDrawn = false;
+
+const lidBottomColor = 0x12201a;
+
+// Lid inside texture — same design as lid top but without booster pack images
+const lidInsideCanvas = makeCanvas(LID_CW, LID_CH);
+const lidInsideTex = new THREE.CanvasTexture(lidInsideCanvas);
+lidInsideTex.colorSpace = THREE.SRGBColorSpace;
+lidInsideTex.anisotropy = maxAniso;
+
+function drawLidInside() {
+  const ctx = lidInsideCanvas.getContext('2d');
+  const w = LID_CW, h = LID_CH;
+
+  // Background (same as lid top)
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#061e18'); g.addColorStop(0.5, '#0d3c30'); g.addColorStop(1, '#061e18');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  const rg = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.4);
+  rg.addColorStop(0, 'rgba(0,220,168,0.06)'); rg.addColorStop(1, 'rgba(0,220,168,0)');
+  ctx.fillStyle = rg; ctx.fillRect(0, 0, w, h);
+
+  // Borders
+  ctx.strokeStyle = 'rgba(0,220,168,0.25)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(30, 20, w - 60, h - 40, 8); ctx.stroke();
+  ctx.strokeStyle = 'rgba(200,168,48,0.15)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(50, 40, w - 100, h - 80, 6); ctx.stroke();
+
+  // Corner accents
+  ctx.strokeStyle = 'rgba(0,220,168,0.35)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(50, 65); ctx.lineTo(50, 40); ctx.lineTo(75, 40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w-75, 40); ctx.lineTo(w-50, 40); ctx.lineTo(w-50, 65); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(50, h-65); ctx.lineTo(50, h-40); ctx.lineTo(75, h-40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w-75, h-40); ctx.lineTo(w-50, h-40); ctx.lineTo(w-50, h-65); ctx.stroke();
+
+  // "Duel Monsters Classic" top center
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(200,168,48,0.25)'; ctx.font = '600 22px Cinzel, serif';
+  ctx.fillText('Duel Monsters Classic', w/2, 70);
+
+  // Wave badge top right
+  ctx.fillStyle = 'rgba(0,220,168,0.12)'; ctx.strokeStyle = 'rgba(0,220,168,0.3)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(w - 210, 80, 120, 32, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#00dca8'; ctx.font = '600 16px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('WAVE 1', w - 150, 102);
+
+  // Set title centered
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 36px Cinzel, serif';
+  ctx.fillText('Legend of Blue Eyes', w/2, h/2 - 20);
+  ctx.fillText('White Dragon', w/2, h/2 + 20);
+
+  // Pack info
+  ctx.fillStyle = 'rgba(176,192,184,0.4)'; ctx.font = '500 18px Cinzel, serif';
+  ctx.fillText(`${TOTAL_PACKS} Booster \u00B7 ${PULL_CARD_IDS.length} Karten pro Booster`, w/2, h/2 + 70);
+  ctx.fillText(`Insgesamt ${TOTAL_PACKS * PULL_CARD_IDS.length} Karten`, w/2, h/2 + 95);
+
+  lidInsideTex.needsUpdate = true;
+}
+drawLidInside();
+
+// ===== BUILD DISPLAY BOX =====
+const boxGroup = new THREE.Group();
+
+const matProps = { roughness: 0.6, metalness: 0.08, envMapIntensity: 1.0 };
+
+const frontBoxMat = new THREE.MeshStandardMaterial({ map: frontTex, ...matProps });
+const backBoxMat = new THREE.MeshStandardMaterial({ map: backTex, ...matProps });
+const sideBoxMat = new THREE.MeshStandardMaterial({ map: sideTex, ...matProps });
+const bottomBoxMat = new THREE.MeshStandardMaterial({ map: bottomTex, ...matProps });
+
+const bottomGeo = new THREE.BoxGeometry(BOX_W, WALL, BOX_D);
+const bottom = new THREE.Mesh(bottomGeo, bottomBoxMat);
+bottom.position.y = WALL / 2;
+boxGroup.add(bottom);
+
+const frontGeo = new THREE.BoxGeometry(BOX_W, BOX_H, WALL);
+const frontWall = new THREE.Mesh(frontGeo, frontBoxMat);
+frontWall.position.set(0, WALL + BOX_H / 2, BOX_D / 2);
+boxGroup.add(frontWall);
+
+const backGeo = new THREE.BoxGeometry(BOX_W, BOX_H, WALL);
+const backWall = new THREE.Mesh(backGeo, backBoxMat);
+backWall.position.set(0, WALL + BOX_H / 2, -BOX_D / 2);
+backWall.rotation.y = Math.PI;
+boxGroup.add(backWall);
+
+const leftGeo = new THREE.BoxGeometry(WALL, BOX_H, BOX_D);
+const leftWall = new THREE.Mesh(leftGeo, sideBoxMat);
+leftWall.position.set(-BOX_W / 2, WALL + BOX_H / 2, 0);
+boxGroup.add(leftWall);
+
+const rightGeo = new THREE.BoxGeometry(WALL, BOX_H, BOX_D);
+const rightWall = new THREE.Mesh(rightGeo, sideBoxMat);
+rightWall.position.set(BOX_W / 2, WALL + BOX_H / 2, 0);
+boxGroup.add(rightWall);
+
+const innerMat = new THREE.MeshStandardMaterial({ color: 0x0a1a14, roughness: 0.9, metalness: 0.0 });
+const innerFloorGeo = new THREE.PlaneGeometry(BOX_W - WALL * 2, BOX_D - WALL * 2);
+const innerFloor = new THREE.Mesh(innerFloorGeo, innerMat);
+innerFloor.rotation.x = -Math.PI / 2;
+innerFloor.position.y = WALL + 0.001;
+boxGroup.add(innerFloor);
+
+// ===== BOOSTER TEXTURES (shared by mini-packs and the extractable pack) =====
+const bp_frontCanvas = makeCanvas(BP_CW, BP_CH);
+const bp_frontTex = new THREE.CanvasTexture(bp_frontCanvas);
+bp_frontTex.colorSpace = THREE.SRGBColorSpace;
+bp_frontTex.anisotropy = maxAniso;
+
+
+const bp_backCanvas = makeCanvas(BP_CW, BP_CH);
+const bp_backTex = new THREE.CanvasTexture(bp_backCanvas);
+bp_backTex.colorSpace = THREE.SRGBColorSpace;
+bp_backTex.anisotropy = maxAniso;
+
+const bp_sideCanvas = document.createElement('canvas');
+bp_sideCanvas.width = 64; bp_sideCanvas.height = 748;
+const bp_sctx = bp_sideCanvas.getContext('2d');
+const bp_sg = bp_sctx.createLinearGradient(0, 0, 0, 748);
+bp_sg.addColorStop(0, '#0a2e24'); bp_sg.addColorStop(1, '#071e18');
+bp_sctx.fillStyle = bp_sg; bp_sctx.fillRect(0, 0, 64, 748);
+bp_sctx.save(); bp_sctx.translate(32, 374); bp_sctx.rotate(-Math.PI / 2);
+bp_sctx.fillStyle = 'rgba(0,220,168,0.1)'; bp_sctx.font = '700 14px Cinzel, serif'; bp_sctx.textAlign = 'center';
+bp_sctx.fillText('LOB', 0, 5); bp_sctx.restore();
+const bp_sideTex = new THREE.CanvasTexture(bp_sideCanvas);
+bp_sideTex.colorSpace = THREE.SRGBColorSpace;
+bp_sideTex.anisotropy = maxAniso;
+
+// ----- Booster scroll rows -----
+function bp_drawScrollRows(ctx, rows) {
+  ctx.globalAlpha = 0.12;
+  rows.forEach(row => {
+    const imgs = row.imgs.filter(Boolean);
+    if (!imgs.length) return;
+    const trackW = imgs.length * (BP_CARD_W + BP_CARD_GAP);
+    const offset = row.t * row.speed * row.dir;
+    for (let i = 0; i < imgs.length; i++) {
+      let x = i * (BP_CARD_W + BP_CARD_GAP) + offset;
+      x = ((x % trackW) + trackW) % trackW - BP_CARD_W;
+      if (x > -BP_CARD_W && x < BP_CW) ctx.drawImage(imgs[i], x, row.y, BP_CARD_W, BP_CARD_H);
+      const x2 = x + trackW;
+      if (x2 > -BP_CARD_W && x2 < BP_CW) ctx.drawImage(imgs[i], x2, row.y, BP_CARD_W, BP_CARD_H);
+    }
+  });
+  ctx.globalAlpha = 1;
+}
+
+function bp_drawFrontFrame(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, BP_CW, BP_CH);
+  g.addColorStop(0, '#082a22'); g.addColorStop(0.5, '#0d3c30'); g.addColorStop(1, '#0a2e24');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, BP_CW, BP_CH);
+  ctx.fillRect(0, 0, BP_CW, BP_SHOWCASE_H);
+
+  bp_drawScrollRows(ctx, [
+    { y: 85,  speed: 30, dir: 1,  imgs: bgImgs, t },
+    { y: 403, speed: 38, dir: -1, imgs: bgImgs, t },
+    { y: 721, speed: 33, dir: 1,  imgs: bgImgs, t },
+  ]);
+
+  ctx.fillStyle = 'rgba(4,14,10,0.95)';
+  ctx.fillRect(0, BP_SHOWCASE_H, BP_CW, BP_CH - BP_SHOWCASE_H);
+
+  ctx.fillStyle = 'rgba(0,220,168,0.15)'; ctx.strokeStyle = 'rgba(0,220,168,0.3)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(780, 50, 200, 56, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#00dca8'; ctx.font = '600 26px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('WAVE 1', 880, 88);
+
+  boosterShowcasePos.forEach((cp, i) => { if (showcaseImgs[i]) ctx.drawImage(showcaseImgs[i], cp.x, cp.y, cp.w, cp.h); });
+
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 44px Cinzel, serif'; ctx.textAlign = 'left';
+  ctx.fillText('Legend of Blue Eyes', 60, 1136);
+  ctx.fillText('White Dragon', 60, 1188);
+  ctx.fillStyle = 'rgba(176,192,184,0.5)'; ctx.font = '500 32px Cinzel, serif';
+  ctx.fillText('Das allererste Booster-Set.', 60, 1260);
+  ctx.fillText('Blue-Eyes White Dragon,', 60, 1300);
+  ctx.fillText('Dark Magician und...', 60, 1340);
+  ctx.fillStyle = '#c8a830'; ctx.font = '700 44px Cinzel, serif';
+  ctx.fillText('120 DP', 60, 1440);
+  ctx.fillStyle = 'rgba(58,74,66,0.8)'; ctx.font = '600 28px Cinzel, serif'; ctx.textAlign = 'right';
+  ctx.fillText('6 Cards Included', 960, 1440);
+}
+
+function bp_drawBackFrame(ctx, t) {
+  const g = ctx.createLinearGradient(0, 0, BP_CW, BP_CH);
+  g.addColorStop(0, '#082a22'); g.addColorStop(0.5, '#0d3c30'); g.addColorStop(1, '#0a2e24');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, BP_CW, BP_CH);
+
+  bp_drawScrollRows(ctx, [
+    { y: 100,  speed: 30, dir: 1,  imgs: rareImgs,    t },
+    { y: 400,  speed: 38, dir: -1, imgs: monsterImgs, t },
+    { y: 700,  speed: 33, dir: 1,  imgs: spellImgs,   t },
+    { y: 1000, speed: 35, dir: -1, imgs: trapImgs,    t },
+  ]);
+
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 34px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('Legend of Blue Eyes', 512, 65);
+  ctx.fillText('White Dragon', 512, 105);
+  ctx.fillStyle = 'rgba(176,192,184,0.5)'; ctx.font = '600 24px Cinzel, serif';
+  ctx.fillText('126 Karten \u00B7 6 pro Pack', 512, 155);
+
+  const rarities = [
+    { text: '2 Secret Rare', color: 'rainbow' },
+    { text: '8 Ultra Rare',  color: '#c44a6a' },
+    { text: '15 Super Rare', color: '#d4a44a' },
+    { text: '32 Rare',       color: '#4a90d9' },
+    { text: '69 Common',     color: '#9a9a9a' },
+  ];
+  rarities.forEach((r, i) => {
+    ctx.font = '600 20px Cinzel, serif'; ctx.textAlign = 'center';
+    const y = 200 + i * 30;
+    if (r.color === 'rainbow') {
+      const rg = ctx.createLinearGradient(512 - 80, 0, 512 + 80, 0);
+      rg.addColorStop(0, '#ff4444'); rg.addColorStop(0.2, '#ff9944'); rg.addColorStop(0.4, '#eedd44');
+      rg.addColorStop(0.6, '#44dd66'); rg.addColorStop(0.8, '#4488ff'); rg.addColorStop(1, '#aa44ff');
+      ctx.fillStyle = rg;
+    } else {
+      ctx.fillStyle = r.color;
+    }
+    ctx.fillText(r.text, 512, y);
+  });
+
+  const items = [
+    { label: 'Monster', count: '87', y: 400 },
+    { label: 'Zauber',  count: '36', y: 700 },
+    { label: 'Fallen',  count: '3',  y: 1000 },
+  ];
+  items.forEach((item, i) => {
+    if (backItemImgs[i]) ctx.drawImage(backItemImgs[i], 60, item.y, BP_CARD_W, BP_CARD_H);
+    ctx.fillStyle = '#d0d8d4'; ctx.font = '700 32px Cinzel, serif'; ctx.textAlign = 'left';
+    ctx.fillText(item.label, 260, item.y + 60);
+    ctx.fillStyle = 'rgba(176,192,184,0.6)'; ctx.font = '600 26px Cinzel, serif';
+    ctx.fillText(item.count + ' Karten', 260, item.y + 100);
+  });
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(176,192,184,0.4)'; ctx.font = '500 20px Cinzel, serif';
+  ctx.fillText('OG Release: 08.03.2002', 512, 1320);
+  ctx.fillText('In-Game Release: 15.01.2026', 512, 1355);
+  ctx.strokeStyle = 'rgba(0,220,168,0.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(350, 1380); ctx.lineTo(674, 1380); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,220,168,0.3)'; ctx.font = '700 22px Cinzel, serif';
+  ctx.fillText('Duel Monsters Classic', 512, 1410);
+}
+
+// ===== MINI-PACKS INSIDE BOX =====
+const packsGroup = new THREE.Group();
+boxGroup.add(packsGroup);
+
+const miniPackMeshes = []; // track individual mini-packs for removal
+
+function buildBoxPacks() {
+  // 2 stacks side by side, centered with space around them
+  // |  X  X  |
+  const scale = 0.7;
+  const packThick = BP_PACK_D * scale;
+  const packWorldW = BP_PACK_W * scale;
+  const gap = packWorldW * 0.15; // small gap between the 2 stacks
+  const layers = TOTAL_PACKS / 2;
+
+  const miniGeo = new RoundedBoxGeometry(BP_PACK_W, BP_PACK_H, BP_PACK_D, 4, BP_CORNER_R);
+  const miniFrontMat = new THREE.MeshStandardMaterial({ map: bp_frontTex, ...BP_FOIL_MAT });
+  const miniBackMat = new THREE.MeshStandardMaterial({ map: bp_backTex, ...BP_FOIL_MAT });
+  const miniSideMat = new THREE.MeshStandardMaterial({ map: bp_sideTex, ...BP_SIDE_MAT_PROPS });
+  const miniTopMat = new THREE.MeshStandardMaterial({ color: 0x0d3c30, roughness: 0.6, metalness: 0.1 });
+  const miniMats = [miniSideMat, miniSideMat, miniTopMat, miniTopMat, miniFrontMat, miniBackMat];
+
+  const xLeft  = -(packWorldW + gap) / 2;
+  const xRight =  (packWorldW + gap) / 2;
+
+  for (let layer = 0; layer < layers; layer++) {
+    for (let col = 0; col < 2; col++) {
+      const pack = new THREE.Mesh(miniGeo, miniMats);
+      pack.scale.setScalar(scale);
+      pack.rotation.x = -Math.PI / 2;
+
+      const x = col === 0 ? xLeft : xRight;
+      const y = WALL + packThick / 2 + layer * packThick + 0.002;
+      pack.position.set(x, y, 0);
+
+      pack.position.x += (Math.random() - 0.5) * 0.02;
+      pack.position.z += (Math.random() - 0.5) * 0.02;
+      pack.rotation.z = (Math.random() - 0.5) * 0.015;
+      packsGroup.add(pack);
+      miniPackMeshes.push(pack);
+    }
+  }
+}
+
+// ===== LID =====
+const lidTopMat = new THREE.MeshStandardMaterial({ map: lidTopTex, ...matProps });
+const lidCardboardMat = new THREE.MeshStandardMaterial({ color: lidBottomColor, roughness: 0.85, metalness: 0.02 });
+const lidInsideMat = new THREE.MeshBasicMaterial({ map: lidInsideTex, toneMapped: false });
+
+const lidGeo = new THREE.BoxGeometry(BOX_W, LID_THICKNESS, BOX_D);
+// Face order: +X, -X, +Y (top), -Y (inside/bottom), +Z, -Z
+const lidMaterials = [
+  lidCardboardMat, lidCardboardMat,
+  lidTopMat, lidInsideMat,
+  lidCardboardMat, lidCardboardMat,
+];
+const lidMesh = new THREE.Mesh(lidGeo, lidMaterials);
+lidMesh.position.set(0, LID_THICKNESS / 2, BOX_D / 2);
+
+const lidPivot = new THREE.Group();
+lidPivot.position.set(0, WALL + BOX_H, -BOX_D / 2);
+lidPivot.add(lidMesh);
+boxGroup.add(lidPivot);
+
+scene.add(boxGroup);
+
+// ===== EXTRACTABLE BOOSTER PACK (reusable for each pack opening) =====
+const bp_packGroup = new THREE.Group();
+bp_packGroup.visible = false;
+
+const bp_bodyGeo = new RoundedBoxGeometry(BP_PACK_W, BP_PACK_H, BP_PACK_D, 4, BP_CORNER_R);
+const bp_frontMat = new THREE.MeshStandardMaterial({ map: bp_frontTex, ...BP_FOIL_MAT });
+const bp_backMat = new THREE.MeshStandardMaterial({ map: bp_backTex, ...BP_FOIL_MAT });
+const bp_sideMatObj = new THREE.MeshStandardMaterial({ map: bp_sideTex, ...BP_SIDE_MAT_PROPS });
+const bp_topMat = new THREE.MeshStandardMaterial({ color: 0x0d3c30, roughness: 0.6, metalness: 0.1 });
+
+const bp_packBody = new THREE.Mesh(bp_bodyGeo, [bp_sideMatObj, bp_sideMatObj, bp_topMat, bp_topMat, bp_frontMat, bp_backMat]);
+bp_packGroup.add(bp_packBody);
+
+// Tear flap (will be re-added for each pack)
+function createFlap() {
+  const flapPivot = new THREE.Group();
+  flapPivot.position.set(0, BP_PACK_H / 2, 0);
+
+  const flapGeo = new RoundedBoxGeometry(BP_PACK_W * 0.92, 0.13, BP_PACK_D * 0.5, 3, 0.02);
+  const flapCanvas = document.createElement('canvas');
+  flapCanvas.width = 512; flapCanvas.height = 64;
+  const fctx = flapCanvas.getContext('2d');
+  fctx.fillStyle = '#0e4236'; fctx.fillRect(0, 0, 512, 64);
+  for (let x = 30; x < 480; x += 12) { fctx.fillStyle = 'rgba(0,220,168,0.35)'; fctx.fillRect(x, 28, 6, 2); }
+  fctx.fillStyle = 'rgba(0,220,168,0.4)'; fctx.font = '24px sans-serif';
+  fctx.fillText('\u2702', 8, 38);
+  fctx.save(); fctx.translate(500, 38); fctx.scale(-1, 1); fctx.fillText('\u2702', 0, 0); fctx.restore();
+  const flapTex = new THREE.CanvasTexture(flapCanvas); flapTex.colorSpace = THREE.SRGBColorSpace;
+  const flapMat = new THREE.MeshStandardMaterial({ map: flapTex, roughness: 0.5, metalness: 0.1 });
+  const flapSideMat = new THREE.MeshStandardMaterial({ color: 0x0a3028, ...BP_SIDE_MAT_PROPS });
+  const flap = new THREE.Mesh(flapGeo, [flapSideMat, flapSideMat, flapSideMat, flapSideMat, flapMat, flapMat]);
+  flap.position.set(0, 0.13 / 2 + 0.01, 0);
+  flap.userData.isFlap = true;
+  flapPivot.add(flap);
+
+  return { flapPivot, flap };
+}
+
+let currentFlapData = createFlap();
+bp_packGroup.add(currentFlapData.flapPivot);
+
+scene.add(bp_packGroup);
+
+// Build mini-packs (now that booster textures exist)
+buildBoxPacks();
+
+// ===== PULL CARDS (reusable card stack) =====
+const bp_cardsGroup = new THREE.Group();
+bp_cardsGroup.visible = false;
+scene.add(bp_cardsGroup);
+
+const bp_cardBackTex = new THREE.TextureLoader().load('/images/card_back/default.png');
+bp_cardBackTex.colorSpace = THREE.SRGBColorSpace;
+bp_cardBackTex.anisotropy = maxAniso;
+
+const bp_cardGeo = new THREE.PlaneGeometry(BP_CARD_3D_W, BP_CARD_3D_H);
+let bp_cardMeshes = [];
+
+function buildCardStack() {
+  // Clear old cards
+  while (bp_cardsGroup.children.length > 0) {
+    const child = bp_cardsGroup.children[0];
+    bp_cardsGroup.remove(child);
+    child.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+  }
+  bp_cardMeshes = [];
+
+  PULL_CARD_IDS.forEach((id, i) => {
+    const frontTx = new THREE.TextureLoader().load(`/images/cards/${id}.jpg`);
+    frontTx.colorSpace = THREE.SRGBColorSpace;
+    frontTx.anisotropy = maxAniso;
+
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(bp_cardGeo, new THREE.MeshBasicMaterial({ map: frontTx, toneMapped: false })));
+    group.add(new THREE.Mesh(bp_cardGeo, new THREE.MeshBasicMaterial({ map: bp_cardBackTex, side: THREE.BackSide, toneMapped: false })));
+
+    group.position.set(0, 0.3, (PULL_CARD_IDS.length - i) * 0.001);
+    group.visible = false;
+    bp_cardsGroup.add(group);
+    bp_cardMeshes.push(group);
+  });
+}
+
+// ===== SUMMARY THUMBNAILS =====
+const summaryEl = document.getElementById('summary');
+function buildSummaryThumbs() {
+  summaryEl.innerHTML = '';
+  PULL_CARD_IDS.forEach(id => {
+    const img = document.createElement('img');
+    img.src = `/images/cards/${id}.jpg`;
+    summaryEl.appendChild(img);
+  });
+}
+
+// ===== UI REFS =====
+const hintEl = document.getElementById('hint');
+const counterEl = document.getElementById('counter');
+const openAllBtn = document.getElementById('openAllBtn');
+const skipFlash = document.getElementById('skipFlash');
+
+function updateOpenAllBtn() {
+  const remaining = TOTAL_PACKS - currentPackIdx;
+  openAllBtn.textContent = `Alle oeffnen (${remaining} verbleibend)`;
+}
+
+// ===== RAYCASTER =====
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+function updatePointer(e) {
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+}
+
+function isPointerOnLid(e) {
+  updatePointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObject(lidMesh);
+  return hits.length > 0;
+}
+
+function isPointerOnBoosterFlap(e) {
+  updatePointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(bp_packGroup.children, true);
+  return hits.some(h => h.object.userData.isFlap);
+}
+
+// ===== LID STATE =====
+let isDraggingLid = false;
+let dragStartY = 0;
+let dragStartAngle = 0;
+let lidAngle = 0;
+let lidOpened = false;
+let isAnimating = false;
+let animStartAngle = 0;
+let animTargetAngle = 0;
+let animStartTime = 0;
+let animDuration = 0;
+let animEasing = null;
+
+// ===== EASING =====
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+// ===== LID SNAP ANIMATION =====
+function startSnapAnimation(from, to, duration, easing) {
+  if (Math.abs(from - to) < 0.001) return;
+  isAnimating = true;
+  animStartAngle = from;
+  animTargetAngle = to;
+  animStartTime = performance.now() / 1000;
+  animDuration = duration;
+  animEasing = easing;
+}
+
+function updateSnapAnimation() {
+  if (!isAnimating) return;
+  const now = performance.now() / 1000;
+  const elapsed = now - animStartTime;
+  let t = Math.min(elapsed / animDuration, 1);
+  t = animEasing(t);
+
+  lidAngle = animStartAngle + (animTargetAngle - animStartAngle) * t;
+  lidPivot.rotation.x = lidAngle;
+
+  if (elapsed >= animDuration) {
+    lidAngle = animTargetAngle;
+    lidPivot.rotation.x = lidAngle;
+    isAnimating = false;
+
+    if (Math.abs(lidAngle - LID_MAX_ANGLE) < 0.01 && !lidOpened) {
+      lidOpened = true;
+      // Start extracting the first pack
+      startPackExtract();
+    }
+  }
+}
+
+// ===== PACK EXTRACT POSITIONS =====
+// Where pack rises from inside box and where it centers for opening
+const PACK_CENTER_POS = new THREE.Vector3(0, 1.5, 3);
+const CAMERA_PACK_POS = new THREE.Vector3(0, 2, 10);
+
+// Track camera transition
+let cameraTransitioning = false;
+let cameraFrom = new THREE.Vector3();
+let cameraTo = new THREE.Vector3();
+let cameraTargetFrom = new THREE.Vector3();
+let cameraTargetTo = new THREE.Vector3();
+let cameraTransTime = 0;
+const CAMERA_TRANS_DUR = 1.0;
+
+function startPackExtract() {
+  if (currentPackIdx >= TOTAL_PACKS) {
+    showFinalResult();
+    return;
+  }
+
+  mainPhase = MAIN_PHASE.PACK_EXTRACT;
+  phaseTime = 0;
+
+  // Remove topmost mini-pack from box
+  const remaining = miniPackMeshes.filter(m => m.visible);
+  if (remaining.length > 0) {
+    remaining[remaining.length - 1].visible = false;
+  }
+
+  // Reset the extractable pack
+  bp_packGroup.visible = true;
+  bp_packGroup.position.set(0, WALL + BOX_H * 0.5, 0); // start inside box
+  bp_packGroup.rotation.set(0, 0, 0);
+  bp_packGroup.scale.setScalar(0.6);
+
+  // Reset pack body opacity
+  bp_packBody.material.forEach(m => {
+    m.transparent = false;
+    m.opacity = 1;
+  });
+
+  // Re-add flap
+  currentFlapData = createFlap();
+  bp_packGroup.add(currentFlapData.flapPivot);
+
+  // Camera transition
+  cameraTransitioning = true;
+  cameraFrom.copy(camera.position);
+  cameraTo.copy(CAMERA_PACK_POS);
+  cameraTargetFrom.copy(controls.target);
+  cameraTargetTo.set(0, 1.5, 0);
+  cameraTransTime = 0;
+
+  controls.autoRotate = false;
+
+  // Update UI
+  counterEl.textContent = `Booster Pack ${currentPackIdx + 1} / ${TOTAL_PACKS}`;
+  counterEl.style.opacity = '1';
+  hintEl.textContent = 'Wische die Lasche';
+  hintEl.style.opacity = '0.5';
+
+  // Show buttons
+  updateOpenAllBtn();
+  openAllBtn.classList.add('show');
+  openAllBtn.classList.add('show');
+}
+
+// ===== RESULT OVERLAY =====
+function showFinalResult() {
+  mainPhase = MAIN_PHASE.DONE;
+  openAllBtn.classList.remove('show');
+  openAllBtn.classList.remove('show');
+  counterEl.style.opacity = '0';
+  hintEl.style.opacity = '0';
+  summaryEl.classList.remove('show');
+
+  // Hide 3D pack and cards
+  bp_packGroup.visible = false;
+  bp_cardsGroup.visible = false;
+
+  const overlay = document.getElementById('resultOverlay');
+  const scroll = document.getElementById('resultScroll');
+  scroll.innerHTML = '';
+
+  let totalDelay = 0;
+
+  for (let p = 0; p < TOTAL_PACKS; p++) {
+    const packGroup = document.createElement('div');
+    packGroup.className = 'result-pack-group';
+
+    const label = document.createElement('div');
+    label.className = 'result-pack-label';
+    label.textContent = `Booster Pack ${p + 1}`;
+    packGroup.appendChild(label);
+
+    const cardsDiv = document.createElement('div');
+    cardsDiv.className = 'result-cards';
+
+    allPackCards[p].forEach((id, i) => {
+      const img = document.createElement('img');
+      img.src = `/images/cards/${id}.jpg`;
+      cardsDiv.appendChild(img);
+      const delay = totalDelay + i * 60;
+      setTimeout(() => img.classList.add('show'), 200 + delay);
+    });
+
+    totalDelay += allPackCards[p].length * 60 + 100;
+    packGroup.appendChild(cardsDiv);
+    scroll.appendChild(packGroup);
+  }
+
+  requestAnimationFrame(() => overlay.classList.add('show'));
+}
+
+function returnToShop() {
+  document.getElementById('resultOverlay').classList.remove('show');
+  // In the real app: navigate('/shop') or router.push('/shop')
+  // Demo: show a brief "back to shop" fade
+  const shopScreen = document.getElementById('shopReturn');
+  shopScreen.classList.add('show');
+}
+
+document.getElementById('resultClose').addEventListener('click', returnToShop);
+document.getElementById('resultOverlay').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('resultOverlay')) returnToShop();
+});
+
+// ===== ALLE OEFFNEN BUTTON =====
+openAllBtn.addEventListener('click', () => {
+  if (mainPhase === MAIN_PHASE.SKIPPING || mainPhase === MAIN_PHASE.DONE) return;
+
+  // Clean up current state
+  bp_cardsGroup.visible = false;
+  summaryEl.classList.remove('show');
+  cardSwiping = false;
+  draggingCard = false;
+
+  mainPhase = MAIN_PHASE.SKIPPING;
+  phaseTime = 0;
+  // If we are mid-pack-open, count the current pack as the starting point for skip
+  // currentPackIdx is the pack we are currently on or about to open
+  skipPackIdx = currentPackIdx;
+  skipTimer = 0;
+
+  hintEl.style.opacity = '0';
+  openAllBtn.classList.remove('show');
+  openAllBtn.classList.remove('show');
+
+  // Reset controls for skipping view
+  controls.enableRotate = true;
+  controls.enableZoom = true;
+  controls.enablePan = true;
+
+  // Transition camera to see the box from above
+  cameraTransitioning = true;
+  cameraFrom.copy(camera.position);
+  cameraTo.set(0, 4, 6);
+  cameraTargetFrom.copy(controls.target);
+  cameraTargetTo.set(0, 1, 0);
+  cameraTransTime = 0;
+});
+
+// ===== POINTER DOWN =====
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  // Card interaction
+  if (mainPhase === MAIN_PHASE.CARD_VIEW && !cardSwiping && currentCardIdx < PULL_CARD_IDS.length) {
+    draggingCard = true;
+    dragStartX = e.clientX;
+    return;
+  }
+
+  // Flap interaction
+  if (mainPhase === MAIN_PHASE.PACK_OPEN && bp_packGroup.visible) {
+    updatePointer(e);
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(bp_packGroup.children, true);
+    if (hits.some(h => h.object.userData.isFlap)) {
+      controls.enabled = false;
+      swipingFlap = true;
+      swipeStartX = e.clientX;
+      e.preventDefault();
+      return;
+    }
+  }
+
+  // Lid interaction
+  if (mainPhase === MAIN_PHASE.LID_CLOSED && !isAnimating) {
+    if (lidAngle > LID_MAX_ANGLE * 0.98 && isPointerOnLid(e)) {
+      isDraggingLid = true;
+      dragStartY = e.clientY;
+      dragStartAngle = lidAngle;
+      controls.enabled = false;
+      renderer.domElement.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  }
+});
+
+// ===== POINTER MOVE =====
+let lastMoveTime = 0;
+renderer.domElement.addEventListener('pointermove', (e) => {
+  // Card drag
+  if (mainPhase === MAIN_PHASE.CARD_VIEW && draggingCard) {
+    const dx = e.clientX - dragStartX;
+    const topCard = bp_cardMeshes[currentCardIdx];
+    topCard.position.x = dx * 0.004;
+    topCard.rotation.z = -dx * 0.0004;
+    renderer.domElement.style.cursor = 'grabbing';
+    return;
+  }
+
+  // Lid drag
+  if (isDraggingLid) {
+    const dy = dragStartY - e.clientY;
+    const sensitivity = LID_MAX_ANGLE / (window.innerHeight * 0.4);
+    let newAngle = dragStartAngle + dy * sensitivity;
+    newAngle = Math.max(LID_MAX_ANGLE, Math.min(0, newAngle));
+    lidAngle = newAngle;
+    lidPivot.rotation.x = lidAngle;
+    return;
+  }
+
+  // Hover cursor (throttled)
+  const now = performance.now();
+  if (now - lastMoveTime < 80) return;
+  lastMoveTime = now;
+
+  if (mainPhase === MAIN_PHASE.CARD_VIEW) {
+    renderer.domElement.style.cursor = 'grab';
+    return;
+  }
+
+  if (mainPhase === MAIN_PHASE.PACK_OPEN && bp_packGroup.visible) {
+    updatePointer(e);
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(bp_packGroup.children, true);
+    if (hits.some(h => h.object.userData.isFlap)) {
+      renderer.domElement.style.cursor = 'pointer';
+      return;
+    }
+    if (hits.length > 0) {
+      renderer.domElement.style.cursor = 'grab';
+      return;
+    }
+  }
+
+  if (mainPhase === MAIN_PHASE.LID_CLOSED && !isAnimating && lidAngle > LID_MAX_ANGLE * 0.98) {
+    if (isPointerOnLid(e)) {
+      renderer.domElement.style.cursor = 'pointer';
+      return;
+    }
+  }
+
+  renderer.domElement.style.cursor = '';
+});
+
+// ===== POINTER UP =====
+renderer.domElement.addEventListener('pointerup', (e) => {
+  // Card swipe release
+  if (draggingCard) {
+    draggingCard = false;
+    const dx = e.clientX - dragStartX;
+    const topCard = bp_cardMeshes[currentCardIdx];
+    if (Math.abs(dx) > 50) {
+      cardSwiping = true;
+      cardSwipeTime = 0;
+      cardSwipeDir = dx > 0 ? 1 : -1;
+    } else {
+      topCard.position.x = 0;
+      topCard.rotation.z = 0;
+    }
+    return;
+  }
+
+  // Flap swipe release
+  if (swipingFlap && mainPhase === MAIN_PHASE.PACK_OPEN) {
+    swipingFlap = false;
+    controls.enabled = true;
+    const dx = e.clientX - swipeStartX;
+    if (Math.abs(dx) > 20) {
+      swipeDir = dx >= 0 ? 1 : -1;
+      mainPhase = MAIN_PHASE.FLAP_ANIM;
+      phaseTime = 0;
+      hintEl.style.opacity = '0';
+    }
+    renderer.domElement.style.cursor = '';
+    return;
+  }
+
+  // Lid release
+  if (isDraggingLid) {
+    isDraggingLid = false;
+    controls.enabled = true;
+    renderer.domElement.style.cursor = '';
+
+    const openPercent = lidAngle / LID_MAX_ANGLE;
+    if (openPercent > LID_SNAP_THRESHOLD) {
+      startSnapAnimation(lidAngle, LID_MAX_ANGLE, 0.6, easeOutBack);
+    } else {
+      startSnapAnimation(lidAngle, 0, 0.4, easeOutCubic);
+    }
+    return;
+  }
+
+  renderer.domElement.style.cursor = '';
+  controls.enabled = true;
+});
+
+renderer.domElement.addEventListener('pointerleave', () => {
+  if (isDraggingLid) {
+    isDraggingLid = false;
+    controls.enabled = true;
+    renderer.domElement.style.cursor = '';
+    const openPercent = lidAngle / LID_MAX_ANGLE;
+    if (openPercent > LID_SNAP_THRESHOLD) {
+      startSnapAnimation(lidAngle, LID_MAX_ANGLE, 0.6, easeOutBack);
+    } else {
+      startSnapAnimation(lidAngle, 0, 0.4, easeOutCubic);
+    }
+  }
+  if (swipingFlap) {
+    swipingFlap = false;
+    controls.enabled = true;
+  }
+});
+
+// ===== ANIMATION LOOP =====
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  // ----- Display box textures -----
+  drawFrontPanel(frontCanvas.getContext('2d'), t);
+  frontTex.needsUpdate = true;
+  drawBackPanel(backCanvas.getContext('2d'), t);
+  backTex.needsUpdate = true;
+  drawSidePanel(sideCanvas.getContext('2d'), t);
+  sideTex.needsUpdate = true;
+
+  // ----- Lid snap animation -----
+  updateSnapAnimation();
+
+  // ----- Display box breathing -----
+  boxGroup.rotation.x = Math.sin(t * 0.4) * 0.01;
+
+  // ----- Camera transition -----
+  if (cameraTransitioning) {
+    cameraTransTime += dt;
+    const p = Math.min(cameraTransTime / CAMERA_TRANS_DUR, 1);
+    const ease = easeOutCubic(p);
+    camera.position.lerpVectors(cameraFrom, cameraTo, ease);
+    controls.target.lerpVectors(cameraTargetFrom, cameraTargetTo, ease);
+    if (p >= 1) {
+      cameraTransitioning = false;
+    }
+  }
+
+  // ----- Booster texture updates (always, mini-packs share these textures) -----
+  bp_drawFrontFrame(bp_frontCanvas.getContext('2d'), t);
+  bp_frontTex.needsUpdate = true;
+  bp_drawBackFrame(bp_backCanvas.getContext('2d'), t);
+  bp_backTex.needsUpdate = true;
+
+  // Redraw lid top every frame (booster packs have animated textures)
+  drawLidTop();
+  lidTopTex.needsUpdate = true;
+
+  // =============================================
+  // ===== MAIN PHASE MACHINE =====
+  // =============================================
+
+  // ----- PACK EXTRACT (rises from box, centers in front of camera) -----
+  if (mainPhase === MAIN_PHASE.PACK_EXTRACT) {
+    phaseTime += dt;
+    const p = Math.min(phaseTime / 1.2, 1);
+    const ease = easeOutCubic(p);
+
+    // Rise from box interior to center position
+    const startY = WALL + BOX_H * 0.8;
+    const startZ = 0;
+    bp_packGroup.position.x = 0;
+    bp_packGroup.position.y = startY + (PACK_CENTER_POS.y - startY) * ease;
+    bp_packGroup.position.z = startZ + (PACK_CENTER_POS.z - startZ) * ease;
+    bp_packGroup.scale.setScalar(0.6 + 0.4 * ease); // scale up to 1.0
+    bp_packGroup.rotation.x = (-Math.PI / 2) * (1 - ease); // rotate from lying to upright
+
+    if (p >= 1) {
+      mainPhase = MAIN_PHASE.PACK_OPEN;
+      phaseTime = 0;
+      bp_packGroup.scale.setScalar(1);
+      bp_packGroup.rotation.set(0, 0, 0);
+      bp_packGroup.position.copy(PACK_CENTER_POS);
+    }
+  }
+
+  // ----- FLAP ANIMATION -----
+  if (mainPhase === MAIN_PHASE.FLAP_ANIM) {
+    phaseTime += dt;
+    const p = Math.min(phaseTime / 1.2, 1);
+    const ease = 1 - Math.pow(1 - p, 2);
+    const flap = currentFlapData.flap;
+    flap.position.x = ease * 2 * swipeDir;
+    flap.rotation.z = -ease * 0.3 * swipeDir;
+    flap.material.forEach(m => { m.transparent = true; m.opacity = 1 - ease; });
+    if (p >= 1) {
+      bp_packGroup.remove(currentFlapData.flapPivot);
+      mainPhase = MAIN_PHASE.PACK_FADE;
+      phaseTime = 0;
+    }
+  }
+
+  // ----- PACK FADE (slides down and out) -----
+  if (mainPhase === MAIN_PHASE.PACK_FADE) {
+    phaseTime += dt;
+    const p = Math.min(phaseTime / 1.0, 1);
+    const ease = p * p * p;
+
+    bp_packGroup.position.y = PACK_CENTER_POS.y - ease * 4;
+    const fadeP = Math.max(0, (p - 0.2) / 0.8);
+    bp_packBody.material.forEach(m => {
+      m.transparent = true;
+      m.opacity = 1 - fadeP;
+    });
+
+    if (p >= 1) {
+      bp_packGroup.visible = false;
+      mainPhase = MAIN_PHASE.CARDS_EMERGE;
+      phaseTime = 0;
+
+      // Build card stack for this pack
+      buildCardStack();
+      buildSummaryThumbs();
+      bp_cardsGroup.visible = true;
+      bp_cardsGroup.position.set(PACK_CENTER_POS.x, PACK_CENTER_POS.y, PACK_CENTER_POS.z + 1);
+      bp_cardMeshes.forEach(c => c.visible = true);
+    }
+  }
+
+  // ----- CARDS EMERGE -----
+  if (mainPhase === MAIN_PHASE.CARDS_EMERGE) {
+    phaseTime += dt;
+    const p = Math.min(phaseTime / 0.8, 1);
+    const ease = easeOutCubic(p);
+
+    bp_cardsGroup.position.y = PACK_CENTER_POS.y + (1 - ease) * 2;
+
+    bp_cardMeshes.forEach(card => {
+      card.children.forEach(child => {
+        child.material.transparent = true;
+        child.material.opacity = ease;
+      });
+    });
+
+    if (p >= 1) {
+      mainPhase = MAIN_PHASE.CARD_VIEW;
+      phaseTime = 0;
+      currentCardIdx = 0;
+      controls.enableRotate = false;
+      controls.enableZoom = false;
+      controls.enablePan = false;
+
+      counterEl.textContent = `Booster Pack ${currentPackIdx + 1} / ${TOTAL_PACKS} — Karte 1 / ${PULL_CARD_IDS.length}`;
+      counterEl.style.opacity = '1';
+      hintEl.textContent = 'Wische nach links oder rechts';
+      hintEl.style.opacity = '0.5';
+      summaryEl.classList.add('show');
+
+      updateOpenAllBtn();
+    }
+  }
+
+  // ----- CARD SWIPE AWAY -----
+  if (cardSwiping && mainPhase === MAIN_PHASE.CARD_VIEW) {
+    cardSwipeTime += dt;
+    const p = Math.min(cardSwipeTime / 0.5, 1);
+    const ease = easeOutCubic(p);
+    const card = bp_cardMeshes[currentCardIdx];
+    card.position.x = ease * 5 * cardSwipeDir;
+    card.rotation.z = -ease * 0.3 * cardSwipeDir;
+    card.children.forEach(child => {
+      child.material.transparent = true;
+      child.material.opacity = 1 - ease;
+    });
+
+    if (p >= 1) {
+      card.visible = false;
+      cardSwiping = false;
+
+      summaryEl.children[currentCardIdx].classList.add('revealed');
+
+      currentCardIdx++;
+      if (currentCardIdx < PULL_CARD_IDS.length) {
+        bp_cardMeshes[currentCardIdx].children.forEach(child => {
+          child.material.transparent = false;
+          child.material.opacity = 1;
+        });
+        counterEl.textContent = `Booster Pack ${currentPackIdx + 1} / ${TOTAL_PACKS} — Karte ${currentCardIdx + 1} / ${PULL_CARD_IDS.length}`;
+      } else {
+        // Pack complete, move to next
+        currentPackIdx++;
+        summaryEl.classList.remove('show');
+
+        if (currentPackIdx >= TOTAL_PACKS) {
+          showFinalResult();
+        } else {
+          mainPhase = MAIN_PHASE.NEXT_PACK;
+          phaseTime = 0;
+        }
+      }
+    }
+  }
+
+  // ----- NEXT PACK TRANSITION -----
+  if (mainPhase === MAIN_PHASE.NEXT_PACK) {
+    phaseTime += dt;
+    // Brief pause before next pack
+    if (phaseTime > 0.6) {
+      bp_cardsGroup.visible = false;
+      controls.enableRotate = true;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+      startPackExtract();
+    }
+  }
+
+  // ----- FAST-OPEN REMAINING PACKS (one by one with mini animation) -----
+  if (mainPhase === MAIN_PHASE.SKIPPING) {
+    // Hide the interactive booster
+    bp_packGroup.visible = false;
+    bp_cardsGroup.visible = false;
+
+    // Start next pack if none active
+    if (!fastOpenPack && currentPackIdx < TOTAL_PACKS) {
+      const remaining = miniPackMeshes.filter(m => m.visible);
+      if (remaining.length > 0) {
+        fastOpenPack = remaining[remaining.length - 1];
+        // Clone material so we can fade independently
+        fastOpenPack.material = fastOpenPack.material.map(m => m.clone());
+        fastOpenPhase = 0;
+        fastOpenTime = 0;
+        currentPackIdx++;
+        counterEl.textContent = `Booster Pack ${currentPackIdx} / ${TOTAL_PACKS}`;
+        counterEl.style.opacity = '1';
+      } else {
+        currentPackIdx = TOTAL_PACKS;
+      }
+    }
+
+    // Animate current fast-open pack
+    if (fastOpenPack) {
+      fastOpenTime += dt;
+      const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+
+      if (fastOpenPhase === 0) {
+        // Phase 0: Rise up + rotate upright
+        const dur = 0.06;
+        const p = Math.min(fastOpenTime / dur, 1);
+        const ease = easeOut(p);
+        fastOpenPack.position.y = WALL + 0.04 + ease * 1.8;
+        fastOpenPack.position.z = ease * 1.5;
+        // Rotate from flat (-PI/2) to upright (0)
+        fastOpenPack.rotation.x = -Math.PI / 2 + ease * Math.PI / 2;
+        // Scale up a bit
+        const s = fastOpenPack.scale.x * (1 + ease * 0.3);
+        fastOpenPack.scale.setScalar(fastOpenPack.scale.x + (ease > 0 ? 0 : 0));
+        if (p >= 1) { fastOpenPhase = 1; fastOpenTime = 0; }
+      } else if (fastOpenPhase === 1) {
+        // Phase 1: Quick flash/shake — simulates flap tear
+        const dur = 0.03;
+        const p = Math.min(fastOpenTime / dur, 1);
+        // Quick shake
+        fastOpenPack.rotation.z = Math.sin(p * Math.PI * 4) * 0.05 * (1 - p);
+        if (p >= 1) { fastOpenPhase = 2; fastOpenTime = 0; }
+      } else if (fastOpenPhase === 2) {
+        // Phase 2: Fly up + fade out
+        const dur = 0.04;
+        const p = Math.min(fastOpenTime / dur, 1);
+        const ease = p * p; // easeIn
+        fastOpenPack.position.y += dt * 4;
+        fastOpenPack.material.forEach(m => {
+          m.transparent = true;
+          m.opacity = 1 - ease;
+        });
+        if (p >= 1) {
+          fastOpenPack.visible = false;
+          fastOpenPack = null;
+          // Fill in cards for this pack
+          allPackCards[currentPackIdx - 1] = [...PULL_CARD_IDS];
+        }
+      }
+    }
+
+    // All done?
+    if (currentPackIdx >= TOTAL_PACKS && !fastOpenPack) {
+      skipTimer += dt;
+      if (skipTimer > 0.5) {
+        showFinalResult();
+      }
+    }
+  }
+
+  // ----- Subtle card bob during view -----
+  if (mainPhase === MAIN_PHASE.CARD_VIEW && !cardSwiping && currentCardIdx < PULL_CARD_IDS.length && bp_cardMeshes.length > 0) {
+    bp_cardMeshes[currentCardIdx].position.y = 0.3 + Math.sin(t * 1.5) * 0.015;
+  }
+
+  // ----- Subtle pack bob during pack open phase -----
+  if (mainPhase === MAIN_PHASE.PACK_OPEN && bp_packGroup.visible) {
+    bp_packGroup.rotation.x = Math.sin(t * 0.5) * 0.02;
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

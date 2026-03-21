@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starter Deck: Yugi — 3D Verpackung</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#060a0c;color:#d0d8d4;font-family:'Cinzel',serif;overflow:hidden}
+  canvas{display:block}
+  .title{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-size:1rem;color:#00dca8;letter-spacing:2px;z-index:10;text-shadow:0 0 20px rgba(0,220,168,0.3)}
+  .hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);font-size:0.45rem;color:#00dca8;letter-spacing:2px;text-transform:uppercase;opacity:0.5;z-index:10}
+</style>
+</head>
+<body>
+<h1 class="title">Starter Deck: Yugi</h1>
+<p class="hint">Klicken + ziehen zum Drehen &middot; Scrollen zum Zoomen</p>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ===== CONFIG =====
+const BOX_W = 1.2, BOX_H = 1.75, BOX_D = 0.3;
+const CW = 1024, CH = 1496;
+const SHOWCASE_H = 1040;
+const CARD_W = 160, CARD_H = 233, CARD_GAP = 12;
+
+const SHOWCASE_IDS = ['72892473', '46986414', '68005187'];
+const BACK_ITEM_IDS = ['46986414', '53129443', '4206964'];
+const BG_IDS = ['46986414','72892473','68005187','13723605','50930991','70781052','46474915','85602018','84257639','40374923'];
+
+// ===== SCENE =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x060a0c);
+
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 0.3, 6.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+// ===== CONTROLS =====
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.15;
+controls.minDistance = 3.5;
+controls.maxDistance = 12;
+controls.rotateSpeed = 1.5;
+controls.minPolarAngle = Math.PI * 0.05;
+controls.maxPolarAngle = Math.PI;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 2;
+renderer.domElement.addEventListener('pointerdown', () => { controls.autoRotate = false; }, { once: true });
+
+// ===== LIGHTING =====
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+const addLight = (color, intensity, pos) => {
+  const l = new THREE.DirectionalLight(color, intensity);
+  l.position.set(...pos);
+  scene.add(l);
+};
+addLight(0xffffff, 1.2, [3, 4, 5]);
+addLight(0x00dca8, 0.3, [-3, 2, -3]);
+addLight(0xc8a830, 0.2, [0, -2, -4]);
+addLight(0xffffff, 1.0, [-3, 4, -5]);
+
+const pl = new THREE.PointLight(0x00dca8, 0.5, 10);
+pl.position.set(0, 0, 3);
+scene.add(pl);
+
+// ===== ENV MAP =====
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene();
+envScene.background = new THREE.Color(0x0a1a14);
+const envL1 = new THREE.PointLight(0x00dca8, 2, 10); envL1.position.set(2, 2, 2); envScene.add(envL1);
+const envL2 = new THREE.PointLight(0xc8a830, 1, 10); envL2.position.set(-2, -1, -2); envScene.add(envL2);
+scene.environment = pmrem.fromScene(envScene).texture;
+
+// ===== IMAGE LOADER =====
+function loadImages(ids) {
+  const imgs = new Array(ids.length);
+  ids.forEach((id, i) => {
+    const img = new Image(); img.crossOrigin = 'anonymous';
+    img.onload = () => { imgs[i] = img; };
+    img.src = `/images/cards/${id}.jpg`;
+  });
+  return imgs;
+}
+
+const bgImgs = loadImages(BG_IDS);
+const scImgs = loadImages(SHOWCASE_IDS);
+const backItemImgs = loadImages(BACK_ITEM_IDS);
+// Type-specific images for back scroll rows (matching item images)
+const monsterImgs = loadImages(['46986414','72892473','68005187','13723605','50930991','70781052','46474915','85602018','84257639','40374923']);
+const spellImgs = loadImages(['53129443','91595718','44209392','19159413','51482758','77622396','90357090','49218300','32452818','87557188']);
+const trapImgs = loadImages(['4206964','50045299','83887306','12607053','46461247','13945283','87796900','36304921','59197169','93221206']);
+
+// ===== CANVAS HELPERS =====
+function makeCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w || CW; c.height = h || CH;
+  return c;
+}
+
+function drawBg(ctx, colors) {
+  const g = ctx.createLinearGradient(0, 0, CW, CH);
+  g.addColorStop(0, colors[0]); g.addColorStop(0.5, colors[1]); g.addColorStop(1, colors[2]);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, CW, CH);
+}
+
+function drawScrollRows(ctx, rows) {
+  ctx.globalAlpha = 0.12;
+  rows.forEach(row => {
+    const imgs = row.imgs.filter(Boolean);
+    if (!imgs.length) return;
+    const trackW = imgs.length * (CARD_W + CARD_GAP);
+    const offset = row.t * row.speed * row.dir;
+    for (let i = 0; i < imgs.length; i++) {
+      let x = i * (CARD_W + CARD_GAP) + offset;
+      x = ((x % trackW) + trackW) % trackW - CARD_W;
+      if (x > -CARD_W && x < CW) ctx.drawImage(imgs[i], x, row.y, CARD_W, CARD_H);
+      const x2 = x + trackW;
+      if (x2 > -CARD_W && x2 < CW) ctx.drawImage(imgs[i], x2, row.y, CARD_W, CARD_H);
+    }
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ===== FRONT TEXTURE =====
+const frontCanvas = makeCanvas();
+const frontTex = new THREE.CanvasTexture(frontCanvas);
+frontTex.colorSpace = THREE.SRGBColorSpace;
+
+function drawFrontFrame(ctx, t) {
+  drawBg(ctx, ['#082a22', '#0d3c30', '#0a2e24']);
+
+  drawScrollRows(ctx, [
+    { y: 85,  speed: 30, dir: 1,  imgs: bgImgs, t },
+    { y: 403, speed: 38, dir: -1, imgs: bgImgs, t },
+    { y: 721, speed: 33, dir: 1,  imgs: bgImgs, t },
+  ]);
+
+  // Showcase fade overlay
+  const sg = ctx.createLinearGradient(0, SHOWCASE_H - 200, 0, SHOWCASE_H);
+  sg.addColorStop(0, 'rgba(8,42,34,0)');
+  sg.addColorStop(1, 'rgba(8,42,34,0.9)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(0, SHOWCASE_H - 200, CW, 200);
+
+  // Wave 1 badge
+  ctx.fillStyle = 'rgba(0,220,168,0.15)'; ctx.strokeStyle = 'rgba(0,220,168,0.3)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(780, 50, 200, 56, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#00dca8'; ctx.font = '600 26px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('WAVE 1', 880, 88);
+
+  // 3 showcase cards — center prominent, sides darker
+  const cardW = 240, cardH = cardW * 86 / 59;
+  const centerX = CW / 2, centerY = SHOWCASE_H * 0.48;
+  const sideOffset = 200, sideDown = 50;
+
+  // Left card (darker, tilted)
+  if (scImgs[0]) {
+    ctx.save();
+    ctx.translate(centerX - sideOffset, centerY + sideDown);
+    ctx.rotate(-0.08);
+    ctx.globalAlpha = 0.5;
+    ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 12;
+    ctx.drawImage(scImgs[0], -cardW * 0.42, -cardH * 0.42, cardW * 0.85, cardH * 0.85);
+    ctx.restore();
+  }
+
+  // Right card (darker, tilted opposite)
+  if (scImgs[2]) {
+    ctx.save();
+    ctx.translate(centerX + sideOffset, centerY + sideDown);
+    ctx.rotate(0.08);
+    ctx.globalAlpha = 0.5;
+    ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 12;
+    ctx.drawImage(scImgs[2], -cardW * 0.42, -cardH * 0.42, cardW * 0.85, cardH * 0.85);
+    ctx.restore();
+  }
+
+  // Center card (full brightness, glow)
+  if (scImgs[1]) {
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.shadowColor = 'rgba(0,220,168,0.15)'; ctx.shadowBlur = 20;
+    ctx.drawImage(scImgs[1], -cardW / 2, -cardH / 2, cardW, cardH);
+    ctx.restore();
+  }
+
+  // Bottom info area
+  ctx.fillStyle = 'rgba(4,14,10,0.95)';
+  ctx.fillRect(0, SHOWCASE_H, CW, CH - SHOWCASE_H);
+
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 44px Cinzel, serif'; ctx.textAlign = 'left';
+  ctx.fillText('Starter Deck: Yugi', 60, 1136);
+  ctx.fillStyle = 'rgba(176,192,184,0.5)'; ctx.font = '500 32px Cinzel, serif';
+  ctx.fillText('Dark Magician, Summoned Skull', 60, 1220);
+  ctx.fillText('und maechtige Zauberkarten.', 60, 1260);
+  ctx.fillStyle = '#c8a830'; ctx.font = '700 44px Cinzel, serif';
+  ctx.fillText('600 DP', 60, 1400);
+  ctx.fillStyle = 'rgba(58,74,66,0.8)'; ctx.font = '600 28px Cinzel, serif'; ctx.textAlign = 'right';
+  ctx.fillText('50 Karten', 960, 1400);
+}
+
+// ===== BACK TEXTURE =====
+const backCanvas = makeCanvas();
+const backTex = new THREE.CanvasTexture(backCanvas);
+backTex.colorSpace = THREE.SRGBColorSpace;
+
+function drawBackFrame(ctx, t) {
+  drawBg(ctx, ['#082a22', '#0d3c30', '#0a2e24']);
+
+  // Header
+  ctx.fillStyle = '#d0d8d4'; ctx.font = '700 34px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('Starter Deck: Yugi', CW / 2, 55);
+  ctx.fillStyle = 'rgba(176,192,184,0.5)'; ctx.font = '600 24px Cinzel, serif';
+  ctx.fillText('50 Karten', CW / 2, 120);
+
+  // Rarity breakdown
+  const rarities = [
+    { text: '1 Ultra Rare',  color: '#c44a6a' },
+    { text: '2 Super Rare',  color: '#d4a44a' },
+    { text: '5 Rare',        color: '#4a90d9' },
+    { text: '42 Common',     color: '#9a9a9a' },
+  ];
+  rarities.forEach((r, i) => {
+    ctx.fillStyle = r.color; ctx.font = '600 20px Cinzel, serif'; ctx.textAlign = 'center';
+    ctx.fillText(r.text, CW / 2, 160 + i * 30);
+  });
+
+  // Scroll rows matching card types (same as booster back)
+  drawScrollRows(ctx, [
+    { y: 100,  speed: 30, dir: 1,  imgs: bgImgs,      t },
+    { y: 400,  speed: 38, dir: -1, imgs: monsterImgs,  t },
+    { y: 700,  speed: 33, dir: 1,  imgs: spellImgs,    t },
+    { y: 1000, speed: 35, dir: -1, imgs: trapImgs,     t },
+  ]);
+
+  // Content items (aligned with scroll rows 2, 3, 4)
+  const items = [
+    { label: 'Monster', count: '20', y: 400 },
+    { label: 'Zauber',  count: '18', y: 700 },
+    { label: 'Fallen',  count: '12', y: 1000 },
+  ];
+  items.forEach((item, i) => {
+    if (backItemImgs[i]) ctx.drawImage(backItemImgs[i], 60, item.y, CARD_W, CARD_H);
+    ctx.fillStyle = '#d0d8d4'; ctx.font = '700 32px Cinzel, serif'; ctx.textAlign = 'left';
+    ctx.fillText(item.label, 260, item.y + 60);
+    ctx.fillStyle = 'rgba(176,192,184,0.6)'; ctx.font = '600 26px Cinzel, serif';
+    ctx.fillText(item.count + ' Karten', 260, item.y + 100);
+  });
+
+  // Footer
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(176,192,184,0.4)'; ctx.font = '500 20px Cinzel, serif';
+  ctx.fillText('OG Release: 08.03.2002', CW / 2, 1280);
+  ctx.fillText('In-Game Release: 15.01.2026', CW / 2, 1315);
+  ctx.strokeStyle = 'rgba(0,220,168,0.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(350, 1340); ctx.lineTo(674, 1340); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,220,168,0.3)'; ctx.font = '700 22px Cinzel, serif';
+  ctx.fillText('Duel Monsters Classic', CW / 2, 1370);
+}
+
+// ===== SIDE TEXTURES =====
+function makeSideTexture(label) {
+  const c = makeCanvas(256, 1496);
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 1496);
+  g.addColorStop(0, '#0a2e24'); g.addColorStop(1, '#071e18');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 1496);
+  ctx.fillStyle = 'rgba(0,220,168,0.12)'; ctx.font = '700 28px Cinzel, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, 128, 748);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const leftTex = makeSideTexture('Starter Deck');
+const rightTex = makeSideTexture('Starter Deck');
+
+// ===== TOP (LID) TEXTURE =====
+const lidCanvas = makeCanvas(1024, 256);
+(function drawLid() {
+  const ctx = lidCanvas.getContext('2d');
+  const w = 1024, h = 256;
+  const g = ctx.createLinearGradient(0, 0, w, 0);
+  g.addColorStop(0, '#0d3c30'); g.addColorStop(0.5, '#10503e'); g.addColorStop(1, '#0d3c30');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(0,220,168,0.15)'; ctx.lineWidth = 2;
+  ctx.strokeRect(12, 12, w - 24, h - 24);
+  ctx.strokeStyle = 'rgba(200,168,48,0.08)'; ctx.lineWidth = 1;
+  ctx.strokeRect(20, 20, w - 40, h - 40);
+
+  // Corner accents
+  ctx.strokeStyle = 'rgba(0,220,168,0.25)'; ctx.lineWidth = 2;
+  [[12,12,1,1],[w-12,12,-1,1],[12,h-12,1,-1],[w-12,h-12,-1,-1]].forEach(([x,y,dx,dy]) => {
+    ctx.beginPath(); ctx.moveTo(x, y + 20*dy); ctx.lineTo(x, y); ctx.lineTo(x + 20*dx, y); ctx.stroke();
+  });
+
+  ctx.fillStyle = 'rgba(0,220,168,0.15)'; ctx.font = '700 24px Cinzel, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Duel Monsters Classic', w/2, h/2);
+
+})();
+const lidTex = new THREE.CanvasTexture(lidCanvas);
+lidTex.colorSpace = THREE.SRGBColorSpace;
+
+// ===== BOTTOM TEXTURE =====
+const bottomCanvas = makeCanvas(1024, 256);
+(function drawBottom() {
+  const ctx = bottomCanvas.getContext('2d');
+  const w = 1024, h = 256;
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, '#061a14'); g.addColorStop(1, '#040e0a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.translate(w/2, h/2);
+  ctx.rotate(-Math.PI / 6);
+  ctx.fillStyle = 'rgba(0,220,168,0.04)'; ctx.font = '600 16px Cinzel, serif'; ctx.textAlign = 'center';
+  for (let row = -6; row <= 6; row++) {
+    for (let col = -3; col <= 3; col++) {
+      ctx.fillText('Duel Monsters Classic', col * 300, row * 35);
+    }
+  }
+  ctx.restore();
+})();
+const bottomTex = new THREE.CanvasTexture(bottomCanvas);
+bottomTex.colorSpace = THREE.SRGBColorSpace;
+
+// ===== BUILD DECK BOX =====
+const boxGroup = new THREE.Group();
+
+const FOIL_MAT = { roughness: 0.35, metalness: 0.15, envMapIntensity: 1.5 };
+const SIDE_MAT = { roughness: 0.6, metalness: 0.05 };
+
+const bodyGeo = new THREE.BoxGeometry(BOX_W, BOX_H, BOX_D);
+const frontMat = new THREE.MeshStandardMaterial({ map: frontTex, ...FOIL_MAT });
+const backMat = new THREE.MeshStandardMaterial({ map: backTex, ...FOIL_MAT });
+const leftMat = new THREE.MeshStandardMaterial({ map: leftTex, ...SIDE_MAT });
+const rightMat = new THREE.MeshStandardMaterial({ map: rightTex, ...SIDE_MAT });
+const topMat = new THREE.MeshStandardMaterial({ map: lidTex, ...SIDE_MAT });
+const bottomMat = new THREE.MeshStandardMaterial({ map: bottomTex, ...SIDE_MAT });
+
+// Face order: +X(right), -X(left), +Y(top), -Y(bottom), +Z(front), -Z(back)
+const boxBody = new THREE.Mesh(bodyGeo, [rightMat, leftMat, topMat, bottomMat, frontMat, backMat]);
+boxGroup.add(boxBody);
+
+// ===== FLAP (Lasche) standing up from back edge of top =====
+const FLAP_H = BOX_H * 0.15;
+const FLAP_THICK = 0.015;
+const flapPivot = new THREE.Group();
+// Pivot at the back edge of the top face
+flapPivot.position.set(0, BOX_H / 2, -BOX_D / 2);
+
+const flapGeo = new THREE.BoxGeometry(BOX_W, FLAP_H, FLAP_THICK);
+const flapCanvas = document.createElement('canvas');
+flapCanvas.width = 512; flapCanvas.height = 256;
+const flapCtx = flapCanvas.getContext('2d');
+const flapGrad = flapCtx.createLinearGradient(0, 0, 512, 256);
+flapGrad.addColorStop(0, '#0a2e24'); flapGrad.addColorStop(1, '#0d3c30');
+flapCtx.fillStyle = flapGrad; flapCtx.fillRect(0, 0, 512, 256);
+flapCtx.strokeStyle = 'rgba(0,220,168,0.2)'; flapCtx.lineWidth = 2;
+flapCtx.setLineDash([8, 6]);
+flapCtx.beginPath(); flapCtx.moveTo(50, 220); flapCtx.lineTo(462, 220); flapCtx.stroke();
+flapCtx.setLineDash([]);
+flapCtx.fillStyle = 'rgba(0,220,168,0.35)'; flapCtx.font = '20px sans-serif';
+flapCtx.textAlign = 'left'; flapCtx.fillText('\u2702', 20, 226);
+flapCtx.save(); flapCtx.translate(492, 226); flapCtx.scale(-1, 1);
+flapCtx.textAlign = 'left'; flapCtx.fillText('\u2702', 0, 0);
+flapCtx.restore();
+flapCtx.fillStyle = 'rgba(0,220,168,0.12)'; flapCtx.font = '600 14px Cinzel, serif'; flapCtx.textAlign = 'center';
+flapCtx.fillText('Duel Monsters Classic', 256, 128);
+const flapTex = new THREE.CanvasTexture(flapCanvas);
+flapTex.colorSpace = THREE.SRGBColorSpace;
+
+const flapMat = new THREE.MeshStandardMaterial({ map: flapTex, ...SIDE_MAT });
+const flapSideMat = new THREE.MeshStandardMaterial({ color: 0x0a2e24, ...SIDE_MAT });
+const flapMesh = new THREE.Mesh(flapGeo, [flapSideMat, flapSideMat, flapSideMat, flapSideMat, flapMat, flapMat]);
+// Flap stands upward from the pivot point, slightly tilted back
+flapMesh.position.set(0, FLAP_H / 2, 0);
+flapPivot.add(flapMesh);
+// Tilt the flap slightly backward (~10 degrees)
+flapPivot.rotation.x = -0.17;
+boxGroup.add(flapPivot);
+
+scene.add(boxGroup);
+
+// ===== ANIMATION =====
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  // Update animated textures
+  drawFrontFrame(frontCanvas.getContext('2d'), t);
+  frontTex.needsUpdate = true;
+  drawBackFrame(backCanvas.getContext('2d'), t);
+  backTex.needsUpdate = true;
+
+  // Subtle breathing
+  boxGroup.rotation.x = Math.sin(t * 0.5) * 0.02;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
