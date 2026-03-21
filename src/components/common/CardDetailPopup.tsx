@@ -81,6 +81,12 @@ interface CardDetailPopupProps {
   artworkVariants?: ArtworkVariant[];
   /** If true, show all effect toggles as preview (public database mode) */
   effectPreviewMode?: boolean;
+  /** Initial ghost/misprint state (e.g. from card_set_entries) */
+  initialGhost?: boolean;
+  initialMisprint?: boolean;
+  /** Called when ghost/misprint toggles change (for admin save) */
+  onGhostChange?: (isGhost: boolean) => void;
+  onMisprintChange?: (isMisprint: boolean) => void;
   children?: React.ReactNode;
 }
 
@@ -96,6 +102,10 @@ export function CardDetailPopup({
   onPreviewArtworkChange,
   artworkVariants,
   effectPreviewMode,
+  initialGhost,
+  initialMisprint,
+  onGhostChange,
+  onMisprintChange,
   children,
 }: CardDetailPopupProps) {
   const { i18n, t } = useTranslation();
@@ -103,9 +113,9 @@ export function CardDetailPopup({
 
   const defaultArtId = currentArtworkId ?? card.artworkId ?? card.id;
   const [previewArtId, setPreviewArtId] = useState<number>(defaultArtId);
-  const [previewGhost, setPreviewGhost] = useState(false);
-  const [previewMisprint, setPreviewMisprint] = useState(false);
-  const [previewMisprintData, setPreviewMisprintData] = useState<MisprintData | null>(null);
+  const [previewGhost, setPreviewGhost] = useState(initialGhost ?? false);
+  const [previewMisprint, setPreviewMisprint] = useState(initialMisprint ?? false);
+  const [previewMisprintData, setPreviewMisprintData] = useState<MisprintData>(() => generatePreviewMisprintData());
 
   // Sync preview when card or default artwork changes
   useEffect(() => {
@@ -129,7 +139,7 @@ export function CardDetailPopup({
       ? ghostMisprintVariant.misprintData as MisprintData
       : previewMisprint && misprintVariant?.misprintData
         ? misprintVariant.misprintData as MisprintData
-        : previewMisprint && effectPreviewMode
+        : previewMisprint
           ? previewMisprintData
           : null;
 
@@ -282,22 +292,22 @@ export function CardDetailPopup({
                 <div className={styles.effectGrid}>
                   <button
                     className={`${styles.effectToggle} ${!previewGhost && !previewMisprint ? styles.effectActive : ''}`}
-                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(false); }}
+                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(false); onGhostChange?.(false); onMisprintChange?.(false); }}
                   >
                     Normal
                   </button>
                   {(ghostEligible || effectPreviewMode) && (
                     <button
-                      className={`${styles.effectToggle} ${previewGhost && !previewMisprint ? styles.effectActive : ''} ${!canGhost && !effectPreviewMode ? styles.effectLocked : ''}`}
-                      onClick={() => { setPreviewGhost(true); setPreviewMisprint(false); }}
+                      className={`${styles.effectToggle} ${previewGhost ? styles.effectActive : ''} ${!canGhost && !effectPreviewMode ? styles.effectLocked : ''}`}
+                      onClick={() => { const next = !previewGhost; setPreviewGhost(next); onGhostChange?.(next); }}
                       title={!canGhost && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
                     >
                       Ghost
                     </button>
                   )}
                   <button
-                    className={`${styles.effectToggle} ${previewMisprint && !previewGhost ? styles.effectActive : ''} ${!canMisprint && !effectPreviewMode ? styles.effectLocked : ''}`}
-                    onClick={() => { setPreviewGhost(false); setPreviewMisprint(true); if (effectPreviewMode) setPreviewMisprintData(generatePreviewMisprintData()); }}
+                    className={`${styles.effectToggle} ${previewMisprint ? styles.effectActive : ''} ${!canMisprint && !effectPreviewMode ? styles.effectLocked : ''}`}
+                    onClick={() => { const next = !previewMisprint; setPreviewMisprint(next); if (next) setPreviewMisprintData(generatePreviewMisprintData()); onMisprintChange?.(next); }}
                     title={!canMisprint && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
                   >
                     Misprint

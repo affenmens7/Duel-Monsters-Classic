@@ -1012,6 +1012,30 @@ export function AdminSetDetailPage() {
             onClose={() => setPopupCardId(null)}
             artworks={popupArtworks}
             effectPreviewMode
+            initialGhost={card.is_ghost}
+            initialMisprint={card.is_misprint}
+            onGhostChange={async (isGhost) => {
+              if (!token || !decodedName) return;
+              try {
+                await assignCardToSet(token, decodedName, {
+                  cardId: card.id, rarity: card.rarity, rarityCode: card.rarity_code,
+                  quantity: card.quantity, artworkId: card.artwork_id ?? undefined,
+                  isGhost, isMisprint: card.is_misprint,
+                });
+                setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_ghost: isGhost } : c));
+              } catch { /* ignore */ }
+            }}
+            onMisprintChange={async (isMisprint) => {
+              if (!token || !decodedName) return;
+              try {
+                await assignCardToSet(token, decodedName, {
+                  cardId: card.id, rarity: card.rarity, rarityCode: card.rarity_code,
+                  quantity: card.quantity, artworkId: card.artwork_id ?? undefined,
+                  isGhost: card.is_ghost, isMisprint,
+                });
+                setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_misprint: isMisprint } : c));
+              } catch { /* ignore */ }
+            }}
             onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
             currentArtworkId={card.artwork_id}
             onArtworkChange={(artworkId) => handleArtworkChange(card.id, artworkId)}
