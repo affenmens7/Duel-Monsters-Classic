@@ -120,9 +120,9 @@ export function CardDetailPopup({
   // Sync preview when card or default artwork changes
   useEffect(() => {
     setPreviewArtId(defaultArtId);
-    setPreviewGhost(false);
-    setPreviewMisprint(false);
-  }, [defaultArtId, card.id]);
+    setPreviewGhost(initialGhost ?? false);
+    setPreviewMisprint(initialMisprint ?? false);
+  }, [defaultArtId, card.id, initialGhost, initialMisprint]);
 
   const artId = previewArtId;
 
