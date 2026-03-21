@@ -19,10 +19,18 @@ import { useAuth } from './AuthContext';
 import { fetchCollectionDetails } from '../services/inventoryApi';
 import { fetchDecks, type DeckSummary } from '../services/deckApi';
 
+export interface InventoryArtworkVariant {
+  artworkId: number;
+  isGhost: boolean;
+  isMisprint: boolean;
+  misprintData?: Record<string, unknown> | null;
+}
+
 export interface InventoryEntry {
   quantity: number;
   usedInDecks: number;
   unlockedArtworks: number[];
+  artworkVariants: InventoryArtworkVariant[];
   preferredArtworkId: number | null;
 }
 
@@ -89,7 +97,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .then((owned) => {
         const map = new Map<number, InventoryEntry>();
         for (const card of owned) {
-          map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
+          map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], artworkVariants: card.artwork_variants ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
         }
         setInventory(map);
       })
@@ -111,7 +119,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const owned = await fetchCollectionDetails(token, excludeDeckId);
       const map = new Map<number, InventoryEntry>();
       for (const card of owned) {
-        map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
+        map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], artworkVariants: card.artwork_variants ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
       }
       setInventory(map);
     } catch {
@@ -146,7 +154,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (entry) {
           next.set(cardId, { ...entry, quantity: entry.quantity + 1 });
         } else {
-          next.set(cardId, { quantity: 1, usedInDecks: 0, unlockedArtworks: [], preferredArtworkId: null });
+          next.set(cardId, { quantity: 1, usedInDecks: 0, unlockedArtworks: [], artworkVariants: [], preferredArtworkId: null });
         }
       }
       return next;

@@ -62,11 +62,23 @@ userRouter.get('/collection/details', requireAuth, async (req, res) => {
       `SELECT c.*, uc.quantity as owned, uc.preferred_artwork_id,
         COALESCE(usage.used, 0) as used_in_decks,
         COALESCE(
-          (SELECT JSON_AGG(uca.artwork_id ORDER BY uca.artwork_id)
+          (SELECT JSON_AGG(DISTINCT uca.artwork_id ORDER BY uca.artwork_id)
            FROM user_card_artworks uca
            WHERE uca.user_id = $1 AND uca.card_id = c.id),
           '[]'::json
-        ) as unlocked_artworks
+        ) as unlocked_artworks,
+        COALESCE(
+          (SELECT JSON_AGG(JSON_BUILD_OBJECT(
+             'artworkId', uca2.artwork_id,
+             'isGhost', uca2.is_ghost,
+             'isMisprint', uca2.is_misprint,
+             'misprintData', uca2.misprint_data
+           ) ORDER BY uca2.artwork_id)
+           FROM user_card_artworks uca2
+           WHERE uca2.user_id = $1 AND uca2.card_id = c.id
+             AND (uca2.is_ghost = TRUE OR uca2.is_misprint = TRUE)),
+          '[]'::json
+        ) as artwork_variants
        FROM user_cards uc
        JOIN cards c ON c.id = uc.card_id
        LEFT JOIN (
@@ -83,7 +95,8 @@ userRouter.get('/collection/details', requireAuth, async (req, res) => {
     );
 
     res.json(result.rows);
-  } catch {
+  } catch (err) {
+    console.error('Load collection failed:', err);
     res.status(500).json({ error: 'Kartendetails konnten nicht geladen werden' });
   }
 });

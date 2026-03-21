@@ -991,6 +991,7 @@ export function AdminSetDetailPage() {
         if (!card) return null;
         return (
           <CardDetailPopup
+            key={`${card.id}-${card.is_ghost}-${card.is_misprint}`}
             card={{
               id: card.id,
               nameDe: card.name_de,
@@ -1016,25 +1017,31 @@ export function AdminSetDetailPage() {
             initialMisprint={card.is_misprint}
             onGhostChange={async (isGhost) => {
               if (!token || !decodedName) return;
+              // Update local state FIRST so re-render picks it up immediately
+              setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_ghost: isGhost } : c));
               try {
                 await assignCardToSet(token, decodedName, {
                   cardId: card.id, rarity: card.rarity, rarityCode: card.rarity_code,
                   quantity: card.quantity, artworkId: card.artwork_id ?? undefined,
                   isGhost, isMisprint: card.is_misprint,
                 });
-                setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_ghost: isGhost } : c));
-              } catch { /* ignore */ }
+              } catch {
+                // Revert on failure
+                setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_ghost: !isGhost } : c));
+              }
             }}
             onMisprintChange={async (isMisprint) => {
               if (!token || !decodedName) return;
+              setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_misprint: isMisprint } : c));
               try {
                 await assignCardToSet(token, decodedName, {
                   cardId: card.id, rarity: card.rarity, rarityCode: card.rarity_code,
                   quantity: card.quantity, artworkId: card.artwork_id ?? undefined,
                   isGhost: card.is_ghost, isMisprint,
                 });
-                setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_misprint: isMisprint } : c));
-              } catch { /* ignore */ }
+              } catch {
+                setSetCards((prev) => prev.map((c) => c.id === card.id ? { ...c, is_misprint: !isMisprint } : c));
+              }
             }}
             onSetClick={(setName) => navigate(`/app/admin/sets/${encodeURIComponent(setName)}`)}
             currentArtworkId={card.artwork_id}

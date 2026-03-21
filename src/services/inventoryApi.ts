@@ -51,9 +51,12 @@ function dbToOwnedCard(db: DbOwnedCard): OwnedCard {
       image_url_small: `/images/cards/${db.id}.jpg`,
       image_url_cropped: `/images/cards/${db.id}.jpg`,
     }],
+    rarity: db.rarity ?? undefined,
+    rarityCode: db.rarity_code ?? undefined,
     owned: db.owned,
     used_in_decks: db.used_in_decks,
     unlockedArtworks: db.unlocked_artworks ?? [],
+    artwork_variants: db.artwork_variants ?? [],
     preferredArtworkId: db.preferred_artwork_id ?? null,
   };
 }

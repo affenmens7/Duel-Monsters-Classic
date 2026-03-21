@@ -12,7 +12,7 @@ import { useCardLocale } from '../../hooks/useCardLocale';
 import { getCardImageUrl } from '../../services/cardApi';
 import { updateDisplay } from '../../services/admin/displays';
 import { getRarityTier } from '../../utils/rarity';
-import { generateSeededMisprintData } from '../../utils/misprint';
+import { generatePreviewMisprintData } from '../../utils/misprint';
 import { sortSetCards, type CardSortKey } from '../../utils/cardSort';
 import { localizeBilingual } from '../../utils/localize';
 import { CardDetailPopup } from '../../components/common/CardDetailPopup';
@@ -305,7 +305,7 @@ export function DisplayDetailView({
                         rarity={allCards.find((c) => c.id === card.cardId)?.rarity}
                         isGhost={card.isGhost}
                         isMisprint={card.isMisprint}
-                        misprintData={card.isMisprint ? generateSeededMisprintData(card.cardId) : undefined}
+                        misprintData={card.isMisprint ? generatePreviewMisprintData() : undefined}
                         className={styles.cardCellImg}
                       />
                       {isSelected && <span className={styles.cardCellSlot}>{slotIndex + 1}</span>}
