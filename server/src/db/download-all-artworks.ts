@@ -1,6 +1,6 @@
 /**
  * Download ALL artworks for ALL cards — including alternative artworks.
- * Re-checks every card even if it already has an entry in card_artworks.
+ * Uses name-based API lookup to get all card_images (ID-based only returns 1).
  * Downloads missing images and inserts missing artwork records.
  *
  * Run with: npx tsx src/db/download-all-artworks.ts
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const IMAGE_DIR = resolve(__dirname, '../../../public/images/cards');
 const API_BASE = 'https://db.ygoprodeck.com/api/v7';
-const DELAY_MS = 100;
+const DELAY_MS = 150;
 const LOG_INTERVAL = 50;
 
 function sleep(ms: number): Promise<void> {
@@ -23,19 +23,31 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function main() {
-  console.log('=== Download ALL Artworks (including alternatives) ===\n');
+  console.log('=== Download ALL Artworks (name-based lookup) ===\n');
 
   await mkdir(IMAGE_DIR, { recursive: true });
 
-  // Get all card IDs
-  const cardResult = await pool.query<{ id: number }>('SELECT id FROM cards ORDER BY id');
-  const allCardIds = cardResult.rows.map((r) => r.id);
-  console.log(`${allCardIds.length} cards in database.\n`);
+  // Get all cards with their English name (for API lookup)
+  const cardResult = await pool.query<{ id: number; name_en: string }>(
+    'SELECT id, name_en FROM cards ORDER BY name_en'
+  );
+  const allCards = cardResult.rows;
+  console.log(`${allCards.length} cards in database.\n`);
 
   // Get all existing artwork IDs (to skip already-known artworks)
   const existingArtworks = await pool.query<{ artwork_id: number }>('SELECT artwork_id FROM card_artworks');
   const existingArtworkIds = new Set(existingArtworks.rows.map((r) => r.artwork_id));
   console.log(`${existingArtworkIds.size} artworks already in DB.\n`);
+
+  // Group cards by name (same name = same artworks in the API)
+  const nameToCards = new Map<string, number[]>();
+  for (const card of allCards) {
+    const list = nameToCards.get(card.name_en) ?? [];
+    list.push(card.id);
+    nameToCards.set(card.name_en, list);
+  }
+  const uniqueNames = [...nameToCards.keys()];
+  console.log(`${uniqueNames.length} unique card names to look up.\n`);
 
   let processed = 0;
   let newArtworks = 0;
@@ -43,9 +55,13 @@ async function main() {
   let cardsWithMultiple = 0;
   let failed = 0;
 
-  for (const cardId of allCardIds) {
+  for (const name of uniqueNames) {
+    const cardIds = nameToCards.get(name) ?? [];
+    // Use the first card ID as the "owner" of the artworks
+    const primaryCardId = cardIds[0];
+
     try {
-      const res = await fetch(`${API_BASE}/cardinfo.php?id=${cardId}`);
+      const res = await fetch(`${API_BASE}/cardinfo.php?name=${encodeURIComponent(name)}`);
       if (!res.ok) {
         failed++;
         await sleep(DELAY_MS);
@@ -76,12 +92,12 @@ async function main() {
         const label = i === 0 ? 'Original' : `Artwork ${i + 1}`;
         const imagePath = `/images/cards/${artworkId}.jpg`;
 
-        // Insert artwork record
+        // Insert artwork record (linked to primary card ID)
         await pool.query(
           `INSERT INTO card_artworks (card_id, artwork_id, label, image_path, is_default)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (artwork_id) DO NOTHING`,
-          [cardId, artworkId, label, imagePath, isDefault]
+          [primaryCardId, artworkId, label, imagePath, isDefault]
         );
         existingArtworkIds.add(artworkId);
         newArtworks++;
@@ -90,7 +106,7 @@ async function main() {
         const destPath = resolve(IMAGE_DIR, `${artworkId}.jpg`);
         if (!existsSync(destPath)) {
           try {
-            const imgRes = await fetch(img.image_url);
+            const imgRes = await fetch(img.image_url_small ?? img.image_url);
             if (imgRes.ok) {
               const buffer = Buffer.from(await imgRes.arrayBuffer());
               await writeFile(destPath, buffer);
@@ -107,7 +123,7 @@ async function main() {
 
     processed++;
     if (processed % LOG_INTERVAL === 0) {
-      console.log(`${processed}/${allCardIds.length} | +${newArtworks} artworks | +${newImages} images | ${cardsWithMultiple} multi-artwork cards`);
+      console.log(`${processed}/${uniqueNames.length} | +${newArtworks} artworks | +${newImages} images | ${cardsWithMultiple} multi-artwork cards`);
     }
     await sleep(DELAY_MS);
   }
@@ -117,7 +133,7 @@ async function main() {
   const multiCards = await pool.query('SELECT COUNT(*) as c FROM (SELECT card_id FROM card_artworks GROUP BY card_id HAVING COUNT(*) > 1) sub');
 
   console.log('\n=== Complete ===');
-  console.log(`Processed:          ${processed} cards`);
+  console.log(`Processed:          ${processed} unique names`);
   console.log(`New artworks:       ${newArtworks}`);
   console.log(`New images:         ${newImages}`);
   console.log(`Failed:             ${failed}`);

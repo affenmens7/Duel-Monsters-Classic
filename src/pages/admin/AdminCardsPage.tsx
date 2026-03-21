@@ -66,6 +66,7 @@ export function AdminCardsPage() {
   // Popup + artworks
   const [popupCard, setPopupCard] = useState<AdminCardRow | null>(null);
   const [popupArtworks, setPopupArtworks] = useState<any[]>([]);
+  const [pendingArtworkId, setPendingArtworkId] = useState<number | null>(null);
 
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<AdminCardRow | null>(null);
@@ -462,25 +463,36 @@ export function AdminCardsPage() {
             banStatus: popupCard.ban_status,
             rarity: popupCard.rarity,
           }}
-          onClose={() => { setPopupCard(null); setPopupArtworks([]); }}
+          onClose={() => { setPopupCard(null); setPopupArtworks([]); setPendingArtworkId(null); }}
           artworks={popupArtworks}
           onSetClick={(setName) => navigate(`/app/admin/sets/booster/${encodeURIComponent(setName)}`)}
           effectPreviewMode
-          currentArtworkId={popupCard.default_artwork_id}
-          onArtworkChange={async (artworkId) => {
-            if (!token || !popupCard) return;
-            try {
-              await fetch(`${env.api.baseUrl}/admin/cards/${popupCard.id}/artworks/${artworkId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ isDefault: true }),
-              });
-              setPopupCard({ ...popupCard, default_artwork_id: artworkId });
-              loadCards();
-            } catch { /* ignore */ }
-          }}
+          currentArtworkId={pendingArtworkId ?? popupCard.default_artwork_id}
+          onArtworkChange={(artworkId) => setPendingArtworkId(artworkId)}
         >
           <div className={styles.popupActions}>
+            <button
+              className={styles.saveCardBtn}
+              onClick={async () => {
+                if (!token || !popupCard) return;
+                const artId = pendingArtworkId;
+                if (artId && artId !== popupCard.default_artwork_id) {
+                  try {
+                    await fetch(`${env.api.baseUrl}/admin/cards/${popupCard.id}/artworks/${artId}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ isDefault: true }),
+                    });
+                    loadCards();
+                  } catch { /* ignore */ }
+                }
+                setPopupCard(null);
+                setPopupArtworks([]);
+                setPendingArtworkId(null);
+              }}
+            >
+              {t('admin.save', 'Speichern')}
+            </button>
             <button
               className={styles.deleteCardBtn}
               onClick={() => { setDeleteConfirm(popupCard); setPopupCard(null); setPopupArtworks([]); }}
