@@ -55,6 +55,7 @@ interface SessionContextValue {
   removeCardFromInventory: (cardId: number, count: number) => void;
   incrementDeckUsage: (cardId: number, delta: number) => void;
   setPreferredArtwork: (cardId: number, artworkId: number) => void;
+  setPreferredEffect: (cardId: number, effect: string | null) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -203,6 +204,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setPreferredEffect = useCallback((cardId: number, effect: string | null) => {
+    setInventory((prev) => {
+      const next = new Map(prev);
+      const entry = next.get(cardId);
+      if (entry) {
+        next.set(cardId, { ...entry, preferredEffect: effect });
+      }
+      return next;
+    });
+  }, []);
+
   return (
     <SessionContext.Provider
       value={{
@@ -218,6 +230,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         removeCardFromInventory,
         incrementDeckUsage,
         setPreferredArtwork,
+        setPreferredEffect,
       }}
     >
       {children}

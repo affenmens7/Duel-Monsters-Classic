@@ -52,7 +52,7 @@ export function DeckCardPopup({
   const { localize } = useCardLocale();
 
   const ownedCard = collection.find((c) => c.id === card.id);
-  const { inventory, refreshInventory } = useSession();
+  const { inventory, setPreferredEffect } = useSession();
   const invEntry = inventory.get(card.id);
   const inDeck = cardCounts.get(card.id) ?? 0;
 
@@ -109,26 +109,22 @@ export function DeckCardPopup({
       onGhostChange={async (isGhost) => {
         if (!token) return;
         const effect = isGhost ? 'ghost' : null;
-        try {
-          await fetch(`${env.api.baseUrl}/user/collection${card.id}/effect`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ effect }),
-          });
-          refreshInventory?.();
-        } catch { /* ignore */ }
+        setPreferredEffect(card.id, effect);
+        fetch(`${env.api.baseUrl}/user/collection${card.id}/effect`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ effect }),
+        }).catch(() => {});
       }}
       onMisprintChange={async (isMisprint) => {
         if (!token) return;
         const effect = isMisprint ? 'misprint' : null;
-        try {
-          await fetch(`${env.api.baseUrl}/user/collection${card.id}/effect`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ effect }),
-          });
-          refreshInventory?.();
-        } catch { /* ignore */ }
+        setPreferredEffect(card.id, effect);
+        fetch(`${env.api.baseUrl}/user/collection${card.id}/effect`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ effect }),
+        }).catch(() => {});
       }}
       isPreviewGreyed={
         popupPreviewArtId != null &&
