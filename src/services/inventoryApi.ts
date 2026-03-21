@@ -58,6 +58,7 @@ function dbToOwnedCard(db: DbOwnedCard): OwnedCard {
     unlockedArtworks: db.unlocked_artworks ?? [],
     artwork_variants: db.artwork_variants ?? [],
     preferredArtworkId: db.preferred_artwork_id ?? null,
+    preferred_effect: db.preferred_effect ?? null,
   };
 }
 

@@ -193,6 +193,7 @@ export function DeckbuilderPage() {
                 return !(card.unlockedArtworks?.includes(setEntry.artworkId) ?? false);
               } : undefined}
               artworkPrefs={deck.userPrefs}
+              effectPrefs={deck.effectPrefs}
               setFilter={setFilter}
               ignoreAvailability
             />

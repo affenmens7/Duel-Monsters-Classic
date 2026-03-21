@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../store/AuthContext';
 import { useCards } from '../store/CardContext';
 import { useInventory } from '../store/InventoryContext';
+import { useSession } from '../store/SessionContext';
 import { fetchDecks, fetchDeck, createDeck, deleteDeck, saveDeckCards, type DeckSummary, type DeckCopy } from '../services/deckApi';
 import type { Card, OwnedCard } from '../types/card';
 
@@ -44,6 +45,16 @@ export function useDeckbuilder() {
     }
     return m;
   }, [collection]);
+
+  // User-preferred effects derived from inventory
+  const { inventory } = useSession();
+  const effectPrefs = useMemo(() => {
+    const m = new Map<number, string | null>();
+    for (const [cardId, entry] of inventory) {
+      if (entry.preferredEffect) m.set(cardId, entry.preferredEffect);
+    }
+    return m;
+  }, [inventory]);
 
   /** Resolve the effective artworkId for a specific copy (per-copy → userPref → null). */
   const resolveArtwork = useCallback((copy: DeckCopy): number | null => {
@@ -270,7 +281,7 @@ export function useDeckbuilder() {
   return {
     // State
     decks, activeDeckId, mainDeck, extraDeck,
-    userPrefs,
+    userPrefs, effectPrefs,
     deckLoading, error, confirmAction, setConfirmAction,
     newDeckOpen, setNewDeckOpen, newDeckName, newDeckError,
     cardCounts, deckTypeCounts, collection, inventoryLoading,

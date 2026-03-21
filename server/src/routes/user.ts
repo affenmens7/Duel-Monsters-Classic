@@ -59,7 +59,7 @@ userRouter.get('/collection/details', requireAuth, async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT c.*, uc.quantity as owned, uc.preferred_artwork_id,
+      `SELECT c.*, uc.quantity as owned, uc.preferred_artwork_id, uc.preferred_effect,
         COALESCE(usage.used, 0) as used_in_decks,
         COALESCE(
           (SELECT JSON_AGG(DISTINCT uca.artwork_id ORDER BY uca.artwork_id)
@@ -145,7 +145,65 @@ userRouter.patch('/collection/:cardId/artwork', requireAuth, async (req, res) =>
     );
 
     res.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error('Set preferred artwork failed:', err);
     res.status(500).json({ error: 'Artwork konnte nicht gesetzt werden' });
+  }
+});
+
+/**
+ * PATCH /api/user/collection:cardId/effect
+ * Set preferred effect for a card in the user's collection.
+ * Body: { effect: null | 'ghost' | 'misprint' }
+ */
+userRouter.patch('/collection:cardId/effect', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.userId;
+    const cardId = parseInt(req.params.cardId as string, 10);
+    const { effect } = req.body;
+
+    if (isNaN(cardId)) {
+      res.status(400).json({ error: 'Ungueltige Karten-ID' });
+      return;
+    }
+
+    const valid = [null, 'ghost', 'misprint'];
+    if (!valid.includes(effect)) {
+      res.status(400).json({ error: 'Ungueltiger Effekt' });
+      return;
+    }
+
+    // Verify the user owns this card
+    const ownership = await pool.query(
+      'SELECT id FROM user_cards WHERE user_id = $1 AND card_id = $2',
+      [userId, cardId]
+    );
+    if (ownership.rows.length === 0) {
+      res.status(404).json({ error: 'Karte nicht in Sammlung' });
+      return;
+    }
+
+    // If setting ghost/misprint, verify the user owns that variant
+    if (effect) {
+      const variant = await pool.query(
+        `SELECT id FROM user_card_artworks WHERE user_id = $1 AND card_id = $2
+         AND ${effect === 'ghost' ? 'is_ghost = TRUE' : 'is_misprint = TRUE'}`,
+        [userId, cardId]
+      );
+      if (variant.rows.length === 0) {
+        res.status(400).json({ error: 'Effekt nicht freigeschaltet' });
+        return;
+      }
+    }
+
+    await pool.query(
+      'UPDATE user_cards SET preferred_effect = $1 WHERE user_id = $2 AND card_id = $3',
+      [effect, userId, cardId]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Set preferred effect failed:', err);
+    res.status(500).json({ error: 'Effekt konnte nicht gesetzt werden' });
   }
 });

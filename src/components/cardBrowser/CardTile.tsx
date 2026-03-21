@@ -13,6 +13,7 @@ interface CardTileProps {
   forceMaxed?: boolean;
   forceGreyed?: boolean;
   preferredArtworkId?: number;
+  preferredEffect?: string | null;
   ignoreAvailability?: boolean;
 }
 
@@ -28,7 +29,7 @@ function getFrameClass(frameType: string): string {
   }
 }
 
-export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, forceGreyed, preferredArtworkId, ignoreAvailability }: CardTileProps) {
+export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, forceGreyed, preferredArtworkId, preferredEffect, ignoreAvailability }: CardTileProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const { localize } = useCardLocale();
   const loc = localize(card);
@@ -62,6 +63,8 @@ export function CardTile({ card, onClick, onMouseDown, setFilter, forceMaxed, fo
             imageSrc={imageUrl}
             alt={loc.name}
             rarity={card.rarity}
+            isGhost={preferredEffect === 'ghost'}
+            isMisprint={preferredEffect === 'misprint'}
           />
         </div>
         {/* Hidden img for onLoad detection */}

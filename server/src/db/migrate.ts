@@ -68,6 +68,13 @@ const schema = `
     quantity    SMALLINT NOT NULL DEFAULT 1
   );
 
+  -- Preferred effect per card (null = normal, 'ghost', 'misprint')
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_cards' AND column_name = 'preferred_effect') THEN
+      ALTER TABLE user_cards ADD COLUMN preferred_effect VARCHAR(16) DEFAULT NULL;
+    END IF;
+  END $$;
+
   -- Add is_ghost / is_misprint to card_set_entries (admin can mark specific cards as guaranteed ghost/misprint)
   DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_set_entries' AND column_name = 'is_ghost') THEN

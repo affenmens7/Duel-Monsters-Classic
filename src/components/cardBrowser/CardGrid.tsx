@@ -11,10 +11,11 @@ interface CardGridProps {
   isCardMaxed?: (cardId: number) => boolean;
   isCardGreyed?: (cardId: number) => boolean;
   artworkPrefs?: Map<number, number>;
+  effectPrefs?: Map<number, string | null>;
   ignoreAvailability?: boolean;
 }
 
-export function CardGrid({ cards, onCardClick, onCardDragStart, setFilter, isCardMaxed, isCardGreyed, artworkPrefs, ignoreAvailability }: CardGridProps) {
+export function CardGrid({ cards, onCardClick, onCardDragStart, setFilter, isCardMaxed, isCardGreyed, artworkPrefs, effectPrefs, ignoreAvailability }: CardGridProps) {
   const { t } = useTranslation();
 
   if (cards.length === 0) {
@@ -37,6 +38,7 @@ export function CardGrid({ cards, onCardClick, onCardDragStart, setFilter, isCar
           forceMaxed={isCardMaxed?.(card.id)}
           forceGreyed={isCardGreyed?.(card.id)}
           preferredArtworkId={artworkPrefs?.get(card.id)}
+          preferredEffect={effectPrefs?.get(card.id)}
           ignoreAvailability={ignoreAvailability}
         />
       ))}

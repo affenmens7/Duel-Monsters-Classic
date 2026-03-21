@@ -32,6 +32,7 @@ export interface InventoryEntry {
   unlockedArtworks: number[];
   artworkVariants: InventoryArtworkVariant[];
   preferredArtworkId: number | null;
+  preferredEffect: string | null;
 }
 
 interface SessionContextValue {
@@ -97,7 +98,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .then((owned) => {
         const map = new Map<number, InventoryEntry>();
         for (const card of owned) {
-          map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], artworkVariants: card.artwork_variants ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
+          map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], artworkVariants: card.artwork_variants ?? [], preferredArtworkId: card.preferredArtworkId ?? null, preferredEffect: card.preferred_effect ?? null });
         }
         setInventory(map);
       })
@@ -119,7 +120,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const owned = await fetchCollectionDetails(token, excludeDeckId);
       const map = new Map<number, InventoryEntry>();
       for (const card of owned) {
-        map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], artworkVariants: card.artwork_variants ?? [], preferredArtworkId: card.preferredArtworkId ?? null });
+        map.set(card.id, { quantity: card.owned, usedInDecks: card.used_in_decks, unlockedArtworks: card.unlockedArtworks ?? [], artworkVariants: card.artwork_variants ?? [], preferredArtworkId: card.preferredArtworkId ?? null, preferredEffect: card.preferred_effect ?? null });
       }
       setInventory(map);
     } catch {
@@ -154,7 +155,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (entry) {
           next.set(cardId, { ...entry, quantity: entry.quantity + 1 });
         } else {
-          next.set(cardId, { quantity: 1, usedInDecks: 0, unlockedArtworks: [], artworkVariants: [], preferredArtworkId: null });
+          next.set(cardId, { quantity: 1, usedInDecks: 0, unlockedArtworks: [], artworkVariants: [], preferredArtworkId: null, preferredEffect: null });
         }
       }
       return next;
