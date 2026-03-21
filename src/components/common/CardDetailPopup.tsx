@@ -10,7 +10,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCardImageUrl } from '../../services/cardApi';
-import { getRarityTier, getEffectTier } from '../../utils/rarity';
+import { getRarityTier } from '../../utils/rarity';
 import { CardEffects } from '../animations/CardEffects';
 import { generatePreviewMisprintData, type MisprintData } from '../../utils/misprint';
 import type { ArtworkVariant } from '../../types/card';
@@ -144,11 +144,9 @@ export function CardDetailPopup({
           : null;
 
   // Can the user toggle this effect?
-  const effectTier = getEffectTier(card.rarity ?? undefined);
   const canGhost = effectPreviewMode || hasGhostVariant;
   const canMisprint = effectPreviewMode || hasMisprintVariant;
   const showEffectToggles = effectPreviewMode || artworkVariants !== undefined;
-  const ghostEligible = effectTier === 'holo' || effectTier === 'rainbow';
 
   // Find the currently previewed artwork info
   const activeArtwork = artworks?.find((a) => a.artworkId === artId);
@@ -296,19 +294,17 @@ export function CardDetailPopup({
                   >
                     Normal
                   </button>
-                  {(ghostEligible || effectPreviewMode) && (
-                    <button
-                      className={`${styles.effectToggle} ${previewGhost ? styles.effectActive : ''} ${!canGhost && !effectPreviewMode ? styles.effectLocked : ''}`}
-                      onClick={() => { const next = !previewGhost; setPreviewGhost(next); onGhostChange?.(next); }}
-                      title={!canGhost && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
-                    >
-                      Ghost
-                    </button>
-                  )}
                   <button
-                    className={`${styles.effectToggle} ${previewMisprint ? styles.effectActive : ''} ${!canMisprint && !effectPreviewMode ? styles.effectLocked : ''}`}
-                    onClick={() => { const next = !previewMisprint; setPreviewMisprint(next); if (next) setPreviewMisprintData(generatePreviewMisprintData()); onMisprintChange?.(next); }}
-                    title={!canMisprint && !effectPreviewMode ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
+                    className={`${styles.effectToggle} ${previewGhost ? styles.effectActive : ''} ${!canGhost ? styles.effectLocked : ''}`}
+                    onClick={() => { if (!canGhost) return; const next = !previewGhost; setPreviewGhost(next); onGhostChange?.(next); }}
+                    title={!canGhost ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
+                  >
+                    Ghost
+                  </button>
+                  <button
+                    className={`${styles.effectToggle} ${previewMisprint ? styles.effectActive : ''} ${!canMisprint ? styles.effectLocked : ''}`}
+                    onClick={() => { if (!canMisprint) return; const next = !previewMisprint; setPreviewMisprint(next); if (next) setPreviewMisprintData(generatePreviewMisprintData()); onMisprintChange?.(next); }}
+                    title={!canMisprint ? t('cardDetail.effectLocked', 'Noch nicht freigeschaltet') : undefined}
                   >
                     Misprint
                   </button>
