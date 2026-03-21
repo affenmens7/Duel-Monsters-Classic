@@ -185,4 +185,6 @@ export interface SetCardRow {
   archetype: string | null;
   image_path: string | null;
   ban_status: string | null;
+  is_ghost: boolean;
+  is_misprint: boolean;
 }

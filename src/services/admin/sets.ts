@@ -133,7 +133,7 @@ export async function fetchSetCards(
 }
 
 export async function assignCardToSet(
-  token: string, setName: string, data: { cardId: number; rarity: string; rarityCode: string; quantity?: number; artworkId?: number },
+  token: string, setName: string, data: { cardId: number; rarity: string; rarityCode: string; quantity?: number; artworkId?: number; isGhost?: boolean; isMisprint?: boolean },
 ): Promise<void> {
   const response = await fetch(
     `${env.api.baseUrl}/admin/sets/${encodeURIComponent(setName)}/cards`,

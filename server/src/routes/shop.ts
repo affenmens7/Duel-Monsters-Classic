@@ -600,7 +600,9 @@ async function openBoosterPack(
 
   // Load all cards grouped by rarity (rarity from cards table)
   const cardsResult = await client.query(
-    `SELECT cse.card_id, c.rarity, cse.artwork_id
+    `SELECT cse.card_id, c.rarity, cse.artwork_id,
+            COALESCE(cse.is_ghost, FALSE) AS is_ghost_forced,
+            COALESCE(cse.is_misprint, FALSE) AS is_misprint_forced
      FROM card_set_entries cse
      JOIN cards c ON c.id = cse.card_id
      WHERE cse.set_name = $1`,
@@ -611,14 +613,20 @@ async function openBoosterPack(
     throw new Error(`No cards found in set: ${setName}`);
   }
 
-  // Group cards by rarity (store card_id + artwork_id)
-  const cardsByRarity: Record<string, Array<{ cardId: number; artworkId: number; rarity: string }>> = {};
+  // Group cards by rarity (store card_id + artwork_id + forced ghost/misprint flags)
+  const cardsByRarity: Record<string, Array<{ cardId: number; artworkId: number; rarity: string; isGhostForced: boolean; isMisprintForced: boolean }>> = {};
   for (const row of cardsResult.rows) {
     const rarity = row.rarity ?? 'Common';
     if (!cardsByRarity[rarity]) {
       cardsByRarity[rarity] = [];
     }
-    cardsByRarity[rarity].push({ cardId: row.card_id, artworkId: row.artwork_id ?? row.card_id, rarity });
+    cardsByRarity[rarity].push({
+      cardId: row.card_id,
+      artworkId: row.artwork_id ?? row.card_id,
+      rarity,
+      isGhostForced: row.is_ghost_forced,
+      isMisprintForced: row.is_misprint_forced,
+    });
   }
 
   // Build weighted rarity tiers from DB rates
@@ -631,6 +639,7 @@ async function openBoosterPack(
   if (rarityTiers.length === 0) {
     const allCards = cardsResult.rows.map((r: any) => ({
       cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id, rarity: r.rarity ?? 'Common',
+      isGhostForced: r.is_ghost_forced, isMisprintForced: r.is_misprint_forced,
     }));
     return pickRandomCards(allCards, packSize).map(applyBonusRolls);
   }
@@ -653,12 +662,13 @@ async function openBoosterPack(
 
     // Pick a random card from that rarity tier
     const pool = cardsByRarity[chosenRarity];
-    let card: { cardId: number; artworkId: number; rarity: string };
+    let card: { cardId: number; artworkId: number; rarity: string; isGhostForced: boolean; isMisprintForced: boolean };
     if (pool && pool.length > 0) {
       card = pool[Math.floor(Math.random() * pool.length)];
     } else {
       const allCards = cardsResult.rows.map((r: any) => ({
         cardId: r.card_id, artworkId: r.artwork_id ?? r.card_id, rarity: r.rarity ?? 'Common',
+        isGhostForced: r.is_ghost_forced, isMisprintForced: r.is_misprint_forced,
       }));
       card = allCards[Math.floor(Math.random() * allCards.length)];
     }
@@ -669,12 +679,18 @@ async function openBoosterPack(
   return pulled;
 }
 
-// Roll for Ghost Rare and Misprint bonuses (independent rolls)
-function applyBonusRolls(card: { cardId: number; artworkId: number; rarity: string }): PulledCard {
-  const isGhost = GHOST_ELIGIBLE.has(card.rarity) && Math.random() < GHOST_CHANCE;
-  const isMisprint = Math.random() < MISPRINT_CHANCE;
+// Roll for Ghost Rare and Misprint bonuses (independent rolls, skip if admin-forced)
+function applyBonusRolls(card: { cardId: number; artworkId: number; rarity: string; isGhostForced?: boolean; isMisprintForced?: boolean }): PulledCard {
+  const isGhost = card.isGhostForced
+    ? true
+    : GHOST_ELIGIBLE.has(card.rarity) && Math.random() < GHOST_CHANCE;
+  const isMisprint = card.isMisprintForced
+    ? true
+    : Math.random() < MISPRINT_CHANCE;
   return {
-    ...card,
+    cardId: card.cardId,
+    artworkId: card.artworkId,
+    rarity: card.rarity,
     isGhost,
     isMisprint,
     misprintData: isMisprint ? generateMisprintData() : null,

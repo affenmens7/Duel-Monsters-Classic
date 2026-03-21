@@ -68,6 +68,16 @@ const schema = `
     quantity    SMALLINT NOT NULL DEFAULT 1
   );
 
+  -- Add is_ghost / is_misprint to card_set_entries (admin can mark specific cards as guaranteed ghost/misprint)
+  DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_set_entries' AND column_name = 'is_ghost') THEN
+      ALTER TABLE card_set_entries ADD COLUMN is_ghost BOOLEAN NOT NULL DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'card_set_entries' AND column_name = 'is_misprint') THEN
+      ALTER TABLE card_set_entries ADD COLUMN is_misprint BOOLEAN NOT NULL DEFAULT FALSE;
+    END IF;
+  END $$;
+
   CREATE UNIQUE INDEX IF NOT EXISTS idx_card_set_entries_unique
     ON card_set_entries (card_id, set_name);
   CREATE INDEX IF NOT EXISTS idx_card_set_entries_set_name

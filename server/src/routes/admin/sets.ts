@@ -853,7 +853,8 @@ setsRouter.get('/:name/cards', async (req, res) => {
       `SELECT
         c.id, c.name_de, c.name_en, c.desc_de, c.desc_en, c.frame_type,
         c.atk, c.def, c.level, c.attribute, c.race_de, c.race_en, c.archetype, c.image_path,
-        c.ban_status, c.rarity, c.rarity_code, cse.artwork_id, COALESCE(cse.quantity, 1)::int AS quantity
+        c.ban_status, c.rarity, c.rarity_code, cse.artwork_id, COALESCE(cse.quantity, 1)::int AS quantity,
+        COALESCE(cse.is_ghost, FALSE) AS is_ghost, COALESCE(cse.is_misprint, FALSE) AS is_misprint
        FROM card_set_entries cse
        JOIN cards c ON c.id = cse.card_id
        ${whereClause}
@@ -882,7 +883,7 @@ setsRouter.get('/:name/cards', async (req, res) => {
 setsRouter.post('/:name/cards', async (req, res) => {
   try {
     const { name } = req.params;
-    const { cardId, rarity, rarityCode, artworkId, quantity } = req.body;
+    const { cardId, rarity, rarityCode, artworkId, quantity, isGhost, isMisprint } = req.body;
 
     if (!cardId) {
       res.status(400).json({ error: 'cardId ist erforderlich' });
@@ -908,12 +909,12 @@ setsRouter.post('/:name/cards', async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO card_set_entries (card_id, set_name, artwork_id, quantity)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO card_set_entries (card_id, set_name, artwork_id, quantity, is_ghost, is_misprint)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (card_id, set_name)
-       DO UPDATE SET artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity
+       DO UPDATE SET artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity, is_ghost = EXCLUDED.is_ghost, is_misprint = EXCLUDED.is_misprint
        RETURNING *`,
-      [cardId, name, resolvedArtworkId, quantity ?? 1]
+      [cardId, name, resolvedArtworkId, quantity ?? 1, isGhost ?? false, isMisprint ?? false]
     );
 
     console.log(`[ADMIN] user=${req.user!.userId} action=add_set_card target=${name} card=${cardId}`);
@@ -947,7 +948,7 @@ setsRouter.post('/:name/cards/bulk', async (req, res) => {
     await client.query('BEGIN');
 
     for (const entry of cards) {
-      const { cardId, rarity, rarityCode, artworkId, quantity } = entry;
+      const { cardId, rarity, rarityCode, artworkId, quantity, isGhost, isMisprint } = entry;
       if (!cardId) {
         await client.query('ROLLBACK');
         res.status(400).json({ error: 'Jeder Eintrag braucht eine cardId' });
@@ -964,11 +965,11 @@ setsRouter.post('/:name/cards/bulk', async (req, res) => {
       }
 
       await client.query(
-        `INSERT INTO card_set_entries (card_id, set_name, artwork_id, quantity)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO card_set_entries (card_id, set_name, artwork_id, quantity, is_ghost, is_misprint)
+         VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (card_id, set_name)
-         DO UPDATE SET artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity`,
-        [cardId, name, artworkId ?? null, quantity ?? 1]
+         DO UPDATE SET artwork_id = EXCLUDED.artwork_id, quantity = EXCLUDED.quantity, is_ghost = EXCLUDED.is_ghost, is_misprint = EXCLUDED.is_misprint`,
+        [cardId, name, artworkId ?? null, quantity ?? 1, isGhost ?? false, isMisprint ?? false]
       );
     }
 
